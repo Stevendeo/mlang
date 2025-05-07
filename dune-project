@@ -68,3 +68,19 @@
    (>= 1.5.3))
   (ocamlformat
    (= 0.19.0))))
+   
+(package
+ (name undef_test)
+ (synopsis "Additional tool to check something with undefined values")
+ (description
+  "Yo")
+ (depends
+  (ocaml
+   (and
+    (>= "4.11.2")))
+  (dune
+   (and :build))
+  (odoc
+   (>= 1.5.3))
+  (ocamlformat
+   (= 0.19.0))))

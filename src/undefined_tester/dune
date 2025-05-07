@@ -1,0 +1,5 @@
+(executable
+ (name undef_test)
+ (package undef_test)
+ (public_name undef_test)
+ (libraries mlang cmdliner dune-build-info))

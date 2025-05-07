@@ -194,7 +194,8 @@ let rec generate_c_expr (e : Mir.expression Pos.marked) :
           (D.lit 0.)
           (D.access (Pos.unmark var) Val (D.dinstr val_index))
       in
-      D.build_transitive_composition { set_vars; def_test; value_comp }
+      D.build_transitive_composition ~safe_def:true
+        { set_vars; def_test; value_comp }
   | Conditional (c, t, f_opt) ->
       let cond = generate_c_expr c in
       let thenval = generate_c_expr t in
