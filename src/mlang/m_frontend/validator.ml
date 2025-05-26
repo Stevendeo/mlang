@@ -348,6 +348,10 @@ module Err = struct
   let forbidden_variable_in_raise pos =
     let msg = "forbidden variable in leve_erreur" in
     Errors.raise_spanned_error msg pos
+
+  let invalid_namespace_def msg pos =
+    let msg = Format.sprintf "invalid namespace definition (%s)" msg in
+    Errors.raise_spanned_error msg pos
 end
 
 type syms = Com.DomainId.t Pos.marked Com.DomainIdMap.t
@@ -387,6 +391,26 @@ type verif = {
 
 type target = (int Pos.marked, Mast.error_name) Com.target
 
+type namespace_id = { app : string Pos.marked; name : string Pos.marked }
+
+type namespace_attrs =
+  | NSDefault (* All defined variables *)
+  | NSOnly of Pos.t Com.CatVar.Map.t
+
+module NameSpaceMap = struct
+  include Map.Make (struct
+    type t = namespace_id
+
+    let compare t t' =
+      let c = String.compare (Pos.unmark t.name) (Pos.unmark t'.name) in
+      if c = 0 then String.compare (Pos.unmark t.app) (Pos.unmark t'.app) else c
+  end)
+
+  let fold_app ~app f =
+    fold (fun k b acc ->
+        if String.equal (Pos.unmark k.app) app then f k b acc else acc)
+end
+
 type program = {
   prog_prefix : string;
   prog_seq : int;
@@ -394,6 +418,7 @@ type program = {
   prog_apps : Pos.t StrMap.t;
   prog_chainings : chaining StrMap.t;
   prog_var_cats : Com.CatVar.data Com.CatVar.Map.t;
+  prog_namespaces : (namespace_id * namespace_attrs) NameSpaceMap.t;
   prog_dict : Com.Var.t IntMap.t;
   prog_vars : int StrMap.t;
   prog_alias : int StrMap.t;
@@ -506,6 +531,7 @@ let empty_program (p : Mast.program) main_target =
     prog_seq = 0;
     prog_app;
     prog_apps = StrMap.empty;
+    prog_namespaces = NameSpaceMap.empty;
     prog_chainings = StrMap.empty;
     prog_var_cats = Com.CatVar.Map.empty;
     prog_dict = IntMap.empty;
@@ -2835,6 +2861,43 @@ let complete_verif_calls (prog : program) : program =
   in
   { prog with prog_targets }
 
+(* Adds to [prog]'s namespace map the new namespace in the given application. *)
+let check_namespace (n : Mast.name_space_decl) (prog : program) : program =
+  (* We save one namespace instance for each application. *)
+  let prog_namespaces =
+    List.fold_left
+      (fun prog_namespaces app ->
+        let id = { name = n.name_space_name; app } in
+        (* Checking if namespace is defined twice *)
+        let () =
+          match NameSpaceMap.find id prog_namespaces with
+          | exception Not_found -> ()
+          | id, _ ->
+              Err.invalid_namespace_def
+                (Format.asprintf
+                   "namespace %s for application %s is already declared at \
+                    position %a"
+                   (Pos.unmark id.name) (Pos.unmark id.app) Pos.format
+                   (Pos.get id.name))
+                (Pos.get id.name)
+        in
+        if n.name_space_is_default then
+          (* If default, it should not have categories *)
+          let () =
+            match Pos.unmark n.name_space_categories with
+            | [] -> ()
+            | c :: _ ->
+                Err.invalid_namespace_def
+                  "cannot specify categories for default namespace" (Pos.get c)
+          in
+          NameSpaceMap.add id (id, NSDefault) prog_namespaces
+        else
+          let cats = Com.CatVar.Map.from_string_list n.name_space_categories in
+          NameSpaceMap.add id (id, NSOnly cats) prog_namespaces)
+      prog.prog_namespaces n.name_space_app
+  in
+  { prog with prog_namespaces }
+
 let proceed (main_target : string) (p : Mast.program) : program =
   (* à paramétrer *)
   let prog =
@@ -2859,7 +2922,8 @@ let proceed (main_target : string) (p : Mast.program) : program =
             | Mast.Function f -> check_target true f prog
             | Mast.Target t -> check_target false t prog
             | Mast.Rule r -> check_rule r prog
-            | Mast.Verification v -> check_verif v prog)
+            | Mast.Verification v -> check_verif v prog
+            | Mast.Namespace n -> check_namespace n prog)
           prog source_file)
       (empty_program p main_target)
       p

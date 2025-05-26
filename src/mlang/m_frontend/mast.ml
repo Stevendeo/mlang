@@ -193,6 +193,13 @@ type error_ = {
   error_descr : string Pos.marked list;
 }
 
+type name_space_decl = {
+  name_space_name : string Pos.marked;
+  name_space_is_default : bool;
+  name_space_app : string Pos.marked list;
+  name_space_categories : string Pos.marked list Pos.marked;
+}
+
 (**{1 M programs}*)
 
 type source_file_item =
@@ -210,6 +217,7 @@ type source_file_item =
   | VarCatDecl of var_category_decl Pos.marked
   | RuleDomDecl of rule_domain_decl
   | VerifDomDecl of verif_domain_decl
+  | Namespace of name_space_decl
 
 (* TODO: parse something here *)
 

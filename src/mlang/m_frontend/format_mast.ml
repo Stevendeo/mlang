@@ -188,6 +188,29 @@ let format_verif_domain fmt (vd : verif_domain_decl) =
   in
   format_domain pp_data fmt vd
 
+let format_namespace_decl fmt (ns : name_space_decl) =
+  Format.fprintf fmt "%s" (Pos.unmark ns.name_space_name);
+  if ns.name_space_is_default then Format.fprintf fmt " : par_defaut"
+  else
+    let () =
+      match ns.name_space_app with
+      | [] -> ()
+      | l ->
+          Format.fprintf fmt " : application %a"
+            (Pp.list_comma (fun fmt a -> format_application fmt (Pos.unmark a)))
+            l
+    in
+    let () =
+      match Pos.unmark ns.name_space_categories with
+      | [] -> ()
+      | l ->
+          Format.fprintf fmt " : categorie %a"
+            (Pp.list_comma (fun fmt a ->
+                 Format.pp_print_string fmt (Pos.unmark a)))
+            l
+    in
+    ()
+
 let format_source_file_item fmt (i : source_file_item) =
   match i with
   | Application app ->
@@ -212,6 +235,8 @@ let format_source_file_item fmt (i : source_file_item) =
   | RuleDomDecl rd -> Format.fprintf fmt "rule domain %a;" format_rule_domain rd
   | VerifDomDecl vd ->
       Format.fprintf fmt "verif domain %a;" format_verif_domain vd
+  | Namespace ns ->
+      Format.fprintf fmt "espace_variable %a;" format_namespace_decl ns
 
 let format_source_file fmt (f : source_file) =
   Pp.list_endline (Pp.unmark format_source_file_item) fmt f
