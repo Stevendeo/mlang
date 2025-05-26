@@ -217,7 +217,7 @@ type source_file_item =
   | VarCatDecl of var_category_decl Pos.marked
   | RuleDomDecl of rule_domain_decl
   | VerifDomDecl of verif_domain_decl
-  | Namespace of name_space_decl
+  | NamespaceDecl of name_space_decl
 
 (* TODO: parse something here *)
 

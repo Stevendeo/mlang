@@ -235,7 +235,7 @@ let format_source_file_item fmt (i : source_file_item) =
   | RuleDomDecl rd -> Format.fprintf fmt "rule domain %a;" format_rule_domain rd
   | VerifDomDecl vd ->
       Format.fprintf fmt "verif domain %a;" format_verif_domain vd
-  | Namespace ns ->
+  | NamespaceDecl ns ->
       Format.fprintf fmt "espace_variable %a;" format_namespace_decl ns
 
 let format_source_file fmt (f : source_file) =

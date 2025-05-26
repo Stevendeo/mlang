@@ -2923,7 +2923,7 @@ let proceed (main_target : string) (p : Mast.program) : program =
             | Mast.Target t -> check_target false t prog
             | Mast.Rule r -> check_rule r prog
             | Mast.Verification v -> check_verif v prog
-            | Mast.Namespace n -> check_namespace n prog)
+            | Mast.NamespaceDecl n -> check_namespace n prog)
           prog source_file)
       (empty_program p main_target)
       p
