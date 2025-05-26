@@ -942,6 +942,37 @@ let get_targets (p : Validator.program) (dict : Com.Var.t IntMap.t)
       (StrMap.add (Pos.unmark target_name) target targets, dict))
     ts (StrMap.empty, dict)
 
+let var_is_in_category_map (ns : Pos.t Com.CatVar.Map.t) (v : Com.Var.t) : bool
+    =
+  (* Only tgv vars can be in a namespace *)
+  match v.scope with
+  | Temp _ | Ref -> false
+  | Tgv { cat; _ } -> (
+      (* Is the var category in the namespace category? *)
+      match Com.CatVar.Map.find cat ns with
+      | _ -> true
+      | exception Not_found -> false)
+
+(* Could be more efficient with a map category => variables *)
+let get_namespaces (p : Validator.program) : Com.Var.t list StrMap.t =
+  let add_to_map cat var map =
+    match StrMap.find cat map with
+    | l -> StrMap.add cat (var :: l) map
+    | exception Not_found -> StrMap.add cat [ var ] map
+  in
+  StrMap.fold
+    (fun _var id map ->
+      Com.Namespace.Map.fold
+        (fun ns_id (_, ns) map ->
+          let cat = Pos.unmark ns_id.name in
+          let v = IntMap.find id p.prog_dict in
+          match ns with
+          | Com.Namespace.NSDefault -> add_to_map cat v map
+          | NSOnly m ->
+              if var_is_in_category_map m v then add_to_map cat v map else map)
+        p.prog_namespaces map)
+    p.prog_vars StrMap.empty
+
 let translate (p : Validator.program) : Mir.program =
   let p, program_stats =
     p |> complete_vars_stack |> complete_vars |> complete_target_vars
@@ -976,6 +1007,7 @@ let translate (p : Validator.program) : Mir.program =
   let program_functions, dict = get_targets p dict p.prog_functions in
   let program_targets, dict = get_targets p dict p.prog_targets in
   let program_dict = dict in
+  let program_namespaces = get_namespaces p in
   Mir.
     {
       program_safe_prefix = p.prog_prefix;
@@ -985,6 +1017,7 @@ let translate (p : Validator.program) : Mir.program =
       program_verif_domains = p.prog_vdoms;
       program_dict;
       program_vars;
+      program_namespaces;
       program_alias;
       program_event_fields = p.prog_event_fields;
       program_event_field_idxs = p.prog_event_field_idxs;

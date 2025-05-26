@@ -78,6 +78,36 @@ module CatVar = struct
   }
 end
 
+module Namespace = struct
+  type id = { app : string Pos.marked; name : string Pos.marked }
+
+  type attrs =
+    | NSDefault (* All defined variables *)
+    | NSOnly of Pos.t CatVar.Map.t
+
+  module Map = struct
+    include MapExt.Make (struct
+      type t = id
+
+      let compare t t' =
+        let c = String.compare (Pos.unmark t.name) (Pos.unmark t'.name) in
+        if c = 0 then String.compare (Pos.unmark t.app) (Pos.unmark t'.app)
+        else c
+    end)
+
+    let fold_app ~app f =
+      fold (fun k b acc ->
+          if String.equal (Pos.unmark k.app) app then f k b acc else acc)
+
+    let find_any_such_that (type e) (is : e -> bool) (t : e t) =
+      let exception Stop of e in
+      try
+        iter (fun _ b -> if is b then raise (Stop b)) t;
+        raise Not_found
+      with Stop t -> t
+  end
+end
+
 (** Here are all the types a value can have. Date types don't seem to be used at
     all though. *)
 type value_typ =

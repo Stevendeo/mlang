@@ -49,23 +49,6 @@ type verif = {
 
 type target = (int Pos.marked, Mast.error_name) Com.target
 
-type namespace_id = { app : string Pos.marked; name : string Pos.marked }
-(** A namespace identifier. *)
-
-(** Each namespace either maps all variables [NSDefault] or keeps only
-    a subset of variables. *)
-type namespace_attrs =
-  | NSDefault  (** All defined variables *)
-  | NSOnly of Pos.t Com.CatVar.Map.t  (** A subset of the defined variables. *)
-
-(** *)
-module NameSpaceMap : sig
-  include Map.S with type key = namespace_id
-
-  val fold_app : app:string -> (key -> 'a -> 'b -> 'b) -> 'a t -> 'b -> 'b
-  (** Folds on all the namespaces of the given application. *)
-end
-
 type program = {
   prog_prefix : string;
   prog_seq : int;
@@ -73,9 +56,10 @@ type program = {
   prog_apps : Pos.t StrMap.t;
   prog_chainings : chaining StrMap.t;
   prog_var_cats : Com.CatVar.data Com.CatVar.Map.t;
-  prog_namespaces : (namespace_id * namespace_attrs) NameSpaceMap.t;
   prog_dict : Com.Var.t IntMap.t;
   prog_vars : int StrMap.t;
+  prog_namespaces :
+    (Com.Namespace.id * Com.Namespace.attrs) Com.Namespace.Map.t;
   prog_alias : int StrMap.t;
   prog_event_fields : Com.event_field StrMap.t;
   prog_event_field_idxs : string IntMap.t;

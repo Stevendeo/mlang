@@ -52,6 +52,8 @@ type program = {
   program_verif_domains : Com.verif_domain Com.DomainIdMap.t;
   program_dict : Com.Var.t IntMap.t;
   program_vars : Com.Var.t StrMap.t;
+  program_namespaces : Com.Var.t list StrMap.t;
+  (* Namespace => list of vars *)
   program_alias : Com.Var.t StrMap.t;
   program_event_fields : Com.event_field StrMap.t;
   program_event_field_idxs : string IntMap.t;

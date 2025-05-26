@@ -25,6 +25,27 @@ module CatVar : sig
   }
 end
 
+module Namespace : sig
+  type id = { app : string Pos.marked; name : string Pos.marked }
+  (** A namespace identifier. *)
+
+  (** Each namespace either maps all variables [NSDefault] or keeps only
+      a subset of variables. *)
+  type attrs =
+    | NSDefault  (** All defined variables *)
+    | NSOnly of Pos.t CatVar.Map.t  (** A subset of the defined variables. *)
+
+  module Map : sig
+    include MapExt.T with type key = id
+
+    val fold_app : app:string -> (key -> 'a -> 'b -> 'b) -> 'a t -> 'b -> 'b
+    (** Folds on all the namespaces of the given application. *)
+
+    val find_any_such_that : ('a -> bool) -> 'a t -> 'a
+    (** Returns any element in the map verifying the predicate in argument. *)
+  end
+end
+
 (** Here are all the types a value can have. Date types don't seem to be used at
     all though. *)
 type value_typ =

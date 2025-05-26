@@ -391,26 +391,6 @@ type verif = {
 
 type target = (int Pos.marked, Mast.error_name) Com.target
 
-type namespace_id = { app : string Pos.marked; name : string Pos.marked }
-
-type namespace_attrs =
-  | NSDefault (* All defined variables *)
-  | NSOnly of Pos.t Com.CatVar.Map.t
-
-module NameSpaceMap = struct
-  include Map.Make (struct
-    type t = namespace_id
-
-    let compare t t' =
-      let c = String.compare (Pos.unmark t.name) (Pos.unmark t'.name) in
-      if c = 0 then String.compare (Pos.unmark t.app) (Pos.unmark t'.app) else c
-  end)
-
-  let fold_app ~app f =
-    fold (fun k b acc ->
-        if String.equal (Pos.unmark k.app) app then f k b acc else acc)
-end
-
 type program = {
   prog_prefix : string;
   prog_seq : int;
@@ -418,9 +398,10 @@ type program = {
   prog_apps : Pos.t StrMap.t;
   prog_chainings : chaining StrMap.t;
   prog_var_cats : Com.CatVar.data Com.CatVar.Map.t;
-  prog_namespaces : (namespace_id * namespace_attrs) NameSpaceMap.t;
   prog_dict : Com.Var.t IntMap.t;
   prog_vars : int StrMap.t;
+  prog_namespaces :
+    (Com.Namespace.id * Com.Namespace.attrs) Com.Namespace.Map.t;
   prog_alias : int StrMap.t;
   prog_event_fields : Com.event_field StrMap.t;
   prog_event_field_idxs : string IntMap.t;
@@ -531,7 +512,7 @@ let empty_program (p : Mast.program) main_target =
     prog_seq = 0;
     prog_app;
     prog_apps = StrMap.empty;
-    prog_namespaces = NameSpaceMap.empty;
+    prog_namespaces = Com.Namespace.Map.empty;
     prog_chainings = StrMap.empty;
     prog_var_cats = Com.CatVar.Map.empty;
     prog_dict = IntMap.empty;
@@ -2864,24 +2845,40 @@ let complete_verif_calls (prog : program) : program =
 (* Adds to [prog]'s namespace map the new namespace in the given application. *)
 let check_namespace (n : Mast.name_space_decl) (prog : program) : program =
   (* We save one namespace instance for each application. *)
-  let prog_namespaces =
+  let _def_global, prog_namespaces =
     List.fold_left
-      (fun prog_namespaces app ->
-        let id = { name = n.name_space_name; app } in
-        (* Checking if namespace is defined twice *)
+      (fun (def_global, prog_namespaces) app ->
+        (* def_global will keep track of the default name space, which should
+           be defined at most once. It starts at [None], then updates to
+           [Some thing] after its first definition. A second definition
+           triggers an error. *)
+        let id = Com.Namespace.{ name = n.name_space_name; app } in
+        (* Checking if namespace is defined twice for a same app *)
         let () =
-          match NameSpaceMap.find id prog_namespaces with
+          match Com.Namespace.Map.find id prog_namespaces with
           | exception Not_found -> ()
-          | id, _ ->
+          | Com.Namespace.{ name; app }, _ ->
               Err.invalid_namespace_def
                 (Format.asprintf
                    "namespace %s for application %s is already declared at \
                     position %a"
-                   (Pos.unmark id.name) (Pos.unmark id.app) Pos.format
-                   (Pos.get id.name))
+                   (Pos.unmark name) (Pos.unmark app) Pos.format (Pos.get name))
                 (Pos.get id.name)
         in
         if n.name_space_is_default then
+          (* Check if there is already a global namespace *)
+          let def_global' =
+            match def_global with
+            | Some other_global ->
+                Err.invalid_namespace_def
+                  (Format.asprintf
+                     "cannot specify two global namespaces, first one is \
+                      declared at location %a"
+                     Pos.format
+                     (Pos.get other_global.Com.Namespace.name))
+                  (Pos.get id.name)
+            | None -> Some id
+          in
           (* If default, it should not have categories *)
           let () =
             match Pos.unmark n.name_space_categories with
@@ -2890,11 +2887,14 @@ let check_namespace (n : Mast.name_space_decl) (prog : program) : program =
                 Err.invalid_namespace_def
                   "cannot specify categories for default namespace" (Pos.get c)
           in
-          NameSpaceMap.add id (id, NSDefault) prog_namespaces
+          ( def_global',
+            Com.Namespace.(Map.add id (id, NSDefault) prog_namespaces) )
         else
           let cats = Com.CatVar.Map.from_string_list n.name_space_categories in
-          NameSpaceMap.add id (id, NSOnly cats) prog_namespaces)
-      prog.prog_namespaces n.name_space_app
+          ( def_global,
+            Com.Namespace.(Map.add id (id, NSOnly cats) prog_namespaces) ))
+      (None, prog.prog_namespaces)
+      n.name_space_app
   in
   { prog with prog_namespaces }
 
