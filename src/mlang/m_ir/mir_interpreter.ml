@@ -326,14 +326,23 @@ struct
 
   exception BlockingError
 
-  let get_var_by_name ctx name =
-    match StrMap.find_opt name ctx.ctx_prog.program_vars with
+  let get_var_by_name ctx (name : Com.var_id) =
+    let varmap =
+      match name.vi_namespace with
+      | None -> ctx.ctx_prog.program_vars
+      | Some ns -> (
+          match StrMap.find_opt ns ctx.ctx_prog.program_namespaces with
+          | None -> StrMap.empty
+          | Some m -> m)
+    in
+    match StrMap.find_opt name.vi_base varmap with
     | Some v -> Some v
     | None -> (
         let rec searchTmp i =
           if i < ctx.ctx_target.target_nb_tmps then
             let v = ctx.ctx_tmps_var.(ctx.ctx_tmps_org - 1 - i) in
-            if Com.Var.name_str v = name then Some v else searchTmp (i + 1)
+            if Com.Var.name_str v = name.vi_base then Some v
+            else searchTmp (i + 1)
           else None
         in
         match searchTmp 0 with
@@ -342,7 +351,8 @@ struct
             let rec searchRef i =
               if i < ctx.ctx_target.target_nb_refs then
                 let v = fst @@ ctx.ctx_ref.(ctx.ctx_ref_org - 1 - i) in
-                if Com.Var.name_str v = name then Some v else searchRef (i + 1)
+                if Com.Var.name_str v = name.vi_base then Some v
+                else searchRef (i + 1)
               else None
             in
             searchRef 0)
@@ -372,7 +382,13 @@ struct
             let i = Int64.to_int N.(to_int z) in
             if 0 <= i then
               let prefix = Com.get_normal_var @@ Pos.unmark m_vn in
-              let name = Strings.concat_int prefix (Pos.unmark m_idxf) i in
+              let name =
+                {
+                  prefix with
+                  vi_base =
+                    Strings.concat_int prefix.vi_base (Pos.unmark m_idxf) i;
+                }
+              in
               match get_var_by_name ctx name with
               | Some v -> get_var_value ctx v
               | None -> Undefined
@@ -410,7 +426,13 @@ struct
             let i = Int64.to_int @@ N.to_int z in
             if 0 <= i then
               let prefix = Com.get_normal_var @@ Pos.unmark m_vn in
-              let name = Strings.concat_int prefix (Pos.unmark m_if) i in
+              let name =
+                {
+                  prefix with
+                  vi_base =
+                    Strings.concat_int prefix.vi_base (Pos.unmark m_if) i;
+                }
+              in
               get_var_by_name ctx name
             else None
         | _ -> None)

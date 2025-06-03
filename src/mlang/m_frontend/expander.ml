@@ -46,6 +46,10 @@ module Err = struct
          p)
       pos
 
+  let namespace_variable_not_allowed_in_left_part_of_loop pos =
+    Errors.raise_spanned_error
+      "namespace variable not allowed in left part of loop" pos
+
   let generic_variable_not_allowed_in_left_part_of_loop pos =
     Errors.raise_spanned_error
       "generic variables not allowed in left part of loop" pos
@@ -63,7 +67,8 @@ module Err = struct
   let variable_is_not_an_integer_constant name pos =
     Errors.raise_spanned_error
       (Format.asprintf
-         "variable %s is not an integer constant and cannot be used here" name)
+         "variable %a is not an integer constant and cannot be used here"
+         Com.format_var_id name)
       pos
 
   let constant_forbidden_as_table pos =
@@ -265,7 +270,18 @@ let elim_unselected_apps (p : Mast.program) : Mast.program =
   check_apps_on_cmdline apps_env;
   List.rev prog
 
-module ConstMap = StrMap
+(* module ConstMap = *)
+(*   MapExt.Make(struct *)
+(*       type t = Com.var_id *)
+(*       let compare (v : t) (v' : t) = *)
+(*         String.compare v.vi_base v'.vi_base *)
+(*     end) *)
+
+module ConstMap = struct
+  include StrMap
+
+  let find_by_id (id : Com.var_id) = find_opt (Com.base_var_name id)
+end
 
 type const_context = float Pos.marked ConstMap.t
 
@@ -305,7 +321,7 @@ let add_const (Pos.Mark (name, name_pos)) (Pos.Mark (cval, cval_pos)) const_map
       | Com.AtomLiteral (Com.Float f) ->
           ConstMap.add name (Pos.mark f name_pos) const_map
       | Com.AtomVar (Pos.Mark (Com.Normal const, _)) -> (
-          match ConstMap.find_opt const const_map with
+          match ConstMap.find_by_id const const_map with
           | Some (Pos.Mark (value, _)) ->
               ConstMap.add name (Pos.mark value name_pos) const_map
           | None -> Err.unknown_constant cval_pos)
@@ -328,7 +344,7 @@ let rec expand_variable (const_map : const_context) (loop_map : loop_context)
     (m_var : Com.m_var_name) : Com.m_var_name Com.atom Pos.marked =
   match Pos.unmark m_var with
   | Com.Normal name -> (
-      match ConstMap.find_opt name const_map with
+      match ConstMap.find_opt (Com.base_var_name name) const_map with
       | Some (Pos.Mark (f, _)) -> Pos.same (Com.AtomLiteral (Float f)) m_var
       | None -> Pos.same (Com.AtomVar m_var) m_var)
   | Com.Generic gen_name ->
@@ -338,9 +354,13 @@ let rec expand_variable (const_map : const_context) (loop_map : loop_context)
       else
         instantiate_params const_map loop_map gen_name.Com.base (Pos.get m_var)
 
-and check_var_name (var_name : string) (var_pos : Pos.t) : unit =
-  for i = String.length var_name - 1 downto 0 do
-    let p = var_name.[i] in
+and check_var_name (var_name : Com.var_id) (var_pos : Pos.t) : unit =
+  check_var_str var_name.vi_base var_pos;
+  Option.iter (fun n -> check_var_str n var_pos) var_name.vi_namespace
+
+and check_var_str (str : string) (var_pos : Pos.t) : unit =
+  for i = String.length str - 1 downto 0 do
+    let p = str.[i] in
     if
       p <> '_'
       && (not ('0' <= p && p <= '9'))
@@ -349,31 +369,34 @@ and check_var_name (var_name : string) (var_pos : Pos.t) : unit =
   done
 
 and instantiate_params (const_map : const_context) (loop_map : loop_context)
-    (var_name : string) (pos : Pos.t) : Com.m_var_name Com.atom Pos.marked =
+    (var_name : Com.var_id) (pos : Pos.t) : Com.m_var_name Com.atom Pos.marked =
   match ParamsMap.choose_opt loop_map with
   | None ->
       check_var_name var_name pos;
       expand_variable const_map loop_map (Pos.mark (Com.Normal var_name) pos)
   | Some (param, (value, size)) ->
-      let new_var_name =
+      let replace =
+        Re.Str.replace_first (Re.Str.regexp (Format.asprintf "%c" param))
+      in
+      let value =
         match value with
         | VarName value ->
             if size <> String.length value then
               Err.variable_name_does_not_match_computed_size pos;
-            Re.Str.replace_first
-              (Re.Str.regexp (Format.asprintf "%c" param))
-              value var_name
+            value
         | RangeInt i ->
             let is = string_of_int i in
             let l = String.length is in
             if size < l then
               Err.integer_representation_exceeds_computed_size pos;
-            let value =
-              if l = size then is else String.make (size - l) '0' ^ is
-            in
-            Re.Str.replace_first
-              (Re.Str.regexp (Format.asprintf "%c" param))
-              value var_name
+            if l = size then is else String.make (size - l) '0' ^ is
+      in
+      let new_var_name =
+        Com.
+          {
+            vi_base = replace value var_name.vi_base;
+            vi_namespace = Option.map (replace value) var_name.vi_namespace;
+          }
       in
       let loop_map = ParamsMap.remove param loop_map in
       instantiate_params const_map loop_map new_var_name pos
@@ -413,7 +436,7 @@ let var_or_int_value (const_map : const_context)
   match Pos.unmark m_atom with
   | Com.AtomVar m_v -> (
       let name = Com.get_var_name (Pos.unmark m_v) in
-      match ConstMap.find_opt name const_map with
+      match ConstMap.find_by_id name const_map with
       | Some (Pos.Mark (fvalue, _)) -> IntIndex (int_of_float fvalue)
       | None -> VarIndex (Pos.unmark m_v))
   | Com.AtomLiteral (Com.Float f) -> IntIndex (int_of_float f)
@@ -421,7 +444,10 @@ let var_or_int_value (const_map : const_context)
 
 let var_or_int (m_atom : Com.m_var_name Com.atom Pos.marked) =
   match Pos.unmark m_atom with
-  | Com.AtomVar (Pos.Mark (Normal v, _)) -> VarName v
+  | Com.AtomVar (Pos.Mark (Normal v, _)) ->
+      if v.vi_namespace <> None then
+        Err.namespace_variable_not_allowed_in_left_part_of_loop (Pos.get m_atom);
+      VarName v.vi_base
   | Com.AtomVar (Pos.Mark (Generic _, _)) ->
       Err.generic_variable_not_allowed_in_left_part_of_loop (Pos.get m_atom)
   | Com.AtomLiteral (Com.Float f) -> RangeInt (int_of_float f)
@@ -578,8 +604,10 @@ let rec expand_access (const_map : const_context) (loop_map : loop_context)
               let m_v' =
                 match Pos.unmark m_v with
                 | Com.Normal n ->
-                    let n' = Strings.concat_int n (Pos.unmark m_if) fi in
-                    Pos.mark (Com.Normal n') v_pos
+                    let vi_base =
+                      Strings.concat_int n.vi_base (Pos.unmark m_if) fi
+                    in
+                    Pos.mark (Com.Normal { n with vi_base }) v_pos
                 | _ -> assert false
               in
               ExpAccess (Pos.mark (Com.VarAccess m_v') a_pos)

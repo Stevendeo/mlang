@@ -421,6 +421,8 @@ type program = {
   prog_main_target : string;
 }
 
+let str_of_normal_var v = Com.(base_var_name @@ get_normal_var v)
+
 let is_vartmp (var : string) =
   String.length var >= 6 && String.sub var 0 6 = "VARTMP"
 
@@ -1222,7 +1224,7 @@ let rec fold_var_expr (get_var : 'v -> string Pos.marked)
 let get_var_mem_type (var : Com.m_var_name) (env : var_env) :
     var_mem_type Pos.marked =
   let var_data, var_pos = Pos.to_couple var in
-  let vn = Com.get_normal_var var_data in
+  let vn = str_of_normal_var var_data in
   let to_mem is_t = match is_t with Some _ -> Table | None -> Num in
   match StrMap.find_opt vn env.vars with
   | Some id ->
@@ -1246,7 +1248,7 @@ let check_variable (var : Com.m_var_name) (idx_mem : var_mem_type)
 
 let check_expression (is_filter : bool) (env : var_env)
     (m_expr : Mast.m_expression) : unit =
-  let get_var m_v = Pos.same (Com.get_normal_var @@ Pos.unmark m_v) m_v in
+  let get_var m_v = Pos.same (str_of_normal_var @@ Pos.unmark m_v) m_v in
   let fold_var var idx_mem env _acc = check_variable var idx_mem env in
   fold_var_expr get_var fold_var is_filter () m_expr env
 
@@ -1313,7 +1315,7 @@ let rec check_instructions (is_rule : bool) (env : var_env)
     (instrs : Mast.instruction Pos.marked list) :
     program * (int Pos.marked, Mast.error_name) Com.m_instruction list =
   let map_var env m_v =
-    let name = Com.get_normal_var (Pos.unmark m_v) in
+    let name = str_of_normal_var (Pos.unmark m_v) in
     let id = StrMap.find name env.vars in
     Pos.same id m_v
   in
@@ -1322,7 +1324,7 @@ let rec check_instructions (is_rule : bool) (env : var_env)
     Com.m_expr_map_var (map_var env) m_expr
   in
   let check_it_var env var =
-    let m_name = Pos.same (Com.get_normal_var (Pos.unmark var)) var in
+    let m_name = Pos.same (str_of_normal_var (Pos.unmark var)) var in
     check_name_in_env env m_name;
     m_name
   in
@@ -1535,7 +1537,7 @@ let rec check_instructions (is_rule : bool) (env : var_env)
             let vars' =
               let fold (vars', seen) var =
                 let var_pos = Pos.get var in
-                let var_name = Com.get_normal_var (Pos.unmark var) in
+                let var_name = str_of_normal_var (Pos.unmark var) in
                 check_variable var Num env;
                 match StrMap.find_opt var_name seen with
                 | None ->
@@ -1583,7 +1585,7 @@ let rec check_instructions (is_rule : bool) (env : var_env)
             let vars' =
               let fold (vars', seen) var =
                 let var_pos = Pos.get var in
-                let var_name = Com.get_normal_var (Pos.unmark var) in
+                let var_name = str_of_normal_var (Pos.unmark var) in
                 check_variable var Both env;
                 match StrMap.find_opt var_name seen with
                 | None ->
@@ -2462,11 +2464,11 @@ let check_verif (v : Mast.verification) (prog : program) : program =
         | None -> ());
         let verif_cat_var_stats, verif_var_stats =
           let get_var m_v =
-            Pos.same (Com.get_normal_var @@ Pos.unmark m_v) m_v
+            Pos.same (str_of_normal_var @@ Pos.unmark m_v) m_v
           in
           let fold_var m_v idx_mem env (vdom_sts, var_sts) =
             check_variable m_v idx_mem env;
-            let name = Com.get_normal_var (Pos.unmark m_v) in
+            let name = str_of_normal_var (Pos.unmark m_v) in
             let id = StrMap.find name env.vars in
             let var = IntMap.find id env.prog.prog_dict in
             let cat = Com.Var.cat var in
@@ -2516,7 +2518,7 @@ let convert_verifs (prog : program) : program =
         let target_file = Some (get_target_file (Pos.get verif.verif_id)) in
         let target_prog =
           let map_var m_v =
-            let name = Com.get_normal_var (Pos.unmark m_v) in
+            let name = str_of_normal_var (Pos.unmark m_v) in
             let id = StrMap.find name prog.prog_vars in
             Pos.same id m_v
           in
@@ -2570,19 +2572,19 @@ let eval_expr_verif (prog : program) (verif : verif)
     | Literal Com.Undefined -> None
     | Var _ -> Err.variable_forbidden_in_filter (Pos.get expr)
     | Attribut (Pos.Mark (VarAccess m_v, _), m_attr) ->
-        let var_name = Com.get_normal_var @@ Pos.unmark m_v in
+        let var_name = str_of_normal_var @@ Pos.unmark m_v in
         let id = StrMap.find var_name prog.prog_vars in
         let var = IntMap.find id prog.prog_dict in
         let attrs = Com.Var.attrs var in
         let m_val = StrMap.find (Pos.unmark m_attr) attrs in
         Some (float (Pos.unmark m_val))
     | Size (Pos.Mark (VarAccess m_v, _)) ->
-        let var_name = Com.get_normal_var @@ Pos.unmark m_v in
+        let var_name = str_of_normal_var @@ Pos.unmark m_v in
         let id = StrMap.find var_name prog.prog_vars in
         let var = IntMap.find id prog.prog_dict in
         Some (float @@ Com.Var.size @@ var)
     | IsVariable (Pos.Mark (VarAccess m_v, _), m_name) -> (
-        let var_name = Com.get_normal_var @@ Pos.unmark m_v in
+        let var_name = str_of_normal_var @@ Pos.unmark m_v in
         let id = StrMap.find var_name prog.prog_vars in
         let var = IntMap.find id prog.prog_dict in
         if Pos.unmark m_name = Com.Var.name_str var then Some 1.0

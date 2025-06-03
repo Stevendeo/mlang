@@ -478,7 +478,7 @@ typedef struct S_irdata T_irdata;
         f)
     cprog.program_event_fields;
   Pp.fpr fmt
-    {|
+    {|     
 #define DS_ irdata->def_saisie
 #define S_ irdata->saisie
 

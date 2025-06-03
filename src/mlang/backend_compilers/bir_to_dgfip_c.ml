@@ -175,7 +175,8 @@ and generate_c_expr (e : Mir.expression Pos.marked) : D.expression_composition =
                     D.dfun "lis_concaccess"
                       [
                         D.ddirect (D.dinstr "irdata");
-                        D.ddirect (D.dinstr (Pp.spr "\"%s\"" name));
+                        D.ddirect
+                          (D.dinstr (Pp.spr "\"%a\"" Com.format_var_id name));
                         D.ddirect (D.dinstr (Pp.spr "\"%s\"" (Pos.unmark m_if)));
                         def_i;
                         val_i;
@@ -398,7 +399,8 @@ and generate_c_expr (e : Mir.expression Pos.marked) : D.expression_composition =
               D.dfun conc_fn
                 [
                   d_irdata;
-                  D.ddirect @@ D.dinstr @@ Pp.spr "\"%s\"" name;
+                  D.ddirect @@ D.dinstr
+                  @@ Pp.spr "\"%a\"" Com.format_var_id name;
                   D.ddirect @@ D.dinstr @@ Pp.spr "\"%s\"" @@ Pos.unmark m_if;
                   ei.def_test;
                   ei.value_comp;
@@ -499,7 +501,7 @@ and generate_c_expr (e : Mir.expression Pos.marked) : D.expression_composition =
         D.dfun "lis_concaccess"
           [
             d_irdata;
-            D.ddirect (D.dinstr (Pp.spr "\"%s\"" name));
+            D.ddirect (D.dinstr (Pp.spr "\"%a\"" Com.format_var_id name));
             D.ddirect (D.dinstr (Pp.spr "\"%s\"" (Pos.unmark m_if)));
             i_def;
             i_val;
@@ -569,7 +571,7 @@ and generate_c_expr (e : Mir.expression Pos.marked) : D.expression_composition =
               D.dfun conc_fn
                 [
                   d_irdata;
-                  D.ddirect (D.dinstr (Pp.spr "\"%s\"" name));
+                  D.ddirect (D.dinstr (Pp.spr "\"%a\"" Com.format_var_id name));
                   D.ddirect (D.dinstr (Pp.spr "\"%s\"" (Pos.unmark m_if)));
                   ei.def_test;
                   ei.value_comp;
@@ -619,7 +621,7 @@ and generate_c_expr (e : Mir.expression Pos.marked) : D.expression_composition =
               D.dfun conc_fn
                 [
                   d_irdata;
-                  D.ddirect (D.dinstr (Pp.spr "\"%s\"" name));
+                  D.ddirect (D.dinstr (Pp.spr "\"%a\"" Com.format_var_id name));
                   D.ddirect (D.dinstr (Pp.spr "\"%s\"" (Pos.unmark m_if)));
                   ei.def_test;
                   ei.value_comp;
@@ -757,7 +759,8 @@ and generate_c_expr (e : Mir.expression Pos.marked) : D.expression_composition =
               D.dfun "est_variable_concaccess"
                 [
                   d_irdata;
-                  D.ddirect @@ D.dinstr @@ Pp.spr "\"%s\"" name;
+                  D.ddirect @@ D.dinstr
+                  @@ Pp.spr "\"%a\"" Com.format_var_id name;
                   D.ddirect @@ D.dinstr @@ Pp.spr "\"%s\"" (Pos.unmark m_if);
                   ei.def_test;
                   ei.value_comp;
@@ -905,8 +908,8 @@ let generate_conc_def (dgfip_flags : Dgfip_options.flags)
   generate_expr_with_res_in dgfip_flags oc idx_def idx_val idx_expr;
   generate_expr_with_res_in dgfip_flags oc res_def res_val expr;
   let name = Com.get_normal_var (Pos.unmark m_vn) in
-  pr "@;ecris_concaccess(irdata, \"%s\", \"%s\", %s, %s, %s, %s);" name
-    (Pos.unmark m_if) idx_def idx_val res_def res_val;
+  pr "@;ecris_concaccess(irdata, \"%a\", \"%s\", %s, %s, %s, %s);"
+    Com.format_var_id name (Pos.unmark m_if) idx_def idx_val res_def res_val;
   pr "@]@;}"
 
 let generate_event_field_def (dgfip_flags : Dgfip_options.flags)
@@ -1079,9 +1082,9 @@ let rec generate_stmt (dgfip_flags : Dgfip_options.flags)
                   pr "@;@[<v 2>{";
                   pr
                     "@;\
-                     T_varinfo *info = lis_concaccess_varinfo(irdata, \"%s\", \
+                     T_varinfo *info = lis_concaccess_varinfo(irdata, \"%a\", \
                      \"%s\", %s, %s);"
-                    name (Pos.unmark m_if) print_def print_val;
+                    Com.format_var_id name (Pos.unmark m_if) print_def print_val;
                   pr "@;@[<v 2>if (info != NULL) {";
                   pr "@;print_string(%s, %s, info->%s);" print_std pr_ctx fld;
                   pr "@]@;}";

@@ -665,7 +665,7 @@ instruction:
   VARIABLE vn = symbol_with_pos COLON
   it_params = nonempty_list(with_pos(it_param))
   IN LPAREN instrs = instruction_list_rev RPAREN {
-    let var = Pos.same (Com.Normal (Pos.unmark vn)) vn in
+    let var = Pos.same (Com.Normal {vi_base = (Pos.unmark vn); vi_namespace = None}) vn in
     match it_params with
     | Pos.Mark (`VarInterval _, _) :: _ ->
         let var_intervals =
@@ -849,7 +849,7 @@ print_precision:
 it_param:
 | vars = separated_nonempty_list(COMMA, symbol_with_pos) COLON {
     let vl =
-      List.map (fun vn -> Pos.same (Com.Normal (Pos.unmark vn)) vn) vars
+      List.map (fun vn -> Pos.same (Com.Normal {vi_base = (Pos.unmark vn); vi_namespace = None}) vn) vars
     in
     `VarList vl
   }
@@ -880,13 +880,13 @@ it_param_with_expr:
 rest_param:
 | vars = separated_nonempty_list(COMMA, symbol_with_pos) COLON {
     let vl =
-      List.map (fun vn -> Pos.same (Com.Normal (Pos.unmark vn)) vn) vars
+      List.map (fun vn -> Pos.same (Com.Normal {vi_base = (Pos.unmark vn); vi_namespace = None}) vn) vars
     in
     `VarList vl
   }
 | VARIABLE vn = symbol_with_pos COLON
   vparams = nonempty_list(rest_param_category) {
-    let var = Pos.same (Com.Normal (Pos.unmark vn)) vn in
+    let var = Pos.same (Com.Normal {vi_base = (Pos.unmark vn); vi_namespace = None}) vn in
     let filters = List.map (fun (vcats, expr) -> (var, vcats, expr)) vparams in
     `VarCatsRest filters
   }
@@ -894,7 +894,9 @@ rest_param:
     `EventList expr_list
   }
 | EVENT vn = symbol_with_pos COLON WITH expr = with_pos(expression) COLON {
-     let var = Pos.same (Com.Normal (Pos.unmark vn)) vn in
+     let var =
+       Pos.same (Com.Normal {vi_base = (Pos.unmark vn); vi_namespace = None}) vn
+     in
     `EventFilter (var, expr)
   }
 
@@ -922,12 +924,12 @@ rest_param_with_expr:
 arrange_events_param:
 | SORT v0 = symbol_with_pos COMMA v1 = symbol_with_pos
   COLON WITH expr = with_pos(expression) COLON {
-    let var0 = Pos.same (Com.Normal (Pos.unmark v0)) v0 in
-    let var1 = Pos.same (Com.Normal (Pos.unmark v1)) v1 in  
+    let var0 = Pos.same (Com.Normal {vi_base = (Pos.unmark v0); vi_namespace = None} ) v0 in
+    let var1 = Pos.same (Com.Normal {vi_base = (Pos.unmark v1); vi_namespace = None} ) v1 in 
     `ArrangeEventsSort (var0, var1, expr)
   }
 | FILTER v = symbol_with_pos COLON WITH expr = with_pos(expression) COLON {
-    let var = Pos.same (Com.Normal (Pos.unmark v)) v in
+    let var = Pos.same (Com.Normal {vi_base = (Pos.unmark v); vi_namespace = None}) v in
     `ArrangeEventsFilter (var, expr)
   }
 | ADD expr = with_pos(expression) COLON {

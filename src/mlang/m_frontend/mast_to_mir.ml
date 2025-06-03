@@ -954,11 +954,11 @@ let var_is_in_category_map (ns : Pos.t Com.CatVar.Map.t) (v : Com.Var.t) : bool
       | exception Not_found -> false)
 
 (* Could be more efficient with a map category => variables *)
-let get_namespaces (p : Validator.program) : Com.Var.t list StrMap.t =
+let get_namespaces (p : Validator.program) : Com.Var.t StrMap.t StrMap.t =
   let add_to_map cat var map =
     match StrMap.find cat map with
-    | l -> StrMap.add cat (var :: l) map
-    | exception Not_found -> StrMap.add cat [ var ] map
+    | varmap -> StrMap.add cat (StrMap.add cat var varmap) map
+    | exception Not_found -> StrMap.add cat (StrMap.singleton cat var) map
   in
   StrMap.fold
     (fun _var id map ->
@@ -969,7 +969,9 @@ let get_namespaces (p : Validator.program) : Com.Var.t list StrMap.t =
           match ns with
           | Com.Namespace.NSDefault -> add_to_map cat v map
           | NSOnly m ->
-              if var_is_in_category_map m v then add_to_map cat v map else map)
+              if var_is_in_category_map m v then
+                add_to_map cat (Com.Var.new_copy v) map
+              else map)
         p.prog_namespaces map)
     p.prog_vars StrMap.empty
 

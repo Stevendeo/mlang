@@ -324,6 +324,8 @@ module Var = struct
 
   let new_res ~(name : string Pos.marked) : t = new_temp ~name ~table:None
 
+  let new_copy (t : t) : t = { t with id = new_id () }
+
   let int_of_scope = function Tgv _ -> 0 | Temp _ -> 1 | Ref -> 2
 
   let compare (var1 : t) (var2 : t) =
@@ -450,11 +452,23 @@ type func =
   | NbEvents
   | Func of string
 
-type var_name_generic = { base : string; parameters : char list }
+type var_id = { vi_namespace : string option; vi_base : string }
+(** A variable is identifier by its base name and an optional prefix
+    corresponding to its namespace. *)
+
+module VarIdMap = MapExt.Make (struct
+  type t = var_id
+
+  let compare t t' =
+    let c = Option.compare String.compare t.vi_namespace t'.vi_namespace in
+    if c = 0 then String.compare t.vi_base t'.vi_base else c
+end)
+
+type var_name_generic = { base : var_id; parameters : char list }
 (** For generic variables, we record the list of their lowercase parameters *)
 
 (** A variable is either generic (with loop parameters) or normal *)
-type var_name = Normal of string | Generic of var_name_generic
+type var_name = Normal of var_id | Generic of var_name_generic
 
 type m_var_name = var_name Pos.marked
 
@@ -873,6 +887,8 @@ let get_var_name v = match v with Normal s -> s | Generic s -> s.base
 
 let get_normal_var = function Normal name -> name | Generic _ -> assert false
 
+let base_var_name { vi_base; _ } = vi_base
+
 let format_value_typ fmt t =
   Pp.string fmt
     (match t with
@@ -950,12 +966,17 @@ let format_comp_op fmt op =
     | Eq -> "="
     | Neq -> "!=")
 
+let format_var_id fmt { vi_namespace; vi_base } =
+  match vi_namespace with
+  | None -> Format.pp_print_string fmt vi_base
+  | Some ns -> Format.fprintf fmt "%s.%s" ns vi_base
+
 let format_access form_var form_expr fmt = function
   | VarAccess v -> form_var fmt v
   | TabAccess (v, m_i) ->
       Format.fprintf fmt "%a[%a]" form_var v form_expr (Pos.unmark m_i)
   | ConcAccess (m_vn, m_idxf, idx) ->
-      Format.fprintf fmt "%s{%s, %a}"
+      Format.fprintf fmt "%a{%s, %a}" format_var_id
         (get_var_name (Pos.unmark m_vn))
         (Pos.unmark m_idxf) form_expr (Pos.unmark idx)
   | FieldAccess (e, f, _) ->

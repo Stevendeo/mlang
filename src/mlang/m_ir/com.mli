@@ -168,6 +168,9 @@ module Var : sig
 
   val new_res : name:string Pos.marked -> t
 
+  val new_copy : t -> t
+  (** Creates a copy of the variable with a brand new id *)
+
   val pp : Format.formatter -> t -> unit
 
   val compare : t -> t -> int
@@ -256,11 +259,17 @@ type func =
     number or characters and there can be multiple of them. We have to store all
     this information. *)
 
-type var_name_generic = { base : string; parameters : char list }
+type var_id = { vi_namespace : string option; vi_base : string }
+(** A variable is identifier by its base name and an optional prefix
+    corresponding to its namespace. *)
+
+module VarIdMap : MapExt.T with type key = var_id
+
+type var_name_generic = { base : var_id; parameters : char list }
 (** For generic variables, we record the list of their lowercase parameters *)
 
 (** A variable is either generic (with loop parameters) or normal *)
-type var_name = Normal of string | Generic of var_name_generic
+type var_name = Normal of var_id | Generic of var_name_generic
 
 type m_var_name = var_name Pos.marked
 
@@ -440,9 +449,11 @@ val instr_map_var :
 val m_instr_map_var :
   ('v -> 'w) -> ('e -> 'f) -> ('v, 'e) m_instruction -> ('w, 'f) m_instruction
 
-val get_var_name : var_name -> string
+val get_var_name : var_name -> var_id
 
-val get_normal_var : var_name -> string
+val get_normal_var : var_name -> var_id
+
+val base_var_name : var_id -> string
 
 val format_value_typ : Pp.t -> value_typ -> unit
 
@@ -458,6 +469,8 @@ val format_unop : Pp.t -> unop -> unit
 val format_binop : Pp.t -> binop -> unit
 
 val format_comp_op : Pp.t -> comp_op -> unit
+
+val format_var_id : Pp.t -> var_id -> unit
 
 val format_set_value :
   (Pp.t -> 'v -> unit) ->

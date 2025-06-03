@@ -24,13 +24,10 @@ let format_chaining fmt (c : chaining) = Format.fprintf fmt "%s" c
 
 let format_variable_name fmt (v : string) = Format.fprintf fmt "%s" v
 
-let format_variable_generic_name fmt (v : Com.var_name_generic) =
-  Format.fprintf fmt "%s" v.base
-
 let format_variable fmt (v : Com.m_var_name) =
   match Pos.unmark v with
-  | Com.Normal v -> format_variable_name fmt v
-  | Com.Generic v -> format_variable_generic_name fmt v
+  | Com.Normal v | Com.Generic { base = v; parameters = _ } ->
+      Com.format_var_id fmt v
 
 let format_error_name fmt (e : error_name) = Format.fprintf fmt "%s" e
 

@@ -25,6 +25,13 @@ let parse_variable_name sloc (s : string) : string =
     E.raise_spanned_error "invalid variable name" (mk_position sloc)
   else s
 
+let parse_variable_id sloc (s : string) : Com.var_id =
+  match String.split_on_char '.' s with
+  | [ v ] -> { vi_base = v; vi_namespace = None }
+  | [ ns; v ] -> { vi_base = v; vi_namespace = Some ns }
+  | [] -> assert false
+  | _ -> E.raise_spanned_error "invalid variable identifier" (mk_position sloc)
+
 let parse_parameter sloc (s : string) : char =
   if String.length s <> 1 then
     E.raise_spanned_error "invalid parameter" (mk_position sloc)
@@ -47,21 +54,21 @@ let dup_exists l =
 let parse_variable_generic_name sloc (s : string) : Com.var_name_generic =
   let parameters = ref [] in
   for i = String.length s - 1 downto 0 do
-    let p = s.[i] in
-    if
-      p = '_'
-      || Re.Str.string_match (Re.Str.regexp "[0-9]+") (String.make 1 p) 0
-      || not (Char.equal (Char.lowercase_ascii p) p)
-    then ()
-    else parameters := p :: !parameters
+    match s.[i] with
+    | '_' | '0' .. '9' | 'A' .. 'Z' | '.' -> ()
+    | 'a' .. 'z' as p -> parameters := p :: !parameters
+    | p ->
+        E.raise_spanned_error
+          (Format.sprintf "invalid character '%c' in variable name" p)
+          (mk_position sloc)
   done;
   if dup_exists !parameters then
     E.raise_spanned_error "variable parameters should have distinct names"
       (mk_position sloc);
-  { Com.parameters = !parameters; Com.base = s }
+  { Com.parameters = !parameters; Com.base = parse_variable_id sloc s }
 
 let parse_variable sloc (s : string) =
-  try Com.Normal (parse_variable_name sloc s)
+  try Com.Normal (parse_variable_id sloc s)
   with E.StructuredError _ -> (
     try Com.Generic (parse_variable_generic_name sloc s)
     with E.StructuredError _ ->
@@ -72,7 +79,7 @@ type parse_val = ParseVar of Com.var_name | ParseInt of int
 let parse_variable_or_int sloc (s : string) : parse_val =
   try ParseInt (int_of_string s)
   with Failure _ -> (
-    try ParseVar (Com.Normal (parse_variable_name sloc s))
+    try ParseVar (Com.Normal (parse_variable_id sloc s))
     with E.StructuredError _ -> (
       try ParseVar (Com.Generic (parse_variable_generic_name sloc s))
       with E.StructuredError _ ->
