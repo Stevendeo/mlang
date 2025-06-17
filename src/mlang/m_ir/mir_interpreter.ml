@@ -14,6 +14,8 @@
    You should have received a copy of the GNU General Public License along with
    this program. If not, see <https://www.gnu.org/licenses/>. *)
 
+exception Stop_instruction
+
 let exit_on_rte = ref true
 
 let repl_debug = ref false
@@ -836,54 +838,59 @@ struct
                 pr_flush ())
           args;
         pr_flush ()
-    | Com.Iterate ((var : Com.Var.t), vars, var_params, stmts) ->
-        List.iter
-          (fun v ->
-            set_var_ref ctx var (get_var ctx v);
-            evaluate_stmts canBlock ctx stmts)
-          vars;
-        List.iter
-          (fun (vcs, expr) ->
-            let eval vc _ =
-              StrMap.iter
-                (fun _ v ->
-                  if
-                    Com.CatVar.compare (Com.Var.cat v) vc = 0
-                    && not (Com.Var.is_table v)
-                  then (
-                    set_var_ref ctx var (get_var ctx v);
-                    match evaluate_expr ctx expr with
-                    | Number z when N.(z =. one ()) ->
-                        evaluate_stmts canBlock ctx stmts
-                    | _ -> ()))
-                ctx.ctx_prog.program_vars
-            in
-            Com.CatVar.Map.iter eval vcs)
-          var_params
-    | Com.Iterate_values ((var : Com.Var.t), var_intervals, stmts) ->
-        List.iter
-          (fun (e0, e1, step) ->
-            match evaluate_expr ctx e0 with
-            | Number z0 -> (
-                match evaluate_expr ctx e1 with
-                | Number z1 -> (
-                    match evaluate_expr ctx step with
-                    | Number zStep when not N.(is_zero zStep) ->
-                        let cmp =
-                          if N.(zStep > zero ()) then N.( <=. ) else N.( >=. )
-                        in
-                        let rec loop i =
-                          if cmp i z1 then (
-                            let vsd = ctx.ctx_prog.program_var_space_def in
-                            set_var_value ctx vsd var (Number i);
-                            evaluate_stmts canBlock ctx stmts;
-                            loop N.(i +. zStep))
-                        in
-                        loop z0
-                    | _ -> ())
-                | Undefined -> ())
-            | Undefined -> ())
-          var_intervals
+    | Com.Iterate ((var : Com.Var.t), vars, var_params, stmts) -> (
+        try
+          List.iter
+            (fun v ->
+              set_var_ref ctx var (get_var ctx v);
+              evaluate_stmts canBlock ctx stmts)
+            vars;
+          List.iter
+            (fun (vcs, expr) ->
+              let eval vc _ =
+                StrMap.iter
+                  (fun _ v ->
+                    if
+                      Com.CatVar.compare (Com.Var.cat v) vc = 0
+                      && not (Com.Var.is_table v)
+                    then (
+                      set_var_ref ctx var (get_var ctx v);
+                      match evaluate_expr ctx expr with
+                      | Number z when N.(z =. one ()) ->
+                          evaluate_stmts canBlock ctx stmts
+                      | _ -> ()))
+                  ctx.ctx_prog.program_vars
+              in
+              Com.CatVar.Map.iter eval vcs)
+            var_params
+        with Stop_instruction -> ())
+    | Com.Iterate_values ((var : Com.Var.t), var_intervals, stmts) -> (
+        try
+          List.iter
+            (fun (e0, e1, step) ->
+              match evaluate_expr ctx e0 with
+              | Number z0 -> (
+                  match evaluate_expr ctx e1 with
+                  | Number z1 -> (
+                      match evaluate_expr ctx step with
+                      | Number zStep when not N.(is_zero zStep) ->
+                          let cmp =
+                            if N.(zStep > zero ()) then N.( <=. ) else N.( >=. )
+                          in
+                          let rec loop i =
+                            if cmp i z1 then (
+                              let vsd = ctx.ctx_prog.program_var_space_def in
+                              set_var_value ctx vsd var (Number i);
+                              evaluate_stmts canBlock ctx stmts;
+                              loop N.(i +. zStep))
+                          in
+                          loop z0
+                      | Undefined | Number _ -> ())
+                  | Undefined -> ())
+              | Undefined -> ())
+            var_intervals
+        with Stop_instruction -> ())
+    | Com.Stop -> raise Stop_instruction
     | Com.Restore (vars, var_params, evts, evtfs, stmts) ->
         let vsd_def = ctx.ctx_prog.program_var_space_def in
         let backup backup_vars var =

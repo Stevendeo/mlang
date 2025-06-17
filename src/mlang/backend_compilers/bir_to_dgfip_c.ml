@@ -17,6 +17,26 @@
 module D = DecoupledExpr
 module VID = Dgfip_varid
 
+type env = {
+  iter_ids : string list;
+  (* A list of identifiers for iter loops *)
+  iter_depth : int; (* = List.length iter_ids*)
+}
+
+let empty_env = { iter_ids = []; iter_depth = 0 }
+
+let fresh_iter_id =
+  let cpt = ref 0 in
+  fun env ->
+    let id = Format.sprintf "label_%i" !cpt in
+    incr cpt;
+    (id, { iter_ids = id :: env.iter_ids; iter_depth = env.iter_depth + 1 })
+
+let last_id env =
+  match env.iter_ids with
+  | [] -> failwith "cannot fetch last id from compiration env"
+  | hd :: _ -> hd
+
 let str_escape str =
   let l = String.length str in
   let buf = Buffer.create l in
@@ -739,7 +759,7 @@ let generate_event_field_ref (program : Mir.program)
     pr "@]@;}";
     pr "@]@;}")
 
-let rec generate_stmt (dgfip_flags : Dgfip_options.flags)
+let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
     (program : Mir.program) (oc : Format.formatter) (stmt : Mir.m_instruction) =
   let pr fmt = Format.fprintf oc fmt in
   match Pos.unmark stmt with
@@ -766,10 +786,10 @@ let rec generate_stmt (dgfip_flags : Dgfip_options.flags)
       generate_expr_with_res_in program dgfip_flags oc cond_def cond_val
         cond_expr;
       pr "@;@[<v 2>if (%s && %s != 0.0) {" cond_def cond_val;
-      pr "%a" (generate_stmts dgfip_flags program) iftrue;
+      pr "%a" (generate_stmts env dgfip_flags program) iftrue;
       if iffalse <> [] then (
         pr "@]@;@[<v 2>} else if (%s) {" cond_def;
-        pr "%a" (generate_stmts dgfip_flags program) iffalse);
+        pr "%a" (generate_stmts env dgfip_flags program) iffalse);
       pr "@]@;}";
       pr "@]@;}"
   | WhenDoElse (wdl, ed) ->
@@ -786,7 +806,7 @@ let rec generate_stmt (dgfip_flags : Dgfip_options.flags)
               expr;
             pr "@;@[<v 2>if(%s) {" cond_def;
             pr "@;if (! %s) goto %s;" cond_val goto_label;
-            pr "%a" (generate_stmts dgfip_flags program) dl;
+            pr "%a" (generate_stmts env dgfip_flags program) dl;
             pr "@]@;}";
             aux l
         | [] -> ()
@@ -794,14 +814,14 @@ let rec generate_stmt (dgfip_flags : Dgfip_options.flags)
       aux wdl;
       pr "@;goto %s;" fin_label;
       pr "@;%s:" goto_label;
-      pr "%a" (generate_stmts dgfip_flags program) (Pos.unmark ed);
+      pr "%a" (generate_stmts env dgfip_flags program) (Pos.unmark ed);
       pr "@;%s:{}" fin_label;
       pr "@]@;}"
   | VerifBlock stmts ->
       let goto_label = fresh_c_local "verif_block" in
       pr "@;@[<v 2>{";
       pr "@;if (setjmp(irdata->jmp_bloq) != 0) goto %s;" goto_label;
-      pr "%a" (generate_stmts dgfip_flags program) stmts;
+      pr "%a" (generate_stmts env dgfip_flags program) stmts;
       pr "%s:;" goto_label;
       pr "@]@;}"
   | Print (std, args) ->
@@ -944,7 +964,7 @@ let rec generate_stmt (dgfip_flags : Dgfip_options.flags)
           (* !!! *)
           pr "@;%s = %s;" ref_val (VID.gen_val_ptr None v);
           (* !!! *)
-          pr "%a" (generate_stmts dgfip_flags program) stmts;
+          pr "%a" (generate_stmts env dgfip_flags program) stmts;
           pr "@]@;}")
         vars;
       List.iter
@@ -957,6 +977,7 @@ let rec generate_stmt (dgfip_flags : Dgfip_options.flags)
               let cond = fresh_c_local "cond" in
               let cond_def = cond ^ "_def" in
               let cond_val = cond ^ "_val" in
+              let id, env = fresh_iter_id env in
               pr "@;@[<v 2>{";
               pr "@;T_varinfo_%s *tab_%s = varinfo_%s;" vcd.id_str it_name
                 vcd.id_str;
@@ -972,13 +993,13 @@ let rec generate_stmt (dgfip_flags : Dgfip_options.flags)
               generate_expr_with_res_in program dgfip_flags oc cond_def cond_val
                 expr;
               pr "@;@[<hov 2>if (%s && %s != 0.0) {" cond_def cond_val;
-              pr "%a" (generate_stmts dgfip_flags program) stmts;
+              pr "%a" (generate_stmts env dgfip_flags program) stmts;
               pr "@]@;}";
               pr "@]@;}";
               pr "@;tab_%s++;" it_name;
               pr "@;nb_%s++;" it_name;
               pr "@]@;}";
-              pr "@]@;}")
+              pr "@]@; %s: ;}" id)
             vcs)
         var_params
   | Iterate_values (var, var_intervals, stmts) ->
@@ -993,6 +1014,7 @@ let rec generate_stmt (dgfip_flags : Dgfip_options.flags)
       let e1_val = Format.sprintf "e1_val%s" postfix in
       let step_def = Format.sprintf "step_def%s" postfix in
       let step_val = Format.sprintf "step_val%s" postfix in
+      let id, env = fresh_iter_id env in
       List.iter
         (fun (e0, e1, step) ->
           pr "@;@[<v 2>{";
@@ -1011,10 +1033,10 @@ let rec generate_stmt (dgfip_flags : Dgfip_options.flags)
              >= %s);@ %s = %s + %s) {@]"
             itval_def itval_val e0_val step_val itval_val e1_val itval_val
             e1_val itval_val itval_val step_val;
-          pr "%a" (generate_stmts dgfip_flags program) stmts;
+          pr "%a" (generate_stmts env dgfip_flags program) stmts;
           pr "@]@;}";
           pr "@]@;}";
-          pr "@]@;}")
+          pr "@]@; %s: ;}" id)
         var_intervals
   | ArrangeEvents (sort, filter, add, stmts) ->
       let events_sav = fresh_c_local "events_sav" in
@@ -1169,7 +1191,7 @@ let rec generate_stmt (dgfip_flags : Dgfip_options.flags)
           pr "@;free(b);";
           pr "@]@;}"
       | None -> ());
-      pr "%a" (generate_stmts dgfip_flags program) stmts;
+      pr "%a" (generate_stmts env dgfip_flags program) stmts;
       pr "@;free(irdata->events);";
       pr "@;irdata->events = %s;" events_sav;
       pr "@;irdata->nb_events = %s;" nb_events_sav;
@@ -1273,7 +1295,7 @@ let rec generate_stmt (dgfip_flags : Dgfip_options.flags)
           pr "@]@;}";
           pr "@]@;}")
         evtfs;
-      pr "%a" (generate_stmts dgfip_flags program) stmts;
+      pr "%a" (generate_stmts env dgfip_flags program) stmts;
       pr "@;env_restaurer(&%s);@;" rest_name;
       pr "@;env_restaurer_evt(&%s);@;" rest_evt_name;
       pr "@]@;}"
@@ -1289,11 +1311,13 @@ let rec generate_stmt (dgfip_flags : Dgfip_options.flags)
   | CleanErrors -> Format.fprintf oc "@;nettoie_erreur(irdata);"
   | ExportErrors -> Format.fprintf oc "@;exporte_erreur(irdata);"
   | FinalizeErrors -> Format.fprintf oc "@;finalise_erreur(irdata);"
+  | Stop -> Format.fprintf oc "@; goto %s;" (last_id env)
   | ComputeDomain _ | ComputeChaining _ | ComputeVerifs _ -> assert false
 
-and generate_stmts (dgfip_flags : Dgfip_options.flags) (program : Mir.program)
-    (oc : Format.formatter) (stmts : Mir.m_instruction list) =
-  List.iter (generate_stmt dgfip_flags program oc) stmts
+and generate_stmts env (dgfip_flags : Dgfip_options.flags)
+    (program : Mir.program) (oc : Format.formatter)
+    (stmts : Mir.m_instruction list) =
+  List.iter (generate_stmt env dgfip_flags program oc) stmts
 
 let generate_function_tmp_decls (oc : Format.formatter) (tf : Mir.target) =
   let pr fmt = Format.fprintf oc fmt in
@@ -1369,7 +1393,7 @@ let generate_function (dgfip_flags : Dgfip_options.flags)
   pr "@;irdata->nb_refs_target = %d;" fd.target_nb_refs;
   pr "@;";
   if dgfip_flags.flg_trace then pr "@;aff1(\"debut %s\\n\");" fn;
-  pr "%a" (generate_stmts dgfip_flags program) fd.target_prog;
+  pr "%a" (generate_stmts empty_env dgfip_flags program) fd.target_prog;
 
   if dgfip_flags.flg_trace then pr "@;aff1(\"fin %s\\n\");" fn;
   pr "@;";
@@ -1439,7 +1463,7 @@ let generate_target (dgfip_flags : Dgfip_options.flags) (program : Mir.program)
   pr "@;irdata->nb_refs_target = %d;" tf.target_nb_refs;
   pr "@;";
   if dgfip_flags.flg_trace then pr "@;aff1(\"debut %s\\n\");" f;
-  pr "%a" (generate_stmts dgfip_flags program) tf.target_prog;
+  pr "%a" (generate_stmts empty_env dgfip_flags program) tf.target_prog;
   if dgfip_flags.flg_trace then pr "@;aff1(\"fin %s\\n\");" f;
   pr "@;";
   if tf.target_nb_refs > 0 then

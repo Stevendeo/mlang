@@ -408,6 +408,7 @@ type ('v, 'e) instruction =
   | CleanErrors
   | ExportErrors
   | FinalizeErrors
+  | Stop
 
 and ('v, 'e) m_instruction = ('v, 'e) instruction Pos.marked
 

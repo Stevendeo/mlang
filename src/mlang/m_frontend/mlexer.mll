@@ -135,6 +135,7 @@ rule token = parse
     | "sinon_si" -> ELSEIF
     | "sortie" -> OUTPUT
     | "specialise" -> SPECIALIZE
+    | "stop" -> STOP
     | "tableau" -> TABLE
     | "taille" -> SIZE
     | "trier" -> SORT
