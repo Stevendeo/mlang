@@ -382,8 +382,18 @@ module Err = struct
     in
     Errors.raise_spanned_error msg pos
 
-  let stop_in_invalid_scope pos =
+  let stop_outside_scope pos =
     let msg = "instruction stop should only be used inside an iteration" in
+    Errors.raise_spanned_error msg pos
+
+  let stop_with_invalid_scope scope current_scopes pos =
+    let msg =
+      Pp.spr "scope %s cannot be exited; current scopes are: %a" scope
+        (Format.pp_print_list
+           ~pp_sep:(fun fmt _ -> Format.fprintf fmt ",")
+           Format.pp_print_string)
+        current_scopes
+    in
     Errors.raise_spanned_error msg pos
 end
 
@@ -1144,12 +1154,12 @@ type var_env = {
   prog : program;
   proc_type : proc_type;
   vars : int StrMap.t;
-  stoppable : int;
-      (* Depth of what can be stopped with the "stop" instruction. *)
+  scopes : string list;
+      (* Scopes of what can be stopped with the "stop" instruction. *)
 }
 
 let new_var_env ?(vars = StrMap.empty) prog proc_type =
-  { prog; proc_type; vars; stoppable = 0 }
+  { prog; proc_type; vars; scopes = [] }
 
 let mod_var_env env proc_type = { env with proc_type }
 
@@ -1801,13 +1811,15 @@ let rec check_instructions (env : var_env)
                   (vcats, map_expr env' expr))
                 var_params
             in
-            let env'' = { env' with stoppable = env'.stoppable + 1 } in
+            let env'' =
+              let new_scope = Com.get_var_name @@ Pos.unmark var in
+              { env' with scopes = new_scope :: env'.scopes }
+            in
             let prog, instrs' = check_instructions env'' instrs in
             let env = { env with prog } in
             let instr' = Com.Iterate (var', vars', var_params', instrs') in
             aux (env, Pos.mark instr' instr_pos :: res) il
         | Com.Iterate_values (var, var_intervals, instrs) ->
-            let env = { env with stoppable = env.stoppable + 1 } in
             let m_name = check_it_var env var in
             let env' =
               let v = Com.Var.new_temp ~name:m_name ~table:None in
@@ -1823,7 +1835,10 @@ let rec check_instructions (env : var_env)
                   (e0', e1', step'))
                 var_intervals
             in
-            let env'' = { env' with stoppable = env'.stoppable + 1 } in
+            let env'' =
+              let new_scope = Com.get_var_name @@ Pos.unmark var in
+              { env' with scopes = new_scope :: env'.scopes }
+            in
             let prog, instrs' = check_instructions env'' instrs in
             let env = { env with prog } in
             let instr' = Com.Iterate_values (var', var_intervals', instrs') in
@@ -1957,12 +1972,18 @@ let rec check_instructions (env : var_env)
             if env.proc_type = Rule then
               Err.instruction_forbidden_in_rules instr_pos;
             aux (env, Pos.mark Com.FinalizeErrors instr_pos :: res) il
-        | Com.Stop ->
+        | Com.Stop scope ->
             (* TODO: allow it in rules to exit *)
             if env.proc_type = Rule then
               Err.instruction_forbidden_in_rules instr_pos;
-            if env.stoppable = 0 then Err.stop_in_invalid_scope instr_pos;
-            aux (env, Pos.mark Com.Stop instr_pos :: res) il)
+            (match env.scopes with
+            | [] -> Err.stop_outside_scope instr_pos
+            | _ -> ());
+            (match scope with
+            | Some s when not (List.mem s env.scopes) ->
+                Err.stop_with_invalid_scope s env.scopes instr_pos
+            | _ -> ());
+            aux (env, Pos.mark (Com.Stop scope) instr_pos :: res) il)
   in
   let env, res = aux (env, []) instrs in
   (env.prog, res)
@@ -2116,7 +2137,7 @@ let rec inout_instrs (env : var_env) (tmps : Pos.t StrMap.t)
             Err.instruction_forbidden_in_rules instr_pos
         | Com.Print _ -> aux (tmps, in_vars, out_vars, def_vars) il
         | Com.Iterate _ -> Err.instruction_forbidden_in_rules instr_pos
-        | Com.Stop ->
+        | Com.Stop _ ->
             Err.instruction_forbidden_in_rules instr_pos
             (* TODO: allow in rules to exit *)
         | Com.Iterate_values (m_id, var_intervals, instrs) ->

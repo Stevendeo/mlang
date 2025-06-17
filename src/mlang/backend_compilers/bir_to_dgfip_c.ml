@@ -25,12 +25,13 @@ type env = {
 
 let empty_env = { iter_ids = []; iter_depth = 0 }
 
-let fresh_iter_id =
-  let cpt = ref 0 in
-  fun env ->
-    let id = Format.sprintf "label_%i" !cpt in
-    incr cpt;
-    (id, { iter_ids = id :: env.iter_ids; iter_depth = env.iter_depth + 1 })
+let scope_of_var (v : Com.Var.t) : string = Pos.unmark v.name
+
+let label_of_scope_id scope_id = Format.sprintf "label_%s" scope_id
+
+let fresh_iter_id ~scope_id env =
+  let id = label_of_scope_id scope_id in
+  (id, { iter_ids = id :: env.iter_ids; iter_depth = env.iter_depth + 1 })
 
 let last_id env =
   match env.iter_ids with
@@ -954,7 +955,11 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
       let ref_def = VID.gen_def_ptr None var in
       (* !!! *)
       let ref_val = VID.gen_val_ptr None var in
+      let id, env = fresh_iter_id ~scope_id:(scope_of_var var) env in
       (* !!! *)
+      pr "@;@[<v 2>{";
+      (* New block for local label definition *)
+      pr "@;__label__ %s;" id;
       pr "@;%s = \"%s\";" ref_name (Com.Var.name_str var);
       List.iter
         (fun v ->
@@ -977,7 +982,6 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
               let cond = fresh_c_local "cond" in
               let cond_def = cond ^ "_def" in
               let cond_val = cond ^ "_val" in
-              let id, env = fresh_iter_id env in
               pr "@;@[<v 2>{";
               pr "@;T_varinfo_%s *tab_%s = varinfo_%s;" vcd.id_str it_name
                 vcd.id_str;
@@ -999,9 +1003,11 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
               pr "@;tab_%s++;" it_name;
               pr "@;nb_%s++;" it_name;
               pr "@]@;}";
-              pr "@]@; %s: ;}" id)
+              pr "@]@;}")
             vcs)
-        var_params
+        var_params;
+      pr "@;@]%s: ;} // End of local label %s" id id
+      (* End of local label scope *)
   | Iterate_values (var, var_intervals, stmts) ->
       let itval_def = VID.gen_def None var in
       (* !!! *)
@@ -1014,7 +1020,10 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
       let e1_val = Format.sprintf "e1_val%s" postfix in
       let step_def = Format.sprintf "step_def%s" postfix in
       let step_val = Format.sprintf "step_val%s" postfix in
-      let id, env = fresh_iter_id env in
+      let id, env = fresh_iter_id ~scope_id:(scope_of_var var) env in
+      pr "@;@[<v 2>{";
+      pr "@;__label__ %s;" id;
+      (* New block for local label definition *)
       List.iter
         (fun (e0, e1, step) ->
           pr "@;@[<v 2>{";
@@ -1036,8 +1045,10 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
           pr "%a" (generate_stmts env dgfip_flags program) stmts;
           pr "@]@;}";
           pr "@]@;}";
-          pr "@]@; %s: ;}" id)
-        var_intervals
+          pr "@]@;}")
+        var_intervals;
+      pr "@;@]%s:;} // End of local label %s" id id
+      (* End of local label scope *)
   | ArrangeEvents (sort, filter, add, stmts) ->
       let events_sav = fresh_c_local "events_sav" in
       let events_tmp = fresh_c_local "events_tmp" in
@@ -1311,7 +1322,11 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
   | CleanErrors -> Format.fprintf oc "@;nettoie_erreur(irdata);"
   | ExportErrors -> Format.fprintf oc "@;exporte_erreur(irdata);"
   | FinalizeErrors -> Format.fprintf oc "@;finalise_erreur(irdata);"
-  | Stop -> Format.fprintf oc "@; goto %s;" (last_id env)
+  | Stop None -> Format.fprintf oc "@; goto %s;" (last_id env)
+  | Stop (Some id) ->
+      let label = label_of_scope_id id in
+      assert (List.mem label env.iter_ids);
+      Format.fprintf oc "@; goto %s;" label
   | ComputeDomain _ | ComputeChaining _ | ComputeVerifs _ -> assert false
 
 and generate_stmts env (dgfip_flags : Dgfip_options.flags)

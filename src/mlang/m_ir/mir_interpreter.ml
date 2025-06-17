@@ -14,7 +14,7 @@
    You should have received a copy of the GNU General Public License along with
    this program. If not, see <https://www.gnu.org/licenses/>. *)
 
-exception Stop_instruction
+exception Stop_instruction of string option
 
 let exit_on_rte = ref true
 
@@ -863,7 +863,10 @@ struct
               in
               Com.CatVar.Map.iter eval vcs)
             var_params
-        with Stop_instruction -> ())
+        with
+        | Stop_instruction None -> ()
+        | Stop_instruction (Some scope) as exn ->
+            if scope = Pos.unmark var.name then () else raise exn)
     | Com.Iterate_values ((var : Com.Var.t), var_intervals, stmts) -> (
         try
           List.iter
@@ -889,8 +892,11 @@ struct
                   | Undefined -> ())
               | Undefined -> ())
             var_intervals
-        with Stop_instruction -> ())
-    | Com.Stop -> raise Stop_instruction
+        with
+        | Stop_instruction None -> ()
+        | Stop_instruction (Some scope) as exn ->
+            if scope = Pos.unmark var.name then () else raise exn)
+    | Com.Stop scope -> raise (Stop_instruction scope)
     | Com.Restore (vars, var_params, evts, evtfs, stmts) ->
         let vsd_def = ctx.ctx_prog.program_var_space_def in
         let backup backup_vars var =

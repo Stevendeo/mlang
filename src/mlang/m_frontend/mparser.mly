@@ -880,7 +880,8 @@ instruction:
 | CLEAN_ERRORS SEMICOLON { Some CleanErrors }
 | EXPORT_ERRORS SEMICOLON { Some ExportErrors }
 | FINALIZE_ERRORS SEMICOLON { Some FinalizeErrors }
-| STOP SEMICOLON { Some Stop }
+| STOP SEMICOLON { Some (Stop None) }
+| STOP s = SYMBOL SEMICOLON { Some (Stop (Some s)) }
 
 target_param:
 | COLON SPACE sp = symbol_with_pos {
