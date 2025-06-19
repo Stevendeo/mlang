@@ -382,11 +382,13 @@ module Err = struct
     in
     Errors.raise_spanned_error msg pos
 
-  let stop_outside_scope pos =
-    let msg = "instruction stop should only be used inside an iteration" in
+  let instruction_outside_scope pos =
+    let msg =
+      Format.sprintf "instruction should only be used inside an iteration"
+    in
     Errors.raise_spanned_error msg pos
 
-  let stop_with_invalid_scope scope current_scopes pos =
+  let instruction_with_invalid_scope scope current_scopes pos =
     let msg =
       Pp.spr "scope %s cannot be exited; current scopes are: %a" scope
         (Format.pp_print_list
@@ -1972,18 +1974,18 @@ let rec check_instructions (env : var_env)
             if env.proc_type = Rule then
               Err.instruction_forbidden_in_rules instr_pos;
             aux (env, Pos.mark Com.FinalizeErrors instr_pos :: res) il
-        | Com.Stop scope ->
-            (* TODO: allow it in rules to exit *)
+        | (Com.Stop scope | Com.Continue scope) as i ->
+            (* TODO: allow stop in rules to exit *)
             if env.proc_type = Rule then
               Err.instruction_forbidden_in_rules instr_pos;
             (match env.scopes with
-            | [] -> Err.stop_outside_scope instr_pos
+            | [] -> Err.instruction_outside_scope instr_pos
             | _ -> ());
             (match scope with
             | Some s when not (List.mem s env.scopes) ->
-                Err.stop_with_invalid_scope s env.scopes instr_pos
+                Err.instruction_with_invalid_scope s env.scopes instr_pos
             | _ -> ());
-            aux (env, Pos.mark (Com.Stop scope) instr_pos :: res) il)
+            aux (env, Pos.mark i instr_pos :: res) il)
   in
   let env, res = aux (env, []) instrs in
   (env.prog, res)
@@ -2137,9 +2139,9 @@ let rec inout_instrs (env : var_env) (tmps : Pos.t StrMap.t)
             Err.instruction_forbidden_in_rules instr_pos
         | Com.Print _ -> aux (tmps, in_vars, out_vars, def_vars) il
         | Com.Iterate _ -> Err.instruction_forbidden_in_rules instr_pos
-        | Com.Stop _ ->
+        | Com.Stop _ | Com.Continue _ ->
             Err.instruction_forbidden_in_rules instr_pos
-            (* TODO: allow in rules to exit *)
+            (* TODO: allow stop in rules to exit *)
         | Com.Iterate_values (m_id, var_intervals, instrs) ->
             let var_name, var_pos =
               let var = IntMap.find (Pos.unmark m_id) env.prog.prog_dict in

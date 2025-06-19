@@ -643,6 +643,7 @@ type ('v, 'e) instruction =
   | ExportErrors
   | FinalizeErrors
   | Stop of string option
+  | Continue of string option
 
 and ('v, 'e) m_instruction = ('v, 'e) instruction Pos.marked
 
@@ -876,6 +877,7 @@ and instr_map_var f g = function
   | ExportErrors -> ExportErrors
   | FinalizeErrors -> FinalizeErrors
   | Stop s -> Stop s
+  | Continue s -> Continue s
 
 and m_instr_map_var f g m_i = Pos.map (instr_map_var f g) m_i
 
@@ -1049,6 +1051,7 @@ and instr_fold_var f instr acc =
   | ExportErrors -> acc
   | FinalizeErrors -> acc
   | Stop _ -> acc
+  | Continue _ -> acc
 
 and m_instr_fold_var f m_i acc = instr_fold_var f (Pos.unmark m_i) acc
 
@@ -1446,6 +1449,8 @@ let rec format_instruction form_var form_err =
     | FinalizeErrors -> Format.fprintf fmt "finalise_erreurs\n"
     | Stop None -> Format.fprintf fmt "stop\n"
     | Stop (Some s) -> Format.fprintf fmt "stop %s\n" s
+    | Continue None -> Format.fprintf fmt "continue\n"
+    | Continue (Some s) -> Format.fprintf fmt "continue %s\n" s
 
 and format_instructions form_var form_err fmt instrs =
   Pp.list "" (Pp.unmark (format_instruction form_var form_err)) fmt instrs

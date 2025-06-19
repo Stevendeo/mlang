@@ -16,6 +16,8 @@
 
 exception Stop_instruction of string option
 
+exception Continue_instruction of string option
+
 let exit_on_rte = ref true
 
 let repl_debug = ref false
@@ -842,23 +844,33 @@ struct
         try
           List.iter
             (fun v ->
-              set_var_ref ctx var (get_var ctx v);
-              evaluate_stmts canBlock ctx stmts)
+              try
+                set_var_ref ctx var (get_var ctx v);
+                evaluate_stmts canBlock ctx stmts
+              with
+              | Continue_instruction None -> ()
+              | Continue_instruction (Some scope) as exn ->
+                  if scope = Pos.unmark var.name then () else raise exn)
             vars;
           List.iter
             (fun (vcs, expr) ->
               let eval vc _ =
                 StrMap.iter
                   (fun _ v ->
-                    if
-                      Com.CatVar.compare (Com.Var.cat v) vc = 0
-                      && not (Com.Var.is_table v)
-                    then (
-                      set_var_ref ctx var (get_var ctx v);
-                      match evaluate_expr ctx expr with
-                      | Number z when N.(z =. one ()) ->
-                          evaluate_stmts canBlock ctx stmts
-                      | _ -> ()))
+                    try
+                      if
+                        Com.CatVar.compare (Com.Var.cat v) vc = 0
+                        && not (Com.Var.is_table v)
+                      then (
+                        set_var_ref ctx var (get_var ctx v);
+                        match evaluate_expr ctx expr with
+                        | Number z when N.(z =. one ()) ->
+                            evaluate_stmts canBlock ctx stmts
+                        | _ -> ())
+                    with
+                    | Continue_instruction None -> ()
+                    | Continue_instruction (Some scope) as exn ->
+                        if scope = Pos.unmark var.name then () else raise exn)
                   ctx.ctx_prog.program_vars
               in
               Com.CatVar.Map.iter eval vcs)
@@ -897,6 +909,7 @@ struct
         | Stop_instruction (Some scope) as exn ->
             if scope = Pos.unmark var.name then () else raise exn)
     | Com.Stop scope -> raise (Stop_instruction scope)
+    | Com.Continue scope -> raise (Continue_instruction scope)
     | Com.Restore (vars, var_params, evts, evtfs, stmts) ->
         let vsd_def = ctx.ctx_prog.program_var_space_def in
         let backup backup_vars var =
@@ -1108,7 +1121,7 @@ struct
     let () =
       try List.iter (evaluate_stmt canBlock ctx) stmts with
       | BlockingError as b_err -> if canBlock then raise b_err
-      | Stop_instruction _ as exn ->
+      | (Stop_instruction _ | Continue_instruction _) as exn ->
           then_ ();
           raise exn
     in

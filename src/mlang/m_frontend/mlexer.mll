@@ -83,6 +83,7 @@ rule token = parse
     | "champ_evenement" -> EVENT_FIELD
     | "cible" -> TARGET
     | "const" -> CONST
+    | "continuer" -> CONTINUE
     | "dans" -> IN
     | "discordance" -> DISCORDANCE
     | "domaine" -> DOMAIN

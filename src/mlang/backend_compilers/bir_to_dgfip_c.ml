@@ -45,8 +45,12 @@ let empty_env = { scopes = [] }
    that can be used to reference nested scopes. *)
 let scope_of_var (v : Com.Var.t) : string = Pos.unmark v.name
 
-(* Given a scope identifier, returns its C label name. *)
-let label_of_scope_id scope_id = Format.sprintf "label_%s" scope_id
+(* Given a scope identifier, returns its stop C label name. *)
+let stop_label_of_scope_id scope_id = Format.sprintf "stop_label_%s" scope_id
+
+(* Same, but for continue C labels. *)
+let continue_label_of_scope_id scope_id =
+  Format.sprintf "cont_label_%s" scope_id
 
 (* Creates a fresh scope identifier from an iterator variable and adds it to
    the environment. *)
@@ -1003,21 +1007,24 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
       (* !!! *)
       let ref_val = VID.gen_val_ptr None var in
       let id, env = fresh_iter_id ~var env in
-      let label = label_of_scope_id id in
+      let stop_id = stop_label_of_scope_id id
+      and cont_id = continue_label_of_scope_id id in
       (* !!! *)
       pr "@;@[<v 2>{";
       (* New block for local label definition *)
-      pr "@;__label__ %s;" label;
+      pr "@;__label__ %s;" stop_id;
       pr "@;%s = \"%s\";" ref_name (Com.Var.name_str var);
       List.iter
         (fun v ->
           pr "@;@[<v 2>{";
+          pr "@;__label__ %s;" cont_id;
           pr "@;%s = %s;" ref_info (VID.gen_info_ptr v);
           pr "@;%s = %s;" ref_def (VID.gen_def_ptr None v);
           (* !!! *)
           pr "@;%s = %s;" ref_val (VID.gen_val_ptr None v);
           (* !!! *)
           pr "%a" (generate_stmts env dgfip_flags program) stmts;
+          pr "@;%s: ; // End of local continue scope %s" cont_id id;
           pr "@]@;}")
         vars;
       List.iter
@@ -1031,6 +1038,7 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
               let cond_def = cond ^ "_def" in
               let cond_val = cond ^ "_val" in
               pr "@;@[<v 2>{";
+              pr "@; __label__ %s;" cont_id;
               pr "@;T_varinfo_%s *tab_%s = varinfo_%s;" vcd.id_str it_name
                 vcd.id_str;
               pr "@;int nb_%s = 0;" it_name;
@@ -1048,13 +1056,14 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
               pr "%a" (generate_stmts env dgfip_flags program) stmts;
               pr "@]@;}";
               pr "@]@;}";
+              pr "@;%s: ; // End of local continue scope %s" cont_id id;
               pr "@;tab_%s++;" it_name;
               pr "@;nb_%s++;" it_name;
               pr "@]@;}";
               pr "@]@;}")
             vcs)
         var_params;
-      pr "@;@]%s: ;} // End of local scope %s" label id
+      pr "@;@]%s: ;} // End of local stop scope for %s" stop_id id
       (* End of local label scope *)
   | Iterate_values (var, var_intervals, stmts) ->
       let itval_def = VID.gen_def None var in
@@ -1069,9 +1078,10 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
       let step_def = Format.sprintf "step_def%s" postfix in
       let step_val = Format.sprintf "step_val%s" postfix in
       let id, env = fresh_iter_id ~var env in
-      let label = label_of_scope_id id in
+      let stop_id = stop_label_of_scope_id id
+      and cont_id = continue_label_of_scope_id id in
       pr "@;@[<v 2>{";
-      pr "@;__label__ %s;" label;
+      pr "@;__label__ %s;" stop_id;
       (* New block for local label definition *)
       List.iter
         (fun (e0, e1, step) ->
@@ -1091,12 +1101,14 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
              >= %s);@ %s = %s + %s) {@]"
             itval_def itval_val e0_val step_val itval_val e1_val itval_val
             e1_val itval_val itval_val step_val;
+          pr "@;__label__ %s;" cont_id;
           pr "%a" (generate_stmts env dgfip_flags program) stmts;
+          pr "@;%s: ; // End of local continue scope %s" cont_id id;
           pr "@]@;}";
           pr "@]@;}";
           pr "@]@;}")
         var_intervals;
-      pr "@;@]%s:;} // End of local scope %s" label id
+      pr "@;@]%s:;} // End of local scope %s" stop_id id
       (* End of local label scope *)
   | ArrangeEvents (sort, filter, add, stmts) ->
       let events_sav = fresh_c_local "events_sav" in
@@ -1381,11 +1393,20 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
   | FinalizeErrors -> Format.fprintf oc "@;finalise_erreur(irdata);"
   | Stop None ->
       sanitize env;
-      Format.fprintf oc "@;goto %s;" (label_of_scope_id @@ current_scope env)
+      Format.fprintf oc "@; goto %s;"
+        (stop_label_of_scope_id @@ current_scope env)
+  | Continue None ->
+      sanitize env;
+      Format.fprintf oc "@; goto %s;"
+        (continue_label_of_scope_id @@ current_scope env)
   | Stop (Some id) ->
+      sanitize env;
       assert (we_are_in_scope ~id env);
-      sanitize ~up_to:id env;
-      Format.fprintf oc "@;goto %s;" (label_of_scope_id id)
+      Format.fprintf oc "@; goto %s;" (stop_label_of_scope_id id)
+  | Continue (Some id) ->
+      sanitize env;
+      assert (we_are_in_scope ~id env);
+      Format.fprintf oc "@; goto %s;" (continue_label_of_scope_id id)
   | ComputeDomain _ | ComputeChaining _ | ComputeVerifs _ -> assert false
 
 and generate_stmts env (dgfip_flags : Dgfip_options.flags)
