@@ -1381,11 +1381,11 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
   | FinalizeErrors -> Format.fprintf oc "@;finalise_erreur(irdata);"
   | Stop None ->
       sanitize env;
-      Format.fprintf oc "@; goto %s;" (label_of_scope_id @@ current_scope env)
+      Format.fprintf oc "@;goto %s;" (label_of_scope_id @@ current_scope env)
   | Stop (Some id) ->
       assert (we_are_in_scope ~id env);
       sanitize ~up_to:id env;
-      Format.fprintf oc "@; goto %s;" (label_of_scope_id id)
+      Format.fprintf oc "@;goto %s;" (label_of_scope_id id)
   | ComputeDomain _ | ComputeChaining _ | ComputeVerifs _ -> assert false
 
 and generate_stmts env (dgfip_flags : Dgfip_options.flags)
