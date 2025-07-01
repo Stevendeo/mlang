@@ -967,12 +967,14 @@ struct
               aux backup_evts 0)
             backup_evts evtfs
         in
-        evaluate_stmts canBlock ctx stmts;
-        List.iter
-          (fun (v, vorg, value) -> set_var_value_org ctx vsd_def v vorg value)
-          backup_vars;
-        let events0 = List.hd ctx.ctx_events in
-        List.iter (fun (i, evt) -> events0.(i) <- evt) backup_evts
+        let then_ () =
+          List.iter
+            (fun (v, vorg, value) -> set_var_value_org ctx vsd_def v vorg value)
+            backup_vars;
+          let events0 = List.hd ctx.ctx_events in
+          List.iter (fun (i, evt) -> events0.(i) <- evt) backup_evts
+        in
+        evaluate_stmts ~then_ canBlock ctx stmts
     | Com.ArrangeEvents (sort, filter, add, stmts) ->
         let event_list, nbAdd =
           match add with
@@ -1055,8 +1057,8 @@ struct
             in
             Sorting.mergeSort sort_fun nbAdd (Array.length events) events
         | None -> ());
-        evaluate_stmts canBlock ctx stmts;
-        ctx.ctx_events <- List.tl ctx.ctx_events
+        let then_ () = ctx.ctx_events <- List.tl ctx.ctx_events in
+        evaluate_stmts ~then_ canBlock ctx stmts
     | Com.RaiseError (m_err, var_opt) ->
         let err = Pos.unmark m_err in
         (match err.typ with
@@ -1101,10 +1103,16 @@ struct
     | Com.ComputeDomain _ | Com.ComputeChaining _ | Com.ComputeVerifs _ ->
         assert false
 
-  and evaluate_stmts canBlock (ctx : ctx) (stmts : Mir.m_instruction list) :
-      unit =
-    try List.iter (evaluate_stmt canBlock ctx) stmts
-    with BlockingError as b_err -> if canBlock then raise b_err
+  and evaluate_stmts ?(then_ = ignore) canBlock (ctx : ctx)
+      (stmts : Mir.m_instruction list) : unit =
+    let () =
+      try List.iter (evaluate_stmt canBlock ctx) stmts with
+      | BlockingError as b_err -> if canBlock then raise b_err
+      | Stop_instruction _ as exn ->
+          then_ ();
+          raise exn
+    in
+    then_ ()
 
   and evaluate_function (ctx : ctx) (target : Mir.target)
       (args : Mir.m_expression list) : value =
