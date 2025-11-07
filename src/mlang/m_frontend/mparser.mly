@@ -61,6 +61,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 %type<Mast.source_file> source_file
 %type<Mast.m_instruction list> instruction_list_rev
+%type<Mast.source_file_item Pos.marked> source_file_item
 
 %nonassoc SEMICOLON
 %left OR
@@ -86,7 +87,7 @@ variable_name:
 
 source_file:
 | vl = with_pos(symbol_colon_etc)* is = source_file_rev EOF {
-    List.flatten (vl :: List.rev is)
+    (vl @ List.rev is)
   }
 
 symbol_colon_etc:
@@ -99,51 +100,51 @@ source_file_rev:
 | { [] }
 
 source_file_item:
-| al = application_etc { al }
-| cl = chaining_etc { cl }
-| cl = var_category_decl_etc { cl }
-| el = event_decl_etc { el }
-| crl = rule_domain_decl_etc { crl }
-| cvl = verif_domain_decl_etc { cvl }
-| vsl = variable_space_decl_etc { vsl }
-| ol = output_etc { ol }
-| rl = rule_etc { rl }
-| vl = verification_etc { vl }
-| tl = target_etc { tl }
-| fl = function_etc { fl }
+| al = application { al }
+| cl = chaining { cl }
+| cl = var_category_decl { cl }
+| el = event_decl { el }
+| crl = rule_domain_decl { crl }
+| cvl = verif_domain_decl { cvl }
+| vsl = variable_space_decl { vsl }
+| ol = output { ol }
+| rl = rule { rl }
+| vl = verification { vl }
+| tl = target { tl }
+| fl = fundef { fl }
 
 var_typ:
 | INPUT { Input }
 | COMPUTED { Computed }
 
-var_category_decl_etc:
-| c = with_pos(var_category_decl) l = with_pos(symbol_colon_etc)* {
-    Pos.same (VarCatDecl c) c :: l
+var_category_decl:
+| c = with_pos(var_category_decl_) {
+    Pos.same (VarCatDecl c) c
   }
 
-var_category_decl:
+var_category_decl_:
 | VARIABLE var_type = var_typ var_category = symbol_with_pos* COLON
   ATTRIBUT var_attributes = separated_nonempty_list(COMMA, symbol_with_pos)
   SEMICOLON {
     { var_type; var_category; var_attributes }
   }
 
-event_decl_etc:
-| e = with_pos(event_decl) l = with_pos(symbol_colon_etc)* {
-    Pos.same (EventDecl (Pos.unmark e)) e :: l
+event_decl:
+| e = with_pos(event_decl_) {
+    Pos.same (EventDecl (Pos.unmark e)) e
   }
 
 event_field:
 | VARIABLE name = symbol_with_pos { Com.{name; is_var = true; index = 0} }
 | VALUE name = symbol_with_pos { Com.{name; is_var = false; index = 0} }
 
-event_decl:
+event_decl_:
 | EVENT COLON el = separated_nonempty_list(COLON, event_field) SEMICOLON { el }
 
-rule_domain_decl_etc:
-| cr =with_pos(rule_domain_decl) l = with_pos(symbol_colon_etc)* { cr :: l }
-
 rule_domain_decl:
+| cr = with_pos(rule_domain_decl_) { cr }
+
+rule_domain_decl_:
 | DOMAIN RULE rdom_params = separated_nonempty_list(COLON, with_pos(rdom_param))
   SEMICOLON {
     let err msg pos = Errors.raise_spanned_error msg pos in
@@ -188,10 +189,10 @@ rdom_param:
 | BY_DEFAULT
   { (None, None, None, Some ()) }
 
-verif_domain_decl_etc:
-| cv = with_pos(verif_domain_decl) l = with_pos(symbol_colon_etc)* { cv :: l }
-
 verif_domain_decl:
+| cv = with_pos(verif_domain_decl_) { cv }
+
+verif_domain_decl_:
 | DOMAIN VERIFICATION vdom_params = separated_nonempty_list(COLON, with_pos(vdom_param))
   SEMICOLON {
     let err msg pos = Errors.raise_spanned_error msg pos in
@@ -256,19 +257,19 @@ vdom_param:
 fonction:
 | SYMBOL COLON FONCTION SYMBOL SEMICOLON { () }
 
-application_etc:
-| a = with_pos(application) l = with_pos(symbol_colon_etc)* { a :: l }
-
 application:
+| a = with_pos(application_) { a }
+
+application_:
 | APPLICATION s = with_pos(SYMBOL) SEMICOLON { Application s }
 
 application_reference:
 | APPLICATION COLON ss = symbol_enumeration { ss }
 
-chaining_etc:
-| c = with_pos(chaining) l = with_pos(symbol_colon_etc)* { c :: l }
-
 chaining:
+| c = with_pos(chaining_) { c }
+
+chaining_:
 | CHAINING s = symbol_with_pos aps = application_reference SEMICOLON {
     Chaining (s, aps)
   }
@@ -395,10 +396,10 @@ input_variable:
     }
   }
 
-variable_space_decl_etc:
-| vs = with_pos(variable_space_decl) l = with_pos(symbol_colon_etc)* { vs :: l }
-
 variable_space_decl:
+| vs = with_pos(variable_space_decl_) { vs  }
+
+variable_space_decl_:
 | VARIABLE_SPACE m_name = symbol_with_pos COLON
   vs_params = separated_nonempty_list(COLON, with_pos(vs_param)) SEMICOLON {
     let err msg pos = Errors.raise_spanned_error msg pos in
@@ -463,10 +464,10 @@ vs_param:
   }
 | BY_DEFAULT { None, Some () }
 
-rule_etc:
+rule:
 | RULE name = symbol_list_with_pos COLON
   header = nonempty_list(with_pos(rule_header_elt))
-  formulaes_etc = instruction_list_etc
+  rule_formulaes = instruction_list
   {
     let num, rule_tag_names =
       let uname = Pos.unmark name in
@@ -574,7 +575,6 @@ rule_etc:
       in
       aux None None None header
     in
-    let rule_formulaes, l = formulaes_etc in 
     let rule = {
       rule_number;
       rule_tag_names;
@@ -583,7 +583,7 @@ rule_etc:
       rule_tmp_vars;
       rule_formulaes;
     } in
-    Pos.same (Rule rule) name :: l
+    Pos.same (Rule rule) name
   }
 
 rule_header_elt:
@@ -593,12 +593,11 @@ rule_header_elt:
   tmp_vars = separated_nonempty_list(COMMA, temporary_variable_name) SEMICOLON
   { `TmpVars tmp_vars }
 
-target_etc:
+target:
 | TARGET name = symbol_with_pos COLON
   header = nonempty_list(with_pos(target_header_elt))
-  prog_etc = instruction_list_etc
+  target_prog = instruction_list
   {
-    let target_prog, l = prog_etc in
     let target_apps, target_args, target_tmp_vars, _ =
       parse_target_or_function_header name false header
     in
@@ -611,7 +610,7 @@ target_etc:
       target_tmp_vars;
       target_prog;
     } in
-    Pos.same (Target target) name :: l
+    Pos.same (Target target) name
   }
 
 target_header_elt:
@@ -623,14 +622,13 @@ target_header_elt:
 | TEMP_VARS COLON
   tmp_vars = separated_nonempty_list(COMMA, temporary_variable_name) SEMICOLON {
     Target_tmp_vars tmp_vars
-  }
+}
 
-function_etc:
+fundef:
 | FONCTION name = symbol_with_pos COLON
   header = nonempty_list(with_pos(function_header_elt))
-  prog_etc = instruction_list_etc
+  target_prog = instruction_list
   {
-    let target_prog, l = prog_etc in
     let target_apps, target_args, target_tmp_vars, target_result =
       parse_target_or_function_header name true header
     in
@@ -643,7 +641,7 @@ function_etc:
       target_tmp_vars;
       target_prog;
     } in
-    Pos.same (Function target) name :: l
+    Pos.same (Function target) name
   }
 
 function_header_elt:
@@ -671,19 +669,16 @@ compute_space:
     Pos.same (parse_variable $sloc (Pos.unmark sp)) sp
   }
 
-instruction_list_etc:
-| i_opt = with_pos(instruction) l = with_pos(symbol_colon_etc)* {
+instruction_list:
+| i_opt = with_pos(instruction) l = instruction_list {
     match Pos.unmark i_opt with
-    | None -> [], l
-    | Some i -> [Pos.same i i_opt], l
+    | None -> l
+    | Some i -> (Pos.same i i_opt) :: l
   }
-| i_opt = with_pos(instruction) il_etc = instruction_list_etc {
+| i_opt = with_pos(instruction) {
     match Pos.unmark i_opt with
-    | None -> il_etc
-    | Some i ->
-        let il, l = il_etc in
-        (Pos.same i i_opt) :: il, l
-  }
+    | None -> []
+    | Some i -> [Pos.same i i_opt] }
 
 instruction_list_rev:
 | i_opt = with_pos(instruction) {
@@ -1159,10 +1154,10 @@ formula:
     EventFieldRef (idx, f, -1, var)
   }
 
-verification_etc:
-| v = with_pos(verification) l = with_pos(symbol_colon_etc)* { v :: l }
-
 verification:
+| v = with_pos(verification_) { v }
+
+verification_:
 | VERIFICATION name = symbol_list_with_pos COLON
   APPLICATION COLON apps = symbol_enumeration SEMICOLON
   verif_conditions = with_pos(verification_condition)+ {
@@ -1260,10 +1255,10 @@ type_error:
 | INFORMATIVE { Com.Error.Information }
 
 
-output_etc:
-| o = with_pos(output) l = with_pos(symbol_colon_etc)* { o :: l }
-
 output:
+| o = with_pos(output_) { o }
+
+output_:
 | OUTPUT LPAREN s = with_pos(variable_name) RPAREN SEMICOLON { Output s }
 
 brackets:
@@ -1524,4 +1519,3 @@ function_arguments:
 
 symbol_enumeration:
 | ss = separated_nonempty_list(COMMA, symbol_with_pos) { ss }
-
