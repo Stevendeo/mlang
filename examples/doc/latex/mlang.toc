@@ -1,0 +1,88 @@
+\babel@toc {french}{}\relax 
+\contentsline {chapter}{\numberline {1}Le langage M}{1}{chapter.1}%
+\contentsline {section}{\numberline {1.1}Introduction au langage M}{1}{section.1.1}%
+\contentsline {subsection}{\numberline {1.1.1}Les éléments de base}{1}{subsection.1.1.1}%
+\contentsline {subsection}{\numberline {1.1.2}Définitions par défaut}{1}{subsection.1.1.2}%
+\contentsline {subsection}{\numberline {1.1.3}Aperçu de la syntaxe}{1}{subsection.1.1.3}%
+\contentsline {subsection}{\numberline {1.1.4}Définition de variables}{2}{subsection.1.1.4}%
+\contentsline {subsection}{\numberline {1.1.5}Règles de calcul}{3}{subsection.1.1.5}%
+\contentsline {section}{\numberline {1.2}La syntaxe du M}{4}{section.1.2}%
+\contentsline {subsection}{\numberline {1.2.1}Programme M et applications}{4}{subsection.1.2.1}%
+\contentsline {subsection}{\numberline {1.2.2}Définitions liminaires}{5}{subsection.1.2.2}%
+\contentsline {subsubsection}{Déclaration une d’application}{5}{subsubsection*.3}%
+\contentsline {subsubsection}{Définition d’une constante}{5}{subsubsection*.4}%
+\contentsline {subsubsection}{Déclaration d’un enchaîneur}{6}{subsubsection*.5}%
+\contentsline {subsubsection}{Définition d’une catégorie de variables}{6}{subsubsection*.6}%
+\contentsline {subsubsection}{Déclaration d’une variable}{6}{subsubsection*.7}%
+\contentsline {paragraph}{Variable saisie}{6}{paragraph*.8}%
+\contentsline {paragraph}{Variable calculée}{6}{paragraph*.9}%
+\contentsline {subsubsection}{Déclaration d’une erreur}{6}{subsubsection*.10}%
+\contentsline {subsubsection}{Déclaration d’une fonction externe}{7}{subsubsection*.11}%
+\contentsline {subsubsection}{Définition d’un domaine de règles}{7}{subsubsection*.12}%
+\contentsline {subsubsection}{Définition d’un domaine de vérifications}{7}{subsubsection*.13}%
+\contentsline {subsubsection}{Déclaration d’une sortie}{7}{subsubsection*.14}%
+\contentsline {subsubsection}{Indices}{7}{subsubsection*.15}%
+\contentsline {subsubsection}{Expressions}{8}{subsubsection*.16}%
+\contentsline {subsubsection}{Instructions}{8}{subsubsection*.17}%
+\contentsline {subsubsection}{Définition d’une règle}{10}{subsubsection*.18}%
+\contentsline {subsubsection}{Définition d’une vérification}{10}{subsubsection*.19}%
+\contentsline {subsubsection}{Définition d’une fonction}{10}{subsubsection*.20}%
+\contentsline {subsubsection}{Définition d’une cible}{11}{subsubsection*.21}%
+\contentsline {subsubsection}{Commentaires}{11}{subsubsection*.22}%
+\contentsline {subsection}{\numberline {1.2.3}Les valeurs}{11}{subsection.1.2.3}%
+\contentsline {subsubsection}{Calcul booléen}{11}{subsubsection*.23}%
+\contentsline {subsubsection}{Calcul numérique}{12}{subsubsection*.24}%
+\contentsline {section}{\numberline {1.3}Les fonctions}{12}{section.1.3}%
+\contentsline {subsection}{\numberline {1.3.1}abs(X)}{12}{subsection.1.3.1}%
+\contentsline {subsection}{\numberline {1.3.2}afficher(X) / afficher « texte »}{12}{subsection.1.3.2}%
+\contentsline {subsection}{\numberline {1.3.3}arr(X)}{12}{subsection.1.3.3}%
+\contentsline {subsection}{\numberline {1.3.4}attribut(X, attribut)}{12}{subsection.1.3.4}%
+\contentsline {subsection}{\numberline {1.3.5}champ\_evenement(X, champ)}{12}{subsection.1.3.5}%
+\contentsline {subsection}{\numberline {1.3.6}inf(X)}{13}{subsection.1.3.6}%
+\contentsline {subsection}{\numberline {1.3.7}max(X, Y)}{13}{subsection.1.3.7}%
+\contentsline {subsection}{\numberline {1.3.8}meme\_variable(X, Y)}{13}{subsection.1.3.8}%
+\contentsline {subsection}{\numberline {1.3.9}multimax(X, TAB)}{13}{subsection.1.3.9}%
+\contentsline {subsection}{\numberline {1.3.10}min(X, Y)}{13}{subsection.1.3.10}%
+\contentsline {subsection}{\numberline {1.3.11}nb\_evenements()}{13}{subsection.1.3.11}%
+\contentsline {subsection}{\numberline {1.3.12}null(X)}{13}{subsection.1.3.12}%
+\contentsline {subsection}{\numberline {1.3.13}positif(X)}{13}{subsection.1.3.13}%
+\contentsline {subsection}{\numberline {1.3.14}positif\_ou\_nul(X)}{13}{subsection.1.3.14}%
+\contentsline {subsection}{\numberline {1.3.15}present(X)}{13}{subsection.1.3.15}%
+\contentsline {subsection}{\numberline {1.3.16}somme(X, Y, …)}{14}{subsection.1.3.16}%
+\contentsline {subsection}{\numberline {1.3.17}supzero(X)}{14}{subsection.1.3.17}%
+\contentsline {subsection}{\numberline {1.3.18}taille(TAB)}{14}{subsection.1.3.18}%
+\contentsline {subsection}{\numberline {1.3.19}type(V, type)}{14}{subsection.1.3.19}%
+\contentsline {section}{\numberline {1.4}Les fichiers IRJ}{14}{section.1.4}%
+\contentsline {subsection}{\numberline {1.4.1}Syntaxe}{14}{subsection.1.4.1}%
+\contentsline {subsection}{\numberline {1.4.2}Utilisation}{15}{subsection.1.4.2}%
+\contentsline {subsubsection}{IRJ checker}{15}{subsubsection*.25}%
+\contentsline {subsubsection}{Interpreteur}{15}{subsubsection*.26}%
+\contentsline {subsubsection}{Fichiers C}{15}{subsubsection*.27}%
+\contentsline {section}{\numberline {1.5}Le compilateur MLang}{15}{section.1.5}%
+\contentsline {subsection}{\numberline {1.5.1}Installer}{15}{subsection.1.5.1}%
+\contentsline {subsection}{\numberline {1.5.2}Utiliser MLang}{16}{subsection.1.5.2}%
+\contentsline {subsubsection}{Mode interpreteur}{16}{subsubsection*.28}%
+\contentsline {subsubsection}{Mode transpilation}{17}{subsubsection*.29}%
+\contentsline {subsubsection}{Options DGFiP}{17}{subsubsection*.30}%
+\contentsline {subsection}{\numberline {1.5.3}Comportement de Mlang}{18}{subsection.1.5.3}%
+\contentsline {subsubsection}{Traduction}{18}{subsubsection*.31}%
+\contentsline {subsubsection}{Pré\sphinxhyphen {}traitement}{18}{subsubsection*.32}%
+\contentsline {paragraph}{Cas des applications}{18}{paragraph*.33}%
+\contentsline {paragraph}{Cas des constantes}{18}{paragraph*.34}%
+\contentsline {paragraph}{Interprétation des indices}{19}{paragraph*.35}%
+\contentsline {paragraph}{Cas des expressions \sphinxstyleliteralintitle {\sphinxupquote {somme(…)}}}{19}{paragraph*.36}%
+\contentsline {paragraph}{Cas des multi\sphinxhyphen {}formules}{20}{paragraph*.37}%
+\contentsline {subsubsection}{Vérification de cohérence}{21}{subsubsection*.38}%
+\contentsline {subsubsection}{Traitement}{21}{subsubsection*.39}%
+\contentsline {paragraph}{Interpreteur}{21}{paragraph*.40}%
+\contentsline {paragraph}{Transpilation}{21}{paragraph*.41}%
+\contentsline {chapter}{\numberline {2}Exemples}{23}{chapter.2}%
+\contentsline {section}{\numberline {2.1}Calcul des valeurs}{23}{section.2.1}%
+\contentsline {subsection}{\numberline {2.1.1}Fichier test : test.m}{23}{subsection.2.1.1}%
+\contentsline {subsection}{\numberline {2.1.2}Fichier irj : test.irj}{25}{subsection.2.1.2}%
+\contentsline {subsection}{\numberline {2.1.3}Commande}{25}{subsection.2.1.3}%
+\contentsline {section}{\numberline {2.2}Les fonctions}{26}{section.2.2}%
+\contentsline {subsection}{\numberline {2.2.1}Fichier test : test.m}{26}{subsection.2.2.1}%
+\contentsline {subsection}{\numberline {2.2.2}Fichier irj : test.irj}{33}{subsection.2.2.2}%
+\contentsline {subsection}{\numberline {2.2.3}Commande}{33}{subsection.2.2.3}%
+\contentsline {chapter}{\numberline {3}Documentation développeur}{35}{chapter.3}%
