@@ -151,7 +151,7 @@ module Var = struct
     id
 
   type tgv = {
-    table : t Array.t option;
+    table : id Array.t option;
     alias : string Pos.marked option;  (** Input variable have an alias *)
     descr : string Pos.marked;
         (** Description taken from the variable declaration *)
@@ -159,9 +159,10 @@ module Var = struct
     cat : CatVar.t;
     is_given_back : bool;
     typ : value_typ option;
+    table_cell : (id * int) option;
   }
 
-  and scope = Tgv of tgv | Temp of t Array.t option | Ref
+  and scope = Tgv of tgv | Temp of id Array.t option | Ref
 
   and t = {
     name : string Pos.marked;  (** The position is the variable declaration *)
@@ -186,6 +187,15 @@ module Var = struct
     | Tgv tgv -> tgv.table
     | Temp table -> table
     | Ref -> None
+
+  let get_table_cell v =
+    match v.scope with Tgv tgv -> tgv.table_cell | _ -> None
+
+  let set_table_cell v ~id:tabvar ~idx:index =
+    let tgv = tgv v in
+    let tgv = { tgv with table_cell = Some (tabvar, index) } in
+    let scope = Tgv tgv in
+    { v with scope }
 
   let is_table v = get_table v <> None
 
@@ -306,18 +316,20 @@ module Var = struct
       loc_cat_idx = 0;
     }
 
-  let new_tgv ~(name : string Pos.marked) ~(table : t Array.t option)
+  let new_tgv ~(name : string Pos.marked) ~(table : id Array.t option)
       ~(is_given_back : bool) ~(alias : string Pos.marked option)
       ~(descr : string Pos.marked) ~(attrs : int Pos.marked StrMap.t)
-      ~(cat : CatVar.t) ~(typ : value_typ option) : t =
+      ~(cat : CatVar.t) ~(typ : value_typ option)
+      ~(table_cell : (id * int) option) : t =
     {
       name;
       id = new_id ();
       loc = LocTgv (Pos.unmark name, init_loc cat);
-      scope = Tgv { table; alias; descr; attrs; cat; is_given_back; typ };
+      scope =
+        Tgv { table; alias; descr; attrs; cat; is_given_back; typ; table_cell };
     }
 
-  let new_temp ~(name : string Pos.marked) ~(table : t Array.t option) : t =
+  let new_temp ~(name : string Pos.marked) ~(table : id Array.t option) : t =
     let loc =
       LocTmp
         (Pos.unmark name, { loc_idx = -1; loc_tab_idx = -1; loc_cat_idx = -1 })
