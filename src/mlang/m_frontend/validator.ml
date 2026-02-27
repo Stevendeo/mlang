@@ -462,6 +462,16 @@ module Err = struct
         case
     in
     Errors.raise_spanned_error msg pos
+
+  let unexpected_variable_scope ~var_scope ~expected_scope (Pos.Mark (v, pos)) =
+    let varname = Com.get_var_name v in
+    let msg =
+      Pp.spr
+        "Variable %s is a %a variable, which should be a %s variable in this \
+         context"
+        varname Com.format_simple_scope var_scope expected_scope
+    in
+    Errors.raise_spanned_error msg pos
 end
 
 type syms = Com.DomainId.t Pos.marked Com.DomainIdMap.t
@@ -1543,6 +1553,27 @@ let check_variable (m_sp_opt : Com.var_space) (m_vn : Com.m_var_name)
       else if Com.Var.is_temp var then
         Err.tmp_var_has_no_var_space v_name (Pos.get m_vn)
 
+let check_variable_can_be_referenced
+    (Pos.Mark (v_name, pos) as m_v : Com.m_var_name) (env : var_env) : unit =
+  let v_name = Com.get_normal_var v_name in
+  let var =
+    let id = StrMap.find v_name env.vars in
+    IntMap.find id env.prog.prog_dict
+  in
+  match var.scope with
+  | Tgv _ -> ()
+  | Ref ->
+      Errors.print_spanned_warning
+        (Format.sprintf
+           "Variable %s used to set an event reference. Make sure it is not a \
+            temporary variable, otherwise this instruction will have no \
+            effect."
+           v_name)
+        pos
+  | Temp _ ->
+      Err.unexpected_variable_scope ~var_scope:var.scope ~expected_scope:"Tgv"
+        m_v
+
 let check_expression (env : var_env) (m_expr : Mast.m_expression) : unit =
   let get_var m_v = Pos.same (Com.get_normal_var @@ Pos.unmark m_v) m_v in
   let fold_sp m_sp_opt env _acc = check_var_space m_sp_opt env in
@@ -1730,6 +1761,7 @@ let rec check_instructions (env : var_env)
                 | None -> Err.unknown_event_field f_name f_pos);
                 let m_i' = map_expr env m_i in
                 check_variable None m_v Num env;
+                check_variable_can_be_referenced m_v env;
                 let m_v' = map_var env m_v in
                 let f' =
                   Com.SingleFormula (EventFieldRef (m_i', f, iFmt, m_v'))
