@@ -23,6 +23,8 @@ let repl_debug = ref false
 module type S = sig
   type custom_float
 
+  type tracer_ctx
+
   type value = Number of custom_float | Undefined
 
   val format_value : Format.formatter -> value -> unit
@@ -66,14 +68,18 @@ module type S = sig
     mutable ctx_archived_anos : StrSet.t;
     mutable ctx_finalized_anos : (Com.Error.t * string option) list;
     mutable ctx_exported_anos : (Com.Error.t * string option) list;
-    mutable ctx_events : (value, Com.Var.t) Com.event_value Array.t Array.t list;
+    mutable ctx_events :
+      (value, Com.Var.t) Com.event_value Array.t Array.t list;
+    tracer_ctx : tracer_ctx;
   }
 
-  val empty_ctx : Mir.program -> ctx
+  val empty_ctx : ?dbg_info:Dbg_info.t -> Mir.program -> ctx
 
   val literal_to_value : Com.literal -> value
 
   val value_to_literal : value -> Com.literal
+
+  val get_dbg_info : ctx -> Dbg_info.t option
 
   val update_ctx_with_inputs : ctx -> Com.literal Com.Var.Map.t -> unit
 
@@ -96,7 +102,12 @@ module type S = sig
   val evaluate_program : ctx -> unit
 end
 
-module Make (N : Mir_number.NumberInterface) (RF : Mir_roundops.RoundOpsFunctor) =
+module type PartialInterp = functor (_ : Tracers.S) -> S
+
+module Make
+    (N : Mir_number.NumberInterface)
+    (RF : Mir_roundops.RoundOpsFunctor)
+    (Tracer : Tracers.S) =
 struct
   (* Careful : this behavior mimics the one imposed by the original Mlang
      compiler... *)
@@ -104,6 +115,8 @@ struct
   module R = RF (N)
 
   type custom_float = N.t
+
+  type tracer_ctx = Tracer.ctx
 
   let truncatef (x : N.t) : N.t = R.truncatef x
 
@@ -163,7 +176,9 @@ struct
     mutable ctx_archived_anos : StrSet.t;
     mutable ctx_finalized_anos : (Com.Error.t * string option) list;
     mutable ctx_exported_anos : (Com.Error.t * string option) list;
-    mutable ctx_events : (value, Com.Var.t) Com.event_value Array.t Array.t list;
+    mutable ctx_events :
+      (value, Com.Var.t) Com.event_value Array.t Array.t list;
+    tracer_ctx : Tracer.ctx;
   }
 
   type pctx = {
@@ -173,7 +188,7 @@ struct
     ctx_pr : print_ctx;
   }
 
-  let empty_ctx (p : Mir.program) : ctx =
+  let empty_ctx ?(dbg_info : Dbg_info.t option) (p : Mir.program) : ctx =
     let dummy_var = Com.Var.new_ref ~name:(Pos.without "") in
     let init_tmp_var _i = { var = dummy_var; value = Undefined } in
     let init_ref _i =
@@ -210,6 +225,7 @@ struct
       in
       Array.init (IntMap.cardinal p.program_var_spaces_idx) init
     in
+    let tracer_ctx = Tracer.empty_ctx dbg_info in
     {
       ctx_prog = p;
       ctx_target = snd (StrMap.min_binding p.program_targets);
@@ -231,6 +247,7 @@ struct
       ctx_finalized_anos = [];
       ctx_exported_anos = [];
       ctx_events = [];
+      tracer_ctx;
     }
 
   let literal_to_value (l : Com.literal) : value =
@@ -498,7 +515,9 @@ struct
           | LocBase -> var_space.base
         in
         if Array.length var_tab > 0 then var_tab.(vi) <- value
-    | Com.Var.Temp _ -> ctx.ctx_tmps.(vorg + vi).value <- value
+    | Com.Var.Temp _ ->
+        Tracer.register_temp ctx.tracer_ctx (value_to_literal value) var;
+        ctx.ctx_tmps.(vorg + vi).value <- value
     | Com.Var.Ref -> assert false
 
   and set_var_value (ctx : ctx) (m_sp_opt : Com.var_space) (var : Com.Var.t)
@@ -528,8 +547,9 @@ struct
         | Number n -> `Value n)
     | SESameVariable v -> `Var v
 
-  and set_access ctx access value =
-    match access with
+  and set_access ctx access vexpr =
+    let value = evaluate_expr ctx vexpr in
+    (match access with
     | Com.VarAccess (m_sp_opt, v) -> set_var_value ctx m_sp_opt v value
     | Com.TabAccess ((m_sp_opt, v), m_idx) -> (
         match evaluate_expr ctx m_idx with
@@ -546,7 +566,13 @@ struct
               match events.(i).(j) with
               | Com.Numeric _ -> events.(i).(j) <- Com.Numeric value
               | Com.RefVar v -> set_var_value ctx m_sp_opt v value)
-        | Undefined -> ())
+        | Undefined -> ()));
+    match get_access_var ctx access with
+    | None -> ()
+    | Some (_, v, _) ->
+        let value = value_to_literal value in
+        Tracer.register_access ctx.tracer_ctx vexpr access v
+          ctx.ctx_prog.program_dict value (eval_m_index ctx)
 
   (* print aux *)
 
@@ -624,9 +650,17 @@ struct
     pr_value pctx mi ma (evaluate_expr pctx.ctx e);
     pr_flush pctx
 
+  (* end of print aux *)
+
   (* interpret *)
 
+  and eval_m_index ctx m_i =
+    match evaluate_expr ctx m_i with
+    | Number z -> Int64.to_string @@ N.to_int z
+    | Undefined -> "indefini"
+
   and evaluate_expr (ctx : ctx) (e : Mir.expression Pos.marked) : value =
+    (* Format.eprintf {|"%a"@.|} (Com.format_expression Com.Var.pp) (Pos.unmark exp); *)
     let comparison op new_e1 new_e2 =
       match (op, new_e1, new_e2) with
       | Com.(Gt | Gte | Lt | Lte | Eq | Neq), _, Undefined
@@ -716,8 +750,8 @@ struct
                 | Some e3 -> evaluate_expr ctx e3)
             | Number _ -> evaluate_expr ctx e2
             | Undefined -> Undefined)
-        | Literal Undefined -> Undefined
-        | Literal (Float f) -> Number (N.of_float f)
+        | Literal { lit = Undefined; _ } -> Undefined
+        | Literal { lit = Float f; _ } -> Number (N.of_float f)
         | Var access -> get_access_value ctx access
         | FuncCall (Pos.Mark (ArrFunc, _), [ arg ]) -> (
             match evaluate_expr ctx arg with
@@ -789,7 +823,22 @@ struct
         | FuncCall (Pos.Mark (Func fn, _), args) ->
             let fd = StrMap.find fn ctx.ctx_prog.program_functions in
             evaluate_function ctx fd args
-        | FuncCall (_, _) -> assert false
+        | FuncCall (Pos.Mark (AbsFunc, _), _)
+        | FuncCall (Pos.Mark (Supzero, _), _)
+        | FuncCall (Pos.Mark (PresentFunc, _), _)
+        | FuncCall (Pos.Mark (ArrFunc, _), _)
+        | FuncCall (Pos.Mark (MinFunc, _), _)
+        | FuncCall (Pos.Mark (MaxFunc, _), _)
+        | FuncCall (Pos.Mark (Multimax, _), _)
+        | FuncCall (Pos.Mark (InfFunc, _), _) ->
+            Errors.raise_error "arity error"
+        | FuncCall
+            ( Mark
+                ( ( SumFunc | GtzFunc | GtezFunc | NullFunc | VerifNumber
+                  | ComplNumber ),
+                  _ ),
+              _ ) ->
+            Errors.raise_error "not implemented"
         | Attribut (m_acc, a) -> (
             match get_access_var ctx (Pos.unmark m_acc) with
             | Some (_, v, _) -> (
@@ -861,7 +910,7 @@ struct
       unit =
     match Pos.unmark stmt with
     | Com.Affectation (Pos.Mark (SingleFormula (VarDecl (m_acc, vexpr)), _)) ->
-        set_access ctx (Pos.unmark m_acc) @@ evaluate_expr ctx vexpr
+        set_access ctx (Pos.unmark m_acc) vexpr
     | Com.Affectation
         (Pos.Mark (SingleFormula (EventFieldRef (idx, _, j, var)), _)) -> (
         match evaluate_expr ctx idx with
@@ -1179,6 +1228,7 @@ struct
           (ctx.ctx_nb_bloquantes + if is_blocking then 1 else 0);
         let v_opt = Option.map Pos.unmark var_opt in
         ctx.ctx_anos <- ctx.ctx_anos @ [ (err, v_opt) ];
+        Tracer.register_ano ctx.tracer_ctx m_err;
         if is_blocking && ctx.ctx_nb_bloquantes >= 4 && canBlock then
           raise BlockingError
     | Com.CleanErrors ->
@@ -1284,6 +1334,16 @@ struct
 
   and evaluate_target (canBlock : bool) (ctx : ctx) (target : Mir.target)
       (args : Mir.m_access list) (vsd : Com.variable_space) : unit =
+    (* We check if the current target is in the rule map.
+       If it is, we assume we're in a rule, and register it
+       to annotate the value we'll set later in the dbg_info. *)
+    let target_name = Pos.unmark target.target_name in
+    let rule_id =
+      ctx.ctx_prog.program_rules |> IntMap.to_seq
+      |> Seq.find (fun (_, str) -> str = target_name)
+      |> Option.map fst
+    in
+    Tracer.update_execution_ctx ctx.tracer_ctx rule_id target_name;
     let rec set_args n vl al =
       match (vl, al) with
       | v :: vl', m_a :: al' -> (
@@ -1349,6 +1409,8 @@ struct
     | Stop_instruction SKApplication ->
         (* The only stop never caught by anything else *) ()
     | Stop_instruction SKTarget -> (* May not be caught by anything else *) ()
+
+  let get_dbg_info ctx = Tracer.get_dbg_info ctx.tracer_ctx
 end
 
 module BigIntPrecision = struct
@@ -1407,24 +1469,36 @@ module RatMfInterp =
     (Mir_number.RationalNumber)
     (Mir_roundops.MainframeRoundOps (MainframeLongSize))
 
-let get_interp (sort : Config.value_sort) (roundops : Config.round_ops) :
-    (module S) =
-  match (sort, roundops) with
-  | RegularFloat, RODefault -> (module FloatDefInterp)
-  | RegularFloat, ROMulti -> (module FloatMultInterp)
-  | RegularFloat, ROMainframe _ -> (module FloatMfInterp)
-  | MPFR _, RODefault -> (module MPFRDefInterp)
-  | MPFR _, ROMulti -> (module MPFRMultInterp)
-  | MPFR _, ROMainframe _ -> (module MPFRMfInterp)
-  | BigInt _, RODefault -> (module BigIntDefInterp)
-  | BigInt _, ROMulti -> (module BigIntMultInterp)
-  | BigInt _, ROMainframe _ -> (module BigIntMfInterp)
-  | Interval, RODefault -> (module IntvDefInterp)
-  | Interval, ROMulti -> (module IntvMultInterp)
-  | Interval, ROMainframe _ -> (module IntvMfInterp)
-  | Rational, RODefault -> (module RatDefInterp)
-  | Rational, ROMulti -> (module RatMultInterp)
-  | Rational, ROMainframe _ -> (module RatMfInterp)
+let get_interp (sort : Config.value_sort) (roundops : Config.round_ops)
+    ~(trace : bool) : (module S) =
+  let partial_interp : (module PartialInterp) =
+    match (sort, roundops) with
+    | RegularFloat, RODefault -> (module FloatDefInterp)
+    | RegularFloat, ROMulti -> (module FloatMultInterp)
+    | RegularFloat, ROMainframe _ -> (module FloatMfInterp)
+    | MPFR _, RODefault -> (module MPFRDefInterp)
+    | MPFR _, ROMulti -> (module MPFRMultInterp)
+    | MPFR _, ROMainframe _ -> (module MPFRMfInterp)
+    | BigInt _, RODefault -> (module BigIntDefInterp)
+    | BigInt _, ROMulti -> (module BigIntMultInterp)
+    | BigInt _, ROMainframe _ -> (module BigIntMfInterp)
+    | Interval, RODefault -> (module IntvDefInterp)
+    | Interval, ROMulti -> (module IntvMultInterp)
+    | Interval, ROMainframe _ -> (module IntvMfInterp)
+    | Rational, RODefault -> (module RatDefInterp)
+    | Rational, ROMulti -> (module RatMultInterp)
+    | Rational, ROMainframe _ -> (module RatMfInterp)
+  in
+  (* We use a small trick to not duplicate the number of interpreter by two. *)
+  let tracer : (module Tracers.S) =
+    match trace with
+    | false -> (module Tracers.NonTracer)
+    | true -> (module Tracers.Tracer)
+  in
+  let module Tracer = (val tracer) in
+  let module PartialInterp = (val partial_interp) in
+  let module Interp = PartialInterp (Tracer) in
+  (module Interp)
 
 let prepare_interp (sort : Config.value_sort) (roundops : Config.round_ops) :
     unit =
@@ -1445,13 +1519,15 @@ let prepare_interp (sort : Config.value_sort) (roundops : Config.round_ops) :
       MainframeLongSize.max_long := max_long
   | _ -> ()
 
-let evaluate_program (p : Mir.program) (inputs : Com.literal Com.Var.Map.t)
+let evaluate_program ?(dbg_info : Dbg_info.t option) (p : Mir.program)
+    (inputs : Com.literal Com.Var.Map.t)
     (events : (Com.literal, Com.Var.t) Com.event_value StrMap.t list)
     (sort : Config.value_sort) (roundops : Config.round_ops) :
-    Com.literal Com.Var.Map.t * Com.Error.Set.t =
+    Com.literal Com.Var.Map.t * Com.Error.Set.t * Dbg_info.t option =
   prepare_interp sort roundops;
-  let module Interp = (val get_interp sort roundops : S) in
-  let ctx = Interp.empty_ctx p in
+  let trace = !Config.trace in
+  let module Interp = (val get_interp sort roundops ~trace : S) in
+  let ctx = Interp.empty_ctx ?dbg_info p in
   Interp.update_ctx_with_inputs ctx inputs;
   Interp.update_ctx_with_events ctx events;
   Interp.evaluate_program ctx;
@@ -1479,10 +1555,21 @@ let evaluate_program (p : Mir.program) (inputs : Com.literal Com.Var.Map.t)
     let fold res (e, _) = Com.Error.Set.add e res in
     List.fold_left fold Com.Error.Set.empty ctx.ctx_exported_anos
   in
-  (varMap, anoSet)
+  let dbg_info = Interp.get_dbg_info ctx in
+  (varMap, anoSet, dbg_info)
 
-let evaluate_expr (p : Mir.program) (e : Mir.expression Pos.marked)
-    (sort : Config.value_sort) (roundops : Config.round_ops) : Com.literal =
-  let module Interp = (val get_interp sort roundops : S) in
-  try Interp.value_to_literal (Interp.evaluate_expr (Interp.empty_ctx p) e)
+let evaluate_expr ?(dbg_info : Dbg_info.t option) (p : Mir.program)
+    (e : Mir.expression Pos.marked) (sort : Config.value_sort)
+    (roundops : Config.round_ops) : Com.literal =
+  let trace = !Config.trace in
+  let module Interp = (val get_interp sort roundops ~trace : S) in
+  try
+    Interp.value_to_literal
+      (Interp.evaluate_expr (Interp.empty_ctx ?dbg_info p) e)
   with Stop_instruction _ -> Undefined
+
+let compare_float_numbers o a b =
+  let module FloatDefInterp = FloatDefInterp (Tracers.NonTracer) in
+  let a = Mir_number.RegularFloatNumber.of_float a in
+  let b = Mir_number.RegularFloatNumber.of_float b in
+  FloatDefInterp.compare_numbers o a b

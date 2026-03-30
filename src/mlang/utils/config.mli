@@ -28,6 +28,13 @@ type execution_mode =
 
 type files = NonEmpty of string list
 
+type filesystem =
+  | Local
+  | Contents of string StrMap.t
+      (** This is used to know where to search for m file contents *)
+
+type trace_output = Stdout | Stderr | Filename of string
+
 val get_files : files -> string list
 
 val source_files : files ref
@@ -88,6 +95,17 @@ val execution_mode : execution_mode ref
 
 val no_nondet_display : bool ref
 
+val filesystem : filesystem ref
+
+val plain_output : bool ref
+
+val trace : bool ref
+(** Controls wheter the interpreter is tracing execution *)
+
+val trace_output : trace_output ref
+(** Controls the tracer output. It can either be output in stdout, stderr, or in
+    a file. *)
+
 val set_opts :
   files:string list ->
   application_names:string list ->
@@ -110,4 +128,7 @@ val set_opts :
   m_clean_calls:bool ->
   dgfip_options:string list option ->
   no_nondet_display:bool ->
+  plain_output:bool ->
+  trace:bool ->
+  trace_output_file:string option ->
   [ `Displayed_dgfip_help | `Error of string | `Run ]

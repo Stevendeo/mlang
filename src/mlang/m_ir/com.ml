@@ -450,6 +450,10 @@ type variable_space = {
 
 type literal = Float of float | Undefined
 
+type origin = string Pos.marked option
+
+type literal_with_orig = { lit : literal; origin : origin }
+
 (** Unary operators *)
 type unop = Not | Minus
 
@@ -498,7 +502,7 @@ and 'v m_access = 'v access Pos.marked
 
 and 'v case = CDefault | CValue of literal | CVar of 'v m_access
 
-and 'v atom = AtomVar of 'v | AtomLiteral of literal
+and 'v atom = AtomVar of 'v | AtomLiteral of literal_with_orig
 
 and 'v set_value_loop =
   | Single of 'v atom Pos.marked
@@ -527,7 +531,7 @@ and 'v expression =
   | FuncCall of func Pos.marked * 'v m_expression list
   | FuncCallLoop of
       func Pos.marked * 'v loop_variables Pos.marked * 'v m_expression
-  | Literal of literal
+  | Literal of literal_with_orig
   | Var of 'v access
   | Loop of 'v loop_variables Pos.marked * 'v m_expression
       (** The loop is prefixed with the loop variables declarations *)
@@ -543,6 +547,64 @@ and 'v expression =
   | NbBloquantes
 
 and 'v m_expression = 'v expression Pos.marked
+
+type const = { id : string; value : literal; pos : Pos.t }
+
+type 'v dep =
+  | Tab of 'v * 'v m_expression
+  | V of 'v
+  | LiteralDep of literal
+  | Const of const
+
+let get_used_variables (e : 'v expression) : 'v dep list =
+  let rec get_used_variables_ (e : 'v expression) (acc : 'v dep list) =
+    match e with
+    | TestInSet (_, Mark (e, _), _) | Unop (_, Mark (e, _)) ->
+        get_used_variables_ e acc
+    | Comparison (_, Mark (e1, _), Mark (e2, _))
+    | Binop (_, Mark (e1, _), Mark (e2, _)) ->
+        let acc = get_used_variables_ e1 acc in
+        let acc = get_used_variables_ e2 acc in
+        acc
+    | Conditional (Mark (e1, _), Mark (e2, _), e3) -> (
+        let acc = get_used_variables_ e1 acc in
+        let acc = get_used_variables_ e2 acc in
+        match e3 with
+        | None -> acc
+        | Some (Mark (e3, _)) -> get_used_variables_ e3 acc)
+    | FuncCall (_, args) ->
+        List.fold_left
+          (fun acc arg -> get_used_variables_ (Pos.unmark arg) acc)
+          acc args
+    | Loop (_, Mark (e, _)) -> get_used_variables_ e acc
+    | FuncCallLoop (_, _, Mark (e, _)) -> get_used_variables_ e acc
+    | Var var
+    | Size (Mark (var, _))
+    | Attribut (Mark (var, _), _)
+    | InDomain (Mark (var, _), _)
+    | Type (Mark (var, _), _) ->
+        get_used_variables_access var acc
+    | Literal { lit; origin = Some (Mark (id, pos)) } ->
+        Const { id; value = lit; pos } :: acc
+    | Literal { lit; origin = None } -> LiteralDep lit :: acc
+    | SameVariable (Mark (l, _), Mark (r, _)) ->
+        let acc = get_used_variables_access l acc in
+        get_used_variables_access r acc
+    | NbCategory _ | NbAnomalies | NbDiscordances | NbInformatives -> acc
+    | NbBloquantes -> acc
+  and get_used_variables_access var acc =
+    match var with
+    | TabAccess ((_, v), m_i) -> Tab (v, m_i) :: acc
+    | VarAccess (_, v) -> V v :: acc
+    | FieldAccess (_, Mark (v, _), _, _) -> get_used_variables_ v acc
+  in
+  get_used_variables_ e []
+
+let mk_lit_with_orig lit origin = { lit; origin }
+
+let mk_lit ?from_const lit = Literal (mk_lit_with_orig lit from_const)
+
+let mk_atomlit ?from_const lit = AtomLiteral (mk_lit_with_orig lit from_const)
 
 module Error = struct
   type typ = Anomaly | Discordance | Information
@@ -1146,13 +1208,14 @@ let format_value_typ fmt t =
     | Real -> "REEL")
 
 let format_literal fmt l =
-  Format.pp_print_string fmt
-    (match l with Float f -> string_of_float f | Undefined -> "indefini")
+  match l with
+  | Float f -> Format.fprintf fmt "%g" f
+  | Undefined -> Format.pp_print_string fmt "indefini"
 
 let format_atom form_var fmt vl =
   match vl with
   | AtomVar v -> form_var fmt v
-  | AtomLiteral l -> format_literal fmt l
+  | AtomLiteral l -> format_literal fmt l.lit
 
 let format_set_value_loop form_var fmt sv =
   let form_atom = format_atom form_var in
@@ -1296,7 +1359,7 @@ let rec format_expression form_var fmt =
       Format.fprintf fmt "%a(%a%a)" format_func (Pos.unmark f)
         (format_loop_variables form_var)
         (Pos.unmark lvs) form_expr (Pos.unmark e)
-  | Literal l -> format_literal fmt l
+  | Literal { lit; _ } -> format_literal fmt lit
   | Var acc -> format_access form_var form_expr fmt acc
   | Loop (lvs, e) ->
       Format.fprintf fmt "pour %a%a"
