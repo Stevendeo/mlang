@@ -360,7 +360,7 @@ let gen_var fmt req_type opt ~idx ~name ~tvar ~is_output ~typ_opt ~attributes
 
   Format.fprintf fmt "    { \"%s\", %s | %d" var_name kind idx;
   if opt.with_type_donnee then
-    Format.fprintf fmt ", %a" Com.format_value_typ typ;
+    Format.fprintf fmt ", %a" Com.Com_format.format_value_typ typ;
   if opt.with_verif then
     if is_input && false then Format.fprintf fmt ", err_%s" name
       (* Note: no alias *)

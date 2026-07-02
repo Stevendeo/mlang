@@ -13,7 +13,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open M_ir
 (** This module describes the interface of a _tracer_ module. A tracer keeps
     assignations in memory, and allow to 'trace' the execution of some M code.
 *)

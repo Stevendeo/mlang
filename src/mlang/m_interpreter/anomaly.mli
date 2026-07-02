@@ -17,7 +17,7 @@ type t
 
 val empty : unit -> t
 
-val raise : t -> M_ir.Com.Error.t -> string option -> bool
+val raise : t -> Com.Error.t -> string option -> bool
 (** Adds the anomaly to the context and returns [true] if the said anomaly is
     blocking, [false] otherwise. *)
 
@@ -47,4 +47,4 @@ val nb_informatives : t -> int
 val nb_bloquantes : t -> int
 (** Returns the amount of [raise]d blocking anomalies. *)
 
-val exported : t -> (M_ir.Com.Error.t * string option) list
+val exported : t -> (Com.Error.t * string option) list
