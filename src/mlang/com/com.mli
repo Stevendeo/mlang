@@ -425,12 +425,12 @@ and 'v case =
 (** Values that can be substituted for loop parameters *)
 and 'v atom = AtomVar of 'v | AtomLiteral of literal_with_orig
 
-and 'v set_value_loop =
+and 'v loop_range =
   | Single of 'v atom Pos.marked
   | Range of 'v atom Pos.marked * 'v atom Pos.marked
   | Interval of 'v atom Pos.marked * 'v atom Pos.marked
 
-and 'v loop_variable = char Pos.marked * 'v set_value_loop list
+and 'v loop_variable = char Pos.marked * 'v loop_range list
 (** A loop variable is the character that should be substituted in variable
     names inside the loop plus the set of value to substitute. *)
 
@@ -551,15 +551,13 @@ type 'v print_arg =
     way they do looping since the definition can depend on the loop variable
     value (e.g [Xi] can depend on [i]). *)
 
-type 'v formula_loop = 'v loop_variables Pos.marked
-
 type 'v formula_decl =
   | VarDecl of 'v access Pos.marked * 'v m_expression
   | EventFieldRef of 'v m_expression * string Pos.marked * int * 'v
 
 type 'v formula =
   | SingleFormula of 'v formula_decl
-  | MultipleFormulaes of 'v formula_loop * 'v formula_decl
+  | MultipleFormulaes of 'v loop_variables Pos.marked * 'v formula_decl
 
 (** {2 Stopping} *)
 

@@ -137,12 +137,12 @@ and 'v case = CDefault | CValue of literal | CVar of 'v m_access
 
 and 'v atom = AtomVar of 'v | AtomLiteral of literal_with_orig
 
-and 'v set_value_loop =
+and 'v loop_range =
   | Single of 'v atom Pos.marked
   | Range of 'v atom Pos.marked * 'v atom Pos.marked
   | Interval of 'v atom Pos.marked * 'v atom Pos.marked
 
-and 'v loop_variable = char Pos.marked * 'v set_value_loop list
+and 'v loop_variable = char Pos.marked * 'v loop_range list
 
 and 'v loop_variables =
   | ValueSets of 'v loop_variable list
@@ -249,15 +249,13 @@ type 'v print_arg =
   | PrintIndent of 'v m_expression
   | PrintExpr of 'v m_expression * int * int
 
-type 'v formula_loop = 'v loop_variables Pos.marked
-
 type 'v formula_decl =
   | VarDecl of 'v access Pos.marked * 'v m_expression
   | EventFieldRef of 'v m_expression * string Pos.marked * int * 'v
 
 type 'v formula =
   | SingleFormula of 'v formula_decl
-  | MultipleFormulaes of 'v formula_loop * 'v formula_decl
+  | MultipleFormulaes of 'v loop_variables Pos.marked * 'v formula_decl
 
 type stop_kind =
   | SKApplication (* Leave the whole application *)
