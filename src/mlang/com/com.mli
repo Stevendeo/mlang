@@ -477,18 +477,6 @@ and 'v m_expression = 'v expression Pos.marked
 
 type const = { id : string; value : literal; pos : Pos.t }
 
-type 'v dep =
-  | Tab of 'v * 'v m_expression
-  | V of 'v
-  | LiteralDep of literal
-  | Const of const
-      (** A type describing the different types of dependencies. Tab for arrays,
-          V for variables, LiteralDep for literals and Const for constants. *)
-
-val get_used_variables : 'v expression -> 'v dep list
-(** [get_used_variables expr] returs the list of dependencies contained in the
-    expression. *)
-
 val mk_atomlit : ?from_const:string Pos.marked -> literal -> 'v atom
 (** [mk_atomtit ?constname lit] makes a Literal atom with the name of the const
     as origin if provided. *)
