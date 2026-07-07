@@ -14,6 +14,548 @@
 (******************************************************************************)
 open Core
 
+module Map = struct
+  type ('v, 'w, 'e, 'f) mapper = {
+    instr :
+      ('v, 'w, 'e, 'f) mapper ->
+      ('v, 'e) m_instruction ->
+      ('w, 'f) m_instruction;
+    switch :
+      ('v, 'w, 'e, 'f) mapper -> 'v switch_expression -> 'w switch_expression;
+    formula :
+      ('v, 'w, 'e, 'f) mapper -> 'v formula Pos.marked -> 'w formula Pos.marked;
+    formula_decl :
+      ('v, 'w, 'e, 'f) mapper -> 'v formula_decl -> 'w formula_decl;
+    print_arg :
+      ('v, 'w, 'e, 'f) mapper ->
+      'v print_arg Pos.marked ->
+      'w print_arg Pos.marked;
+    set_value : ('v, 'w, 'e, 'f) mapper -> 'v set_value -> 'w set_value;
+    loop_variables :
+      ('v, 'w, 'e, 'f) mapper ->
+      'v loop_variables Pos.marked ->
+      'w loop_variables Pos.marked;
+    loop_variable :
+      ('v, 'w, 'e, 'f) mapper -> 'v loop_variable -> 'w loop_variable;
+    loop_range : ('v, 'w, 'e, 'f) mapper -> 'v loop_range -> 'w loop_range;
+    expr : ('v, 'w, 'e, 'f) mapper -> 'v m_expression -> 'w m_expression;
+    access : ('v, 'w, 'e, 'f) mapper -> 'v m_access -> 'w m_access;
+    case : ('v, 'w, 'e, 'f) mapper -> 'v case -> 'w case;
+    atom : ('v, 'w, 'e, 'f) mapper -> 'v atom Pos.marked -> 'w atom Pos.marked;
+    varspace : ('v, 'w, 'e, 'f) mapper -> var_space -> var_space;
+    var : 'v -> 'w;
+    err : 'e -> 'f;
+  }
+
+  let map_l f self = List.map (fun x -> f self x)
+
+  let instr self instr =
+    let ret =
+      match Pos.unmark instr with
+      | Affectation form -> Affectation (self.formula self form)
+      | IfThenElse (cond, tbody, ebody) ->
+          let cond = self.expr self cond in
+          let tbody = map_l self.instr self tbody in
+          let ebody = map_l self.instr self ebody in
+          IfThenElse (cond, tbody, ebody)
+      | WhenDoElse (branches, ebody) ->
+          let map_branch (guard, body, pos) =
+            let guard = self.expr self guard in
+            let body = map_l self.instr self body in
+            (guard, body, pos)
+          in
+          let branches = List.map map_branch branches in
+          let ebody' = Pos.map (map_l self.instr self) ebody in
+          WhenDoElse (branches, ebody')
+      | ComputeDomain (a, vs) ->
+          let vs = self.varspace self vs in
+          ComputeDomain (a, vs)
+      | ComputeChaining (a, vs) ->
+          let vs = self.varspace self vs in
+          ComputeChaining (a, vs)
+      | ComputeVerifs (a, expr, sp) ->
+          let sp = self.varspace self sp in
+          let expr = self.expr self expr in
+          ComputeVerifs (a, expr, sp)
+      | ComputeTarget (a, args, sp) ->
+          let sp = self.varspace self sp in
+          let args = map_l self.access self args in
+          ComputeTarget (a, args, sp)
+      | VerifBlock body ->
+          let body = map_l self.instr self body in
+          VerifBlock body
+      | Print (std, args) ->
+          let args = map_l self.print_arg self args in
+          Print (std, args)
+      | Iterate (v, vars, cat_filters, body) ->
+          let v = self.var v in
+          let vars = map_l self.access self vars in
+          let cat_filters =
+            List.map
+              (fun (a, e, sp) -> (a, self.expr self e, self.varspace self sp))
+              cat_filters
+          in
+          let body = map_l self.instr self body in
+          Iterate (v, vars, cat_filters, body)
+      | Iterate_values (v, intervals, body) ->
+          let v = self.var v in
+          let intervals =
+            List.map
+              (fun (a, b, c) ->
+                (self.expr self a, self.expr self b, self.expr self c))
+              intervals
+          in
+          let body = map_l self.instr self body in
+          Iterate_values (v, intervals, body)
+      | Restore (als, cat_filters, events, event_filters, body) ->
+          let als = map_l self.access self als in
+          let cat_filters =
+            List.map
+              (fun (v, a, e, sp) ->
+                (self.var v, a, self.expr self e, self.varspace self sp))
+              cat_filters
+          in
+          let events = map_l self.expr self events in
+          let event_filters =
+            List.map
+              (fun (v, e) -> (self.var v, self.expr self e))
+              event_filters
+          in
+          let body = map_l self.instr self body in
+          Restore (als, cat_filters, events, event_filters, body)
+      | ArrangeEvents (a, b, c, body) ->
+          let a =
+            Option.map
+              (fun (v, v', e) -> (self.var v, self.var v', self.expr self e))
+              a
+          in
+          let b = Option.map (fun (v, e) -> (self.var v, self.expr self e)) b in
+          let c = Option.map (fun e -> self.expr self e) c in
+          let body = map_l self.instr self body in
+          ArrangeEvents (a, b, c, body)
+      | Switch (sexpr, cases) ->
+          let sexpr = self.switch self sexpr in
+          let cases =
+            List.map
+              (fun (cases, body) ->
+                let cases = map_l self.case self cases in
+                let body = map_l self.instr self body in
+                (cases, body))
+              cases
+          in
+          Switch (sexpr, cases)
+      | RaiseError (err, b) ->
+          let err = Pos.map self.err err in
+          RaiseError (err, b)
+      | CleanErrors -> CleanErrors
+      | CleanFinalizedErrors -> CleanFinalizedErrors
+      | ExportErrors -> ExportErrors
+      | FinalizeErrors -> FinalizeErrors
+      | Stop k -> Stop k
+    in
+    Pos.same ret instr
+
+  let switch self e =
+    match e with
+    | SEValue e -> SEValue (self.expr self e)
+    | SESameVariable a -> SESameVariable (self.access self a)
+
+  let formula self formula =
+    let ret =
+      match Pos.unmark formula with
+      | SingleFormula decl -> SingleFormula (self.formula_decl self decl)
+      | MultipleFormulaes (loop, decl) ->
+          let loop = self.loop_variables self loop in
+          let decl = self.formula_decl self decl in
+          MultipleFormulaes (loop, decl)
+    in
+    Pos.same ret formula
+
+  let formula_decl self decl =
+    match decl with
+    | VarDecl (id, expr) ->
+        let id = self.access self id in
+        let expr = self.expr self expr in
+        VarDecl (id, expr)
+    | EventFieldRef (expr, b, c, v) ->
+        let expr = self.expr self expr in
+        let v = self.var v in
+        EventFieldRef (expr, b, c, v)
+
+  let print_arg self arg =
+    let ret =
+      match Pos.unmark arg with
+      | PrintString s -> PrintString s
+      | PrintAccess (a, acc) ->
+          let acc = self.access self acc in
+          PrintAccess (a, acc)
+      | PrintIndent e -> PrintIndent (self.expr self e)
+      | PrintExpr (e, b, c) ->
+          let e = self.expr self e in
+          PrintExpr (e, b, c)
+    in
+    Pos.same ret arg
+
+  let expr self expr =
+    let ret =
+      match Pos.unmark expr with
+      | TestInSet (a, e, svs) ->
+          let e = self.expr self e in
+          let svs = map_l self.set_value self svs in
+          TestInSet (a, e, svs)
+      | Unop (op, e) -> Unop (op, self.expr self e)
+      | Comparison (op, l, r) ->
+          let l = self.expr self l in
+          let r = self.expr self r in
+          Comparison (op, l, r)
+      | Binop (op, l, r) ->
+          let l = self.expr self l in
+          let r = self.expr self r in
+          Binop (op, l, r)
+      | Conditional (cond, texpr, eexpr) ->
+          let cond = self.expr self cond in
+          let texpr = self.expr self texpr in
+          let eexpr = Option.map (self.expr self) eexpr in
+          Conditional (cond, texpr, eexpr)
+      | FuncCall (a, args) ->
+          let args = map_l self.expr self args in
+          FuncCall (a, args)
+      | FuncCallLoop (a, lvs, arg) ->
+          let lvs = self.loop_variables self lvs in
+          let arg = self.expr self arg in
+          FuncCallLoop (a, lvs, arg)
+      | Literal l -> Literal l
+      | Var v -> Var (Pos.unmark (self.access self (Pos.same v expr)))
+      | Loop (lvs, e) ->
+          let lvs = self.loop_variables self lvs in
+          let e = self.expr self e in
+          Loop (lvs, e)
+      | NbCategory a -> NbCategory a
+      | Attribut (acc, b) ->
+          let acc = self.access self acc in
+          Attribut (acc, b)
+      | Size acc -> Size (self.access self acc)
+      | Type (a, b) -> Type (self.access self a, b)
+      | SameVariable (a, b) ->
+          let a = self.access self a in
+          let b = self.access self b in
+          SameVariable (a, b)
+      | InDomain (a, b) -> InDomain (self.access self a, b)
+      | NbAnomalies -> NbAnomalies
+      | NbDiscordances -> NbDiscordances
+      | NbInformatives -> NbInformatives
+      | NbBloquantes -> NbBloquantes
+    in
+    Pos.same ret expr
+
+  let set_value self sv =
+    match sv with
+    | FloatValue f -> FloatValue f
+    | VarValue a -> VarValue (self.access self a)
+    | IntervalValue (l, r) -> IntervalValue (l, r)
+
+  let loop_variables self lvs =
+    let ret =
+      match Pos.unmark lvs with
+      | ValueSets lvs ->
+          let lvs = map_l self.loop_variable self lvs in
+          ValueSets lvs
+      | Ranges lvs ->
+          let lvs = map_l self.loop_variable self lvs in
+          Ranges lvs
+    in
+    Pos.same ret lvs
+
+  let loop_variable self (a, ranges) = (a, map_l self.loop_range self ranges)
+
+  let loop_range self range =
+    match range with
+    | Single atom -> Single (self.atom self atom)
+    | Range (l, r) ->
+        let l = self.atom self l in
+        let r = self.atom self r in
+        Range (l, r)
+    | Interval (l, r) ->
+        let l = self.atom self l in
+        let r = self.atom self r in
+        Interval (l, r)
+
+  let case self case =
+    match case with
+    | CDefault -> CDefault
+    | CValue v -> CValue v
+    | CVar a -> CVar (self.access self a)
+
+  let access self a =
+    let ret =
+      match Pos.unmark a with
+      | VarAccess (sp, v) ->
+          let sp = self.varspace self sp in
+          VarAccess (sp, self.var v)
+      | TabAccess ((sp, v), e) ->
+          let sp = self.varspace self sp in
+          let v = self.var v in
+          let e = self.expr self e in
+          TabAccess ((sp, v), e)
+      | FieldAccess (sp, e, c, d) ->
+          let sp = self.varspace self sp in
+          let e = self.expr self e in
+          FieldAccess (sp, e, c, d)
+    in
+    Pos.same ret a
+
+  let atom self atom =
+    let ret =
+      match Pos.unmark atom with
+      | AtomVar v -> AtomVar (self.var v)
+      | AtomLiteral l -> AtomLiteral l
+    in
+    Pos.same ret atom
+
+  let varspace _self space = space
+
+  let default var err =
+    {
+      instr;
+      switch;
+      formula;
+      formula_decl;
+      print_arg;
+      set_value;
+      loop_variables;
+      loop_variable;
+      loop_range;
+      expr;
+      access;
+      atom;
+      case;
+      var;
+      err;
+      varspace;
+    }
+end
+
+module Fold = struct
+  type ('a, 'v, 'e) folder = {
+    instr : ('a, 'v, 'e) folder -> ('v, 'e) m_instruction -> 'a -> 'a;
+    switch : ('a, 'v, 'e) folder -> 'v switch_expression -> 'a -> 'a;
+    formula : ('a, 'v, 'e) folder -> 'v formula Pos.marked -> 'a -> 'a;
+    formula_decl : ('a, 'v, 'e) folder -> 'v formula_decl -> 'a -> 'a;
+    print_arg : ('a, 'v, 'e) folder -> 'v print_arg Pos.marked -> 'a -> 'a;
+    set_value : ('a, 'v, 'e) folder -> 'v set_value -> 'a -> 'a;
+    loop_variables :
+      ('a, 'v, 'e) folder -> 'v loop_variables Pos.marked -> 'a -> 'a;
+    loop_variable : ('a, 'v, 'e) folder -> 'v loop_variable -> 'a -> 'a;
+    loop_range : ('a, 'v, 'e) folder -> 'v loop_range -> 'a -> 'a;
+    expr : ('a, 'v, 'e) folder -> 'v m_expression -> 'a -> 'a;
+    access : ('a, 'v, 'e) folder -> 'v m_access -> 'a -> 'a;
+    case : ('a, 'v, 'e) folder -> 'v case -> 'a -> 'a;
+    atom : ('a, 'v, 'e) folder -> 'v atom Pos.marked -> 'a -> 'a;
+    varspace : ('a, 'v, 'e) folder -> var_space -> 'a -> 'a;
+  }
+
+  let fold_l f self = List.fold_left (fun acc x -> f self x acc)
+
+  let fold_proj f self p = List.fold_left (fun acc x -> f self (p x) acc)
+
+  let fold_filters self =
+    List.fold_left (fun acc (_, e, sp) ->
+        let acc = self.varspace self sp acc in
+        self.expr self e acc)
+
+  let instr self instr acc =
+    match Pos.unmark instr with
+    | Affectation form -> self.formula self form acc
+    | IfThenElse (e, tbody, fbody) ->
+        let acc = self.expr self e acc in
+        let acc = fold_l self.instr self acc tbody in
+        fold_l self.instr self acc fbody
+    | WhenDoElse (branches, else_body) ->
+        let fold_branch (guard, body, _) acc =
+          let acc = self.expr self guard acc in
+          fold_l self.instr self acc body
+        in
+        let acc =
+          List.fold_left (fun acc b -> fold_branch b acc) acc branches
+        in
+        fold_l self.instr self acc (Pos.unmark else_body)
+    | ComputeDomain (_, sp) -> self.varspace self sp acc
+    | ComputeChaining (_, sp) -> self.varspace self sp acc
+    | ComputeVerifs (_, expr, sp) ->
+        let acc = self.varspace self sp acc in
+        self.expr self expr acc
+    | ComputeTarget (_, params, sp) ->
+        let acc = self.varspace self sp acc in
+        fold_l self.access self acc params
+    | VerifBlock body -> fold_l self.instr self acc body
+    | Print (_, args) -> fold_l self.print_arg self acc args
+    | Iterate (_, vars, cat_filters, body) ->
+        let acc = fold_l self.access self acc vars in
+        let acc = fold_filters self acc cat_filters in
+        fold_l self.instr self acc body
+    | Iterate_values (_, intervals, body) ->
+        let acc =
+          List.fold_left
+            (fun acc (start, _end, step) ->
+              let acc = self.expr self start acc in
+              let acc = self.expr self _end acc in
+              self.expr self step acc)
+            acc intervals
+        in
+        fold_l self.instr self acc body
+    | Restore (als, cat_filters, events, event_filters, body) ->
+        let acc = fold_l self.access self acc als in
+        let acc =
+          fold_proj self.expr self (fun (_, _, e, _) -> e) acc cat_filters
+        in
+        let acc =
+          fold_proj self.varspace self (fun (_, _, _, sp) -> sp) acc cat_filters
+        in
+        let acc = fold_l self.expr self acc events in
+        let acc =
+          fold_proj self.expr self (fun (_, e) -> e) acc event_filters
+        in
+        fold_l self.instr self acc body
+    | ArrangeEvents (a, b, c, body) ->
+        let acc =
+          Option.fold ~none:acc ~some:(fun (_, _, e) -> self.expr self e acc) a
+        in
+        let acc =
+          Option.fold ~none:acc ~some:(fun (_, e) -> self.expr self e acc) b
+        in
+        let acc =
+          Option.fold ~none:acc ~some:(fun e -> self.expr self e acc) c
+        in
+        fold_l self.instr self acc body
+    | Switch (sexpr, cases) ->
+        let acc = self.switch self sexpr acc in
+        let acc =
+          List.fold_left
+            (fun acc (cases, body) ->
+              let acc = fold_l self.case self acc cases in
+              fold_l self.instr self acc body)
+            acc cases
+        in
+        acc
+    | RaiseError (_, _)
+    | CleanErrors | CleanFinalizedErrors | ExportErrors | FinalizeErrors
+    | Stop _ ->
+        acc
+
+  let switch self e acc =
+    match e with
+    | SEValue e -> self.expr self e acc
+    | SESameVariable a -> self.access self a acc
+
+  let formula self formula acc =
+    match Pos.unmark formula with
+    | SingleFormula decl -> self.formula_decl self decl acc
+    | MultipleFormulaes (loop, decl) ->
+        let acc = self.loop_variables self loop acc in
+        self.formula_decl self decl acc
+
+  let formula_decl self decl acc =
+    match decl with
+    | VarDecl (id, expr) ->
+        let acc = self.access self id acc in
+        self.expr self expr acc
+    | EventFieldRef (e, _, _, _) -> self.expr self e acc
+
+  let print_arg self arg acc =
+    match Pos.unmark arg with
+    | PrintAccess (_, a) -> self.access self a acc
+    | PrintIndent e | PrintExpr (e, _, _) -> self.expr self e acc
+    | PrintString _ -> acc
+
+  let expr self expr acc =
+    match Pos.unmark expr with
+    | TestInSet (_, e, set) ->
+        let acc = self.expr self e acc in
+        fold_l self.set_value self acc set
+    | Unop (_, e) -> self.expr self e acc
+    | Comparison (_, l, r) | Binop (_, l, r) ->
+        let acc = self.expr self l acc in
+        self.expr self r acc
+    | Conditional (cond, texp, fexp) ->
+        let acc = self.expr self cond acc in
+        let acc = self.expr self texp acc in
+        Option.fold ~none:acc ~some:(fun e -> self.expr self e acc) fexp
+    | FuncCall (_, args) -> fold_l self.expr self acc args
+    | FuncCallLoop (_, lvs, e) ->
+        let acc = self.loop_variables self lvs acc in
+        self.expr self e acc
+    | Loop (lvs, e) ->
+        let acc = self.loop_variables self lvs acc in
+        self.expr self e acc
+    | Var a -> self.access self (Pos.same a expr) acc
+    | Attribut (a, _) -> self.access self a acc
+    | Size a -> self.access self a acc
+    | Type (a, _) -> self.access self a acc
+    | SameVariable (a, b) ->
+        let acc = self.access self a acc in
+        self.access self b acc
+    | InDomain (a, _) -> self.access self a acc
+    | NbAnomalies | NbDiscordances | NbInformatives | NbBloquantes
+    | NbCategory _ | Literal _ ->
+        acc
+
+  let set_value self sv acc =
+    match sv with
+    | FloatValue _ -> acc
+    | VarValue a -> self.access self a acc
+    | IntervalValue (_, _) -> acc
+
+  let loop_variables self lvs acc =
+    match Pos.unmark lvs with
+    | ValueSets lvs | Ranges lvs -> fold_l self.loop_variable self acc lvs
+
+  let loop_variable self (_, lrs) acc = fold_l self.loop_range self acc lrs
+
+  let loop_range self range acc =
+    match range with
+    | Single atom -> self.atom self atom acc
+    | Range (l, r) | Interval (l, r) ->
+        let acc = self.atom self l acc in
+        self.atom self r acc
+
+  let case self case acc =
+    match case with
+    | CDefault | CValue _ -> acc
+    | CVar a -> self.access self a acc
+
+  let access self a acc =
+    match Pos.unmark a with
+    | VarAccess (sp, _) -> self.varspace self sp acc
+    | TabAccess ((sp, _), e) ->
+        let acc = self.varspace self sp acc in
+        self.expr self e acc
+    | FieldAccess (sp, e, _, _) ->
+        let acc = self.varspace self sp acc in
+        self.expr self e acc
+
+  let atom _self _atom acc = acc
+
+  let varspace _self _vs acc = acc
+
+  let default =
+    {
+      instr;
+      switch;
+      formula;
+      formula_decl;
+      print_arg;
+      set_value;
+      loop_variables;
+      loop_variable;
+      loop_range;
+      expr;
+      access;
+      atom;
+      case;
+      varspace;
+    }
+end
+
 let rec access_map_var f = function
   | VarAccess (m_sp_opt, v) -> VarAccess (m_sp_opt, f v)
   | TabAccess ((m_sp_opt, v), m_i) ->
@@ -39,7 +581,7 @@ and atom_map_var f = function
 
 and m_atom_map_var f m_a = Pos.map (atom_map_var f) m_a
 
-and set_value_loop_map_var f = function
+and loop_range_map_var f = function
   | Single m_a0 -> Single (m_atom_map_var f m_a0)
   | Range (m_a0, m_a1) ->
       let m_a0' = m_atom_map_var f m_a0 in
@@ -51,7 +593,7 @@ and set_value_loop_map_var f = function
       Interval (m_a0', m_a1')
 
 and loop_variable_map_var f (m_ch, svl) =
-  let svl' = List.map (set_value_loop_map_var f) svl in
+  let svl' = List.map (loop_range_map_var f) svl in
   (m_ch, svl')
 
 and loop_variables_map_var f = function
@@ -256,6 +798,8 @@ and instr_map_var f g = function
 
 and m_instr_map_var f g m_i = Pos.map (instr_map_var f g) m_i
 
+(** {2 Folder} *)
+
 type var_usage = Read | Write | Info | DeclRef | ArgRef | DeclLocal | Macro
 
 let fold_list fold l acc = List.fold_left (fun a e -> fold e a) acc l
@@ -286,7 +830,7 @@ and atom_fold_var f a acc =
 
 and m_atom_fold_var f m_a acc = acc |> atom_fold_var f (Pos.unmark m_a)
 
-and set_value_loop_fold_var f svl acc =
+and loop_range_fold_var f svl acc =
   match svl with
   | Single m_a0 -> acc |> m_atom_fold_var f m_a0
   | Range (m_a0, m_a1) ->
@@ -295,7 +839,7 @@ and set_value_loop_fold_var f svl acc =
       acc |> m_atom_fold_var f m_a0 |> m_atom_fold_var f m_a1
 
 and loop_variable_fold_var f (_, svl) acc =
-  fold_list (set_value_loop_fold_var f) svl acc
+  fold_list (loop_range_fold_var f) svl acc
 
 and loop_variables_fold_var f lv acc =
   match lv with
