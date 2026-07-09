@@ -95,6 +95,3 @@ val find_var_by_name : program -> string Pos.marked -> Com.Var.t
     share a name or alias. If an alias is provided, the variable returned is
     that with the lowest execution number. When a name is provided, then the
     variable with the highest execution number is returned. *)
-
-val expand_functions : program -> program
-(** Calls [expand_functions_expr] on the whole program *)
