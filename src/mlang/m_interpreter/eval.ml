@@ -115,10 +115,7 @@ module Make (N : Number.S) (Tracer : Tracers.S) :
   let binop op new_e1 new_e2 =
     let open Com in
     match (op, new_e1, new_e2) with
-    | Add, Number i1, Number i2 -> Number N.(i1 +. i2)
-    | Add, Number i1, Undefined -> Number N.(i1 +. zero ())
-    | Add, Undefined, Number i2 -> Number N.(zero () +. i2)
-    | Add, Undefined, Undefined -> Undefined
+    | Add, _, _ -> Fun.add new_e1 new_e2
     | Sub, Number i1, Number i2 -> Number N.(i1 -. i2)
     | Sub, Number i1, Undefined -> Number N.(i1 -. zero ())
     | Sub, Undefined, Number i2 -> Number N.(zero () -. i2)
