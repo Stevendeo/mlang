@@ -237,15 +237,24 @@ module Make (N : Number.S) (Tracer : Tracers.S) :
         Fun.multimax (evaluate_expr ctx a1) a2
     | NbEvents, [] -> Fun.nb_events ctx
     | SumFunc, args -> Fun.sum @@ List.map (evaluate_expr ctx) args
+    | GtzFunc, [ arg ] ->
+        let n = evaluate_expr ctx arg in
+        comparison Com.Gt n @@ Number (N.zero ())
+    | GtezFunc, [ arg ] ->
+        let n = evaluate_expr ctx arg in
+        comparison Com.Gte n @@ Number (N.zero ())
+    | NullFunc, [ arg ] ->
+        let n = evaluate_expr ctx arg in
+        comparison Com.Eq n @@ Number (N.zero ())
     | Func fn, args ->
         let fd = StrMap.find fn ctx.ctx_prog.program_functions in
         evaluate_function ctx fd args
     | ( (( ArrFunc | InfFunc | PresentFunc | Supzero | AbsFunc | MinFunc
-         | MaxFunc | Multimax | NbEvents ) as func),
+         | GtzFunc | GtezFunc | NullFunc | MaxFunc | Multimax | NbEvents ) as
+         func),
         _ ) ->
         Err.wrong_arity ~func ~args:(List.length args) ~pos:(Pos.get f)
-    | ((GtzFunc | GtezFunc | NullFunc | VerifNumber | ComplNumber) as func), _
-      ->
+    | ((VerifNumber | ComplNumber) as func), _ ->
         Err.unimplemented ~func ~pos:(Pos.get f)
 
   and evaluate_test_in_set ctx positive e0 values =
