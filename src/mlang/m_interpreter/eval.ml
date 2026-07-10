@@ -236,6 +236,7 @@ module Make (N : Number.S) (Tracer : Tracers.S) :
         in
         Fun.multimax (evaluate_expr ctx a1) a2
     | NbEvents, [] -> Fun.nb_events ctx
+    | SumFunc, args -> Fun.sum @@ List.map (evaluate_expr ctx) args
     | Func fn, args ->
         let fd = StrMap.find fn ctx.ctx_prog.program_functions in
         evaluate_function ctx fd args
@@ -243,9 +244,8 @@ module Make (N : Number.S) (Tracer : Tracers.S) :
          | MaxFunc | Multimax | NbEvents ) as func),
         _ ) ->
         Err.wrong_arity ~func ~args:(List.length args) ~pos:(Pos.get f)
-    | ( ((SumFunc | GtzFunc | GtezFunc | NullFunc | VerifNumber | ComplNumber)
-         as func),
-        _ ) ->
+    | ((GtzFunc | GtezFunc | NullFunc | VerifNumber | ComplNumber) as func), _
+      ->
         Err.unimplemented ~func ~pos:(Pos.get f)
 
   and evaluate_test_in_set ctx positive e0 values =

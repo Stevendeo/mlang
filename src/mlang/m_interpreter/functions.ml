@@ -77,4 +77,9 @@ module Make (N : Number.S) = struct
     | Number i1, Undefined -> Number N.(i1 +. zero ())
     | Undefined, Number i2 -> Number N.(zero () +. i2)
     | Undefined, Undefined -> Undefined
+
+  let sum l =
+    match l with
+    | [] -> Number (N.zero ())
+    | hd :: tl -> List.fold_left (fun acc n -> add acc n) hd tl
 end

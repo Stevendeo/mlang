@@ -55,4 +55,7 @@ module Make (N : Number.S) : sig
 
   val add : N.t Types.value -> N.t Types.value -> N.t Types.value
   (** Implements an addition. Helper for `sum`. *)
+
+  val sum : N.t Types.value list -> N.t Types.value
+  (** Implements the `sum` function call, returning the sum of their args. *)
 end
