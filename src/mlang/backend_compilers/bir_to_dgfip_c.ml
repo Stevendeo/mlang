@@ -152,6 +152,9 @@ and funcall p f args =
       D.Func.multimax (generate_c_expr p e1) v
   | NbEvents, _ -> D.Func.nb_events () (* should expect strictly no argument *)
   | Func fn, args -> D.Func.call fn @@ List.map (generate_c_expr p) args
+  | SumFunc, args -> D.Func.sum @@ List.map (generate_c_expr p) args
+  | GtezFunc, [ arg ] -> D.Func.gtez @@ generate_c_expr p arg
+  | GtzFunc, [ arg ] -> D.Func.gtz @@ generate_c_expr p arg
   | _ -> assert false (* should not happen *)
 
 and attribute p acc attr =

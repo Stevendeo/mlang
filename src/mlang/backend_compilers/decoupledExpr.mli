@@ -168,6 +168,12 @@ module Func : sig
   val min :
     expression_composition -> expression_composition -> expression_composition
 
+  val sum : expression_composition list -> expression_composition
+
+  val gtez : expression_composition -> expression_composition
+
+  val gtz : expression_composition -> expression_composition
+
   val multimax :
     expression_composition -> Com.Var.t Com.var_id -> expression_composition
 

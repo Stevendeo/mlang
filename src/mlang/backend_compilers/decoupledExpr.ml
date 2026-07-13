@@ -1014,6 +1014,43 @@ module Func = struct
             @@ build_transitive_composition ~safe_def:true
                  { set_vars = []; def_test; value_comp }))
 
+  let gtez se =
+    make_let se (fun d1 v1 ->
+        let value_comp = Constr.Comp (">=", v1, Lit 0.0) in
+        atomic
+        @@ build_transitive_composition ~safe_def:false
+             { set_vars = []; def_test = d1; value_comp })
+
+  let gtz se =
+    make_let se (fun d1 v1 ->
+        let value_comp = Constr.Comp (">", v1, Lit 0.0) in
+        atomic
+        @@ build_transitive_composition ~safe_def:true
+             { set_vars = []; def_test = d1; value_comp })
+
+  let sum (args : expression_composition list) =
+    let rec loop def_test value_comp = function
+      | [] ->
+          atomic
+          @@ build_transitive_composition ~safe_def:true
+               { set_vars = []; def_test; value_comp }
+      | hd :: tl ->
+          make_let hd (fun d v ->
+              let def_test = DE.deor [ def_test; d ]
+              and value_comp = Constr.Plus (value_comp, v) in
+              loop def_test value_comp tl)
+    in
+    match args with
+    | [] ->
+        atomic
+        @@ build_transitive_composition ~safe_def:true
+             {
+               set_vars = [];
+               def_test = DE.detrue;
+               value_comp = Constr.Lit 0.0;
+             }
+    | _ -> loop DE.defalse (Constr.Lit 0.0) args
+
   let multimax (e : expression_composition) (m_sp_opt, v) =
     let ptr = VID.gen_info_ptr v in
     make_let e (fun vardef varval ->
