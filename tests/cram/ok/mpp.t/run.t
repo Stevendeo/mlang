@@ -314,8 +314,8 @@
       char is_same_var11_def;
       double is_same_var11_val;
       {
-        register int int0;
-        register double real0;
+        int int0;
+        double real0;
         T_varinfo* varinfo0;
         T_varinfo* varinfo1;
         char res12_def;
@@ -341,8 +341,8 @@
         char is_same_var13_def;
         double is_same_var13_val;
         {
-          register int int0;
-          register double real0;
+          int int0;
+          double real0;
           T_varinfo* varinfo0;
           T_varinfo* varinfo1;
           char res14_def;
@@ -369,8 +369,8 @@
           char is_same_var15_def;
           double is_same_var15_val;
           {
-            register int int0;
-            register double real0;
+            int int0;
+            double real0;
             T_varinfo* varinfo0;
             T_varinfo* varinfo1;
             char res16_def;
@@ -454,7 +454,7 @@
       char cond36_def;
       double cond36_val;
       {
-        register int int0;
+        int int0;
         cond36_def = def_saisie[0/*X*/];
         if (cond36_def) {
           int0 = (GT_E(saisie[0/*X*/],0.0));

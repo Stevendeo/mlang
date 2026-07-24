@@ -914,8 +914,8 @@
       int print91;
       print_string(stdout, &(irdata->ctx_pr_out), "champ_evenement(0, numero) = ");
       {
-        register int int0;
-        register double real0;
+        int int0;
+        double real0;
         int space0;
         char res92_def;
         double res92_val;
@@ -943,8 +943,8 @@
       int print93;
       print_string(stdout, &(irdata->ctx_pr_out), "champ_evenement(0, code) = ");
       {
-        register int int0;
-        register double real0;
+        int int0;
+        double real0;
         int space0;
         char res94_def;
         double res94_val;
@@ -1201,8 +1201,8 @@
       int print111;
       print_string(stdout, &(irdata->ctx_pr_out), "meme_variable(X,X) = ");
       {
-        register int int0;
-        register double real0;
+        int int0;
+        double real0;
         T_varinfo* varinfo0;
         T_varinfo* varinfo1;
         char res112_def;
@@ -1232,8 +1232,8 @@
       int print113;
       print_string(stdout, &(irdata->ctx_pr_out), "meme_variable(X,TAB) = ");
       {
-        register int int0;
-        register double real0;
+        int int0;
+        double real0;
         T_varinfo* varinfo0;
         T_varinfo* varinfo1;
         char res114_def;
@@ -1263,8 +1263,8 @@
       int print115;
       print_string(stdout, &(irdata->ctx_pr_out), "meme_variable(TAB[0],TAB) = ");
       {
-        register int int0;
-        register double real0;
+        int int0;
+        double real0;
         T_varinfo* varinfo0;
         T_varinfo* varinfo1;
         char res116_def;
@@ -1501,8 +1501,8 @@
       int print132;
       print_string(stdout, &(irdata->ctx_pr_out), "multimax(indefini, TAB) = ");
       {
-        register int int0;
-        register double real0;
+        int int0;
+        double real0;
         char res133_def;
         double res133_val;
         res133_def =
@@ -1529,8 +1529,8 @@
       int print134;
       print_string(stdout, &(irdata->ctx_pr_out), "multimax(7, TAB) = ");
       {
-        register int int0;
-        register double real0;
+        int int0;
+        double real0;
         char res135_def;
         double res135_val;
         res135_def =
@@ -1557,8 +1557,8 @@
       int print136;
       print_string(stdout, &(irdata->ctx_pr_out), "multimax(taille(TAB) + 1, TAB) = ");
       {
-        register int int0;
-        register double real0;
+        int int0;
+        double real0;
         char res137_def;
         double res137_val;
         res137_def =
@@ -1585,8 +1585,8 @@
       int print138;
       print_string(stdout, &(irdata->ctx_pr_out), "multimax(0, TAB) = ");
       {
-        register int int0;
-        register double real0;
+        int int0;
+        double real0;
         char res139_def;
         double res139_val;
         res139_def =
@@ -1613,8 +1613,8 @@
       int print140;
       print_string(stdout, &(irdata->ctx_pr_out), "multimax(-1, TAB) = ");
       {
-        register int int0;
-        register double real0;
+        int int0;
+        double real0;
         char res141_def;
         double res141_val;
         res141_def =
@@ -2529,8 +2529,8 @@
       int print210;
       print_string(stdout, &(irdata->ctx_pr_out), "type(X, REEL) = ");
       {
-        register int int0;
-        register double real0;
+        int int0;
+        double real0;
         T_varinfo* varinfo0;
         char res211_def;
         double res211_val;
@@ -2557,8 +2557,8 @@
       int print212;
       print_string(stdout, &(irdata->ctx_pr_out), "type(X, ENTIER) = ");
       {
-        register int int0;
-        register double real0;
+        int int0;
+        double real0;
         T_varinfo* varinfo0;
         char res213_def;
         double res213_val;
@@ -2585,8 +2585,8 @@
       int print214;
       print_string(stdout, &(irdata->ctx_pr_out), "type(TAB, ENTIER) = ");
       {
-        register int int0;
-        register double real0;
+        int int0;
+        double real0;
         T_varinfo* varinfo0;
         char res215_def;
         double res215_val;
@@ -2613,8 +2613,8 @@
       int print216;
       print_string(stdout, &(irdata->ctx_pr_out), "type(Y, ENTIER) = ");
       {
-        register int int0;
-        register double real0;
+        int int0;
+        double real0;
         T_varinfo* varinfo0;
         char res217_def;
         double res217_val;
@@ -2641,8 +2641,8 @@
       int print218;
       print_string(stdout, &(irdata->ctx_pr_out), "type(Y, REEL) = ");
       {
-        register int int0;
-        register double real0;
+        int int0;
+        double real0;
         T_varinfo* varinfo0;
         char res219_def;
         double res219_val;
@@ -2669,8 +2669,8 @@
       int print220;
       print_string(stdout, &(irdata->ctx_pr_out), "type(Y, BOOLEEN) = ");
       {
-        register int int0;
-        register double real0;
+        int int0;
+        double real0;
         T_varinfo* varinfo0;
         char res221_def;
         double res221_val;
@@ -2698,8 +2698,8 @@
       int print222;
       print_string(stdout, &(irdata->ctx_pr_out), "type(Y, DATE_AAAA) = ");
       {
-        register int int0;
-        register double real0;
+        int int0;
+        double real0;
         T_varinfo* varinfo0;
         char res223_def;
         double res223_val;
@@ -2727,8 +2727,8 @@
       int print224;
       print_string(stdout, &(irdata->ctx_pr_out), "type(Y, DATE_JJMMAAAA) = ");
       {
-        register int int0;
-        register double real0;
+        int int0;
+        double real0;
         T_varinfo* varinfo0;
         char res225_def;
         double res225_val;
@@ -2756,8 +2756,8 @@
       int print226;
       print_string(stdout, &(irdata->ctx_pr_out), "type(Y, DATE_MM) = ");
       {
-        register int int0;
-        register double real0;
+        int int0;
+        double real0;
         T_varinfo* varinfo0;
         char res227_def;
         double res227_val;

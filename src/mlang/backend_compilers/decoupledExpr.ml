@@ -833,10 +833,10 @@ and format_varinfo ~env fmt : varinfo_access -> unit = function
 
 let format_local_declarations fmt (ld : local_decls) =
   for i = 0 to ld.def_stk_size do
-    Format.fprintf fmt "@;@[<hov 2>register int int%d;@]" i
+    Format.fprintf fmt "@;@[<hov 2>int int%d;@]" i
   done;
   for i = 0 to ld.val_stk_size do
-    Format.fprintf fmt "@;@[<hov 2>register double real%d;@]" i
+    Format.fprintf fmt "@;@[<hov 2>double real%d;@]" i
   done;
   for i = 0 to ld.var_stk_size do
     Format.fprintf fmt "@;@[<hov 2>T_varinfo* varinfo%d;@]" i
