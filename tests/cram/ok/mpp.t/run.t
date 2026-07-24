@@ -21,12 +21,12 @@
     irdata->nb_tmps_target = 0;
     irdata->nb_refs_target = 0;
     {
-      (def_calculee[0/*X*/]) = 1;
-      (calculee[0/*X*/]) = 0.0;
+      def_calculee[0/*X*/] = 1;
+      calculee[0/*X*/] = 0.0;
     }
     {
-      (def_calculee[1/*Y*/]) = 1;
-      (calculee[1/*Y*/]) = 1.0;
+      def_calculee[1/*Y*/] = 1;
+      calculee[1/*Y*/] = 1.0;
     }
     {
       int must_exec = 1;
@@ -49,9 +49,9 @@
       int print1;
       print_string(stdout, &(irdata->ctx_pr_out), "Z = ");
       {
-        print1_def = (def_calculee[2/*Z*/]);
+        print1_def = def_calculee[2/*Z*/];
         if (print1_def) {
-          print1_val = (calculee[2/*Z*/]);
+          print1_val = calculee[2/*Z*/];
         } else print1_val = 0.0;
       }
       if (print1_def) {
@@ -82,9 +82,9 @@
       int print2;
       print_string(stdout, &(irdata->ctx_pr_out), "Z = ");
       {
-        print2_def = (def_calculee[2/*Z*/]);
+        print2_def = def_calculee[2/*Z*/];
         if (print2_def) {
-          print2_val = (calculee[2/*Z*/]);
+          print2_val = calculee[2/*Z*/];
         } else print2_val = 0.0;
       }
       if (print2_def) {
@@ -95,10 +95,10 @@
       print_string(stdout, &(irdata->ctx_pr_out), "\012");
     }
     {
-      (def_calculee[2/*Z*/]) = 0;
-      if ((def_calculee[2/*Z*/])) {
-        (calculee[2/*Z*/]) = 0.0;
-      } else (calculee[2/*Z*/]) = 0.0;
+      def_calculee[2/*Z*/] = 0;
+      if (def_calculee[2/*Z*/]) {
+        calculee[2/*Z*/] = 0.0;
+      } else calculee[2/*Z*/] = 0.0;
     }
     {
       int must_exec = 1;
@@ -121,9 +121,9 @@
       int print3;
       print_string(stdout, &(irdata->ctx_pr_out), "Z = ");
       {
-        print3_def = (def_calculee[2/*Z*/]);
+        print3_def = def_calculee[2/*Z*/];
         if (print3_def) {
-          print3_val = (calculee[2/*Z*/]);
+          print3_val = calculee[2/*Z*/];
         } else print3_val = 0.0;
       }
       if (print3_def) {
@@ -154,9 +154,9 @@
       int print4;
       print_string(stdout, &(irdata->ctx_pr_out), "Z = ");
       {
-        print4_def = (def_calculee[2/*Z*/]);
+        print4_def = def_calculee[2/*Z*/];
         if (print4_def) {
-          print4_val = (calculee[2/*Z*/]);
+          print4_val = calculee[2/*Z*/];
         } else print4_val = 0.0;
       }
       if (print4_def) {
@@ -187,9 +187,9 @@
       int print5;
       print_string(stdout, &(irdata->ctx_pr_out), "Z = ");
       {
-        print5_def = (def_calculee[2/*Z*/]);
+        print5_def = def_calculee[2/*Z*/];
         if (print5_def) {
-          print5_val = (calculee[2/*Z*/]);
+          print5_val = calculee[2/*Z*/];
         } else print5_val = 0.0;
       }
       if (print5_def) {
@@ -220,9 +220,9 @@
       int print6;
       print_string(stdout, &(irdata->ctx_pr_out), "Z = ");
       {
-        print6_def = (def_calculee[2/*Z*/]);
+        print6_def = def_calculee[2/*Z*/];
         if (print6_def) {
-          print6_val = (calculee[2/*Z*/]);
+          print6_val = calculee[2/*Z*/];
         } else print6_val = 0.0;
       }
       if (print6_def) {
@@ -261,22 +261,22 @@
         if (EQ_E((exp8_val),(0))) {
         
           {
-            (def_calculee[2/*Z*/]) = 1;
-            (calculee[2/*Z*/]) = 0.0;
+            def_calculee[2/*Z*/] = 1;
+            calculee[2/*Z*/] = 0.0;
           }
         }else {
           if (EQ_E((exp8_val),(1))) {
           
             {
-              (def_calculee[2/*Z*/]) = 1;
-              (calculee[2/*Z*/]) = 1.0;
+              def_calculee[2/*Z*/] = 1;
+              calculee[2/*Z*/] = 1.0;
             }
           }/* Default switch case */
           
           else {
                   {
-                    (def_calculee[2/*Z*/]) = 1;
-                    (calculee[2/*Z*/]) = -1.0;
+                    def_calculee[2/*Z*/] = 1;
+                    calculee[2/*Z*/] = -1.0;
                   }
           }
         }
@@ -285,10 +285,10 @@
         /* Undefined switch case */
          else 
         {
-          (def_calculee[2/*Z*/]) = 0;
-          if ((def_calculee[2/*Z*/])) {
-            (calculee[2/*Z*/]) = 0.0;
-          } else (calculee[2/*Z*/]) = 0.0;
+          def_calculee[2/*Z*/] = 0;
+          if (def_calculee[2/*Z*/]) {
+            calculee[2/*Z*/] = 0.0;
+          } else calculee[2/*Z*/] = 0.0;
         }}
   
     irdata->refs_org = irdata->refs_org - 1;
@@ -326,15 +326,15 @@
         res12_val = res12_val;
         is_same_var11_def = res12_def;
         if (is_same_var11_def) {
-          int0 = (NEQ_E((res12_def),(0.0)));
+          int0 = (NEQ_E(res12_def,0.0));
           real0 = res12_val;
           is_same_var11_val = (int0 ? real0 : 0.0);
         } else is_same_var11_val = 0.0;
       }if (is_same_var11_val) {
       
         {
-          (def_calculee[2/*Z*/]) = 1;
-          (calculee[2/*Z*/]) = 0.0;
+          def_calculee[2/*Z*/] = 1;
+          calculee[2/*Z*/] = 0.0;
         }
       }else {
         
@@ -354,15 +354,15 @@
           res14_val = res14_val;
           is_same_var13_def = res14_def;
           if (is_same_var13_def) {
-            int0 = (NEQ_E((res14_def),(0.0)));
+            int0 = (NEQ_E(res14_def,0.0));
             real0 = res14_val;
             is_same_var13_val = (int0 ? real0 : 0.0);
           } else is_same_var13_val = 0.0;
         }if (is_same_var13_val) {
         
           {
-            (def_calculee[2/*Z*/]) = 1;
-            (calculee[2/*Z*/]) = 1.0;
+            def_calculee[2/*Z*/] = 1;
+            calculee[2/*Z*/] = 1.0;
           }
         }else {
           
@@ -382,24 +382,24 @@
             res16_val = res16_val;
             is_same_var15_def = res16_def;
             if (is_same_var15_def) {
-              int0 = (NEQ_E((res16_def),(0.0)));
+              int0 = (NEQ_E(res16_def,0.0));
               real0 = res16_val;
               is_same_var15_val = (int0 ? real0 : 0.0);
             } else is_same_var15_val = 0.0;
           }if (is_same_var15_val) {
           
             {
-              (def_calculee[2/*Z*/]) = 0;
-              if ((def_calculee[2/*Z*/])) {
-                (calculee[2/*Z*/]) = 0.0;
-              } else (calculee[2/*Z*/]) = 0.0;
+              def_calculee[2/*Z*/] = 0;
+              if (def_calculee[2/*Z*/]) {
+                calculee[2/*Z*/] = 0.0;
+              } else calculee[2/*Z*/] = 0.0;
             }
           }/* Default switch case */
           
           else {
                   {
-                    (def_calculee[2/*Z*/]) = 1;
-                    (calculee[2/*Z*/]) = -1.0;
+                    def_calculee[2/*Z*/] = 1;
+                    calculee[2/*Z*/] = -1.0;
                   }
           }
         }
@@ -455,21 +455,21 @@
       double cond36_val;
       {
         register int int0;
-        cond36_def = (def_saisie[0/*X*/]);
+        cond36_def = def_saisie[0/*X*/];
         if (cond36_def) {
-          int0 = (GT_E(((saisie[0/*X*/])),(0.0)));
-          cond36_val = ((def_saisie[0/*X*/]) ? int0 : 0);
+          int0 = (GT_E(saisie[0/*X*/],0.0));
+          cond36_val = (def_saisie[0/*X*/] ? int0 : 0);
         } else cond36_val = 0.0;
       }
       if (cond36_def && cond36_val != 0.0) {
         {
-          (def_calculee[0/*Z*/]) = 1;
-          (calculee[0/*Z*/]) = 1.0;
+          def_calculee[0/*Z*/] = 1;
+          calculee[0/*Z*/] = 1.0;
         }
       } else if (cond36_def) {
         {
-          (def_calculee[0/*Z*/]) = 1;
-          (calculee[0/*Z*/]) = 0.0;
+          def_calculee[0/*Z*/] = 1;
+          calculee[0/*Z*/] = 0.0;
         }
       }
     }

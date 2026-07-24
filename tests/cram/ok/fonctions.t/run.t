@@ -848,8 +848,8 @@
         }
       }
       {
-        (def_calculee[20/*X*/]) = 1;
-        (calculee[20/*X*/]) = 2.0;
+        def_calculee[20/*X*/] = 1;
+        calculee[20/*X*/] = 2.0;
       }
       {
         char print87_def;
@@ -862,10 +862,10 @@
       }
       
       {
-        (def_calculee[20/*X*/]) = 0;
-        if ((def_calculee[20/*X*/])) {
-          (calculee[20/*X*/]) = 0.0;
-        } else (calculee[20/*X*/]) = 0.0;
+        def_calculee[20/*X*/] = 0;
+        if (def_calculee[20/*X*/]) {
+          calculee[20/*X*/] = 0.0;
+        } else calculee[20/*X*/] = 0.0;
       }
       free(irdata->events);
       irdata->events = events_sav74;
@@ -925,7 +925,7 @@
         res92_val = res92_val;
         print91_def = res92_def;
         if (print91_def) {
-          int0 = (NEQ_E((res92_def),(0.0)));
+          int0 = (NEQ_E(res92_def,0.0));
           real0 = res92_val;
           print91_val = (int0 ? real0 : 0.0);
         } else print91_val = 0.0;
@@ -954,7 +954,7 @@
         res94_val = res94_val;
         print93_def = res94_def;
         if (print93_def) {
-          int0 = (NEQ_E((res94_def),(0.0)));
+          int0 = (NEQ_E(res94_def,0.0));
           real0 = res94_val;
           print93_val = (int0 ? real0 : 0.0);
         } else print93_val = 0.0;
@@ -1214,7 +1214,7 @@
         res112_val = res112_val;
         print111_def = res112_def;
         if (print111_def) {
-          int0 = (NEQ_E((res112_def),(0.0)));
+          int0 = (NEQ_E(res112_def,0.0));
           real0 = res112_val;
           print111_val = (int0 ? real0 : 0.0);
         } else print111_val = 0.0;
@@ -1245,7 +1245,7 @@
         res114_val = res114_val;
         print113_def = res114_def;
         if (print113_def) {
-          int0 = (NEQ_E((res114_def),(0.0)));
+          int0 = (NEQ_E(res114_def,0.0));
           real0 = res114_val;
           print113_val = (int0 ? real0 : 0.0);
         } else print113_val = 0.0;
@@ -1276,7 +1276,7 @@
         res116_val = res116_val;
         print115_def = res116_def;
         if (print115_def) {
-          int0 = (NEQ_E((res116_def),(0.0)));
+          int0 = (NEQ_E(res116_def,0.0));
           real0 = res116_val;
           print115_val = (int0 ? real0 : 0.0);
         } else print115_val = 0.0;
@@ -1511,7 +1511,7 @@
         res133_val = res133_val;
         print132_def = res133_def;
         if (print132_def) {
-          int0 = (NEQ_E((res133_def),(0.0)));
+          int0 = (NEQ_E(res133_def,0.0));
           real0 = res133_val;
           print132_val = (int0 ? real0 : 0.0);
         } else print132_val = 0.0;
@@ -1539,7 +1539,7 @@
         res135_val = res135_val;
         print134_def = res135_def;
         if (print134_def) {
-          int0 = (NEQ_E((res135_def),(0.0)));
+          int0 = (NEQ_E(res135_def,0.0));
           real0 = res135_val;
           print134_val = (int0 ? real0 : 0.0);
         } else print134_val = 0.0;
@@ -1567,7 +1567,7 @@
         res137_val = res137_val;
         print136_def = res137_def;
         if (print136_def) {
-          int0 = (NEQ_E((res137_def),(0.0)));
+          int0 = (NEQ_E(res137_def,0.0));
           real0 = res137_val;
           print136_val = (int0 ? real0 : 0.0);
         } else print136_val = 0.0;
@@ -1595,7 +1595,7 @@
         res139_val = res139_val;
         print138_def = res139_def;
         if (print138_def) {
-          int0 = (NEQ_E((res139_def),(0.0)));
+          int0 = (NEQ_E(res139_def,0.0));
           real0 = res139_val;
           print138_val = (int0 ? real0 : 0.0);
         } else print138_val = 0.0;
@@ -1623,7 +1623,7 @@
         res141_val = res141_val;
         print140_def = res141_def;
         if (print140_def) {
-          int0 = (NEQ_E((res141_def),(0.0)));
+          int0 = (NEQ_E(res141_def,0.0));
           real0 = res141_val;
           print140_val = (int0 ? real0 : 0.0);
         } else print140_val = 0.0;
@@ -2539,7 +2539,7 @@
         res211_val = res211_val;
         print210_def = res211_def;
         if (print210_def) {
-          int0 = (NEQ_E((res211_def),(0.0)));
+          int0 = (NEQ_E(res211_def,0.0));
           real0 = res211_val;
           print210_val = (int0 ? real0 : 0.0);
         } else print210_val = 0.0;
@@ -2567,7 +2567,7 @@
         res213_val = res213_val;
         print212_def = res213_def;
         if (print212_def) {
-          int0 = (NEQ_E((res213_def),(0.0)));
+          int0 = (NEQ_E(res213_def,0.0));
           real0 = res213_val;
           print212_val = (int0 ? real0 : 0.0);
         } else print212_val = 0.0;
@@ -2595,7 +2595,7 @@
         res215_val = res215_val;
         print214_def = res215_def;
         if (print214_def) {
-          int0 = (NEQ_E((res215_def),(0.0)));
+          int0 = (NEQ_E(res215_def,0.0));
           real0 = res215_val;
           print214_val = (int0 ? real0 : 0.0);
         } else print214_val = 0.0;
@@ -2623,7 +2623,7 @@
         res217_val = res217_val;
         print216_def = res217_def;
         if (print216_def) {
-          int0 = (NEQ_E((res217_def),(0.0)));
+          int0 = (NEQ_E(res217_def,0.0));
           real0 = res217_val;
           print216_val = (int0 ? real0 : 0.0);
         } else print216_val = 0.0;
@@ -2651,7 +2651,7 @@
         res219_val = res219_val;
         print218_def = res219_def;
         if (print218_def) {
-          int0 = (NEQ_E((res219_def),(0.0)));
+          int0 = (NEQ_E(res219_def,0.0));
           real0 = res219_val;
           print218_val = (int0 ? real0 : 0.0);
         } else print218_val = 0.0;
@@ -2680,7 +2680,7 @@
         res221_val = res221_val;
         print220_def = res221_def;
         if (print220_def) {
-          int0 = (NEQ_E((res221_def),(0.0)));
+          int0 = (NEQ_E(res221_def,0.0));
           real0 = res221_val;
           print220_val = (int0 ? real0 : 0.0);
         } else print220_val = 0.0;
@@ -2709,7 +2709,7 @@
         res223_val = res223_val;
         print222_def = res223_def;
         if (print222_def) {
-          int0 = (NEQ_E((res223_def),(0.0)));
+          int0 = (NEQ_E(res223_def,0.0));
           real0 = res223_val;
           print222_val = (int0 ? real0 : 0.0);
         } else print222_val = 0.0;
@@ -2738,7 +2738,7 @@
         res225_val = res225_val;
         print224_def = res225_def;
         if (print224_def) {
-          int0 = (NEQ_E((res225_def),(0.0)));
+          int0 = (NEQ_E(res225_def,0.0));
           real0 = res225_val;
           print224_val = (int0 ? real0 : 0.0);
         } else print224_val = 0.0;
@@ -2767,7 +2767,7 @@
         res227_val = res227_val;
         print226_def = res227_def;
         if (print226_def) {
-          int0 = (NEQ_E((res227_def),(0.0)));
+          int0 = (NEQ_E(res227_def,0.0));
           real0 = res227_val;
           print226_val = (int0 ? real0 : 0.0);
         } else print226_val = 0.0;

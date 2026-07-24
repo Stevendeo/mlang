@@ -236,6 +236,10 @@ let local_var (lvar : local_var) (stacks : local_stacks) (ctx : local_vars) =
                    (fun fmt (i, _) -> Format.fprintf fmt "%i" i))
                 stacks.var_substs))
 
+let dand = function [] -> Dtrue | [ e ] -> e | l -> Dand l
+
+let dor = function [] -> Dfalse | [ e ] -> e | l -> Dor l
+
 let and_ e1 e2 stacks ctx =
   let stacks', lv1, e1 = push_with_kind stacks ctx Def e1 in
   let _, lv2, e2 = push_with_kind stacks' ctx Def e2 in
@@ -244,10 +248,10 @@ let and_ e1 e2 stacks ctx =
   | _, Dtrue -> (e1, Def, lv1)
   | Dfalse, _ | _, Dfalse -> (Dfalse, Def, [])
   | Dvar v1, Dvar v2 when v1 = v2 -> (e1, Def, lv1)
-  | Dand l1, Dand l2 -> (Dand (l1 @ l2), Def, lv2 @ lv1)
-  | _, Dand l -> (Dand (e1 :: l), Def, lv2 @ lv1)
-  | Dand l, _ -> (Dand (l @ [ e2 ]), Def, lv2 @ lv1)
-  | _, _ -> (Dand [ e1; e2 ], Def, lv2 @ lv1)
+  | Dand l1, Dand l2 -> (dand (l1 @ l2), Def, lv2 @ lv1)
+  | _, Dand l -> (dand (e1 :: l), Def, lv2 @ lv1)
+  | Dand l, _ -> (dand (l @ [ e2 ]), Def, lv2 @ lv1)
+  | _, _ -> (dand [ e1; e2 ], Def, lv2 @ lv1)
 
 let or_ (e1 : builder) (e2 : builder) (stacks : local_stacks) (ctx : local_vars)
     =
@@ -689,7 +693,63 @@ let format_expr_var ~(env : Types.env) fmt (ev : expr_var) =
         (generate_variable ~env ~trace_flag:env.dgfip_flags.flg_trace ~def_flag
            m_sp_opt var)
 
-let rec format_dexpr ~(env : Types.env) fmt (de : expr) =
+let has_name ~name = function
+  | Local slot -> name = Format.asprintf "%a" format_slot slot
+  | M (m_sp_opt, var, df) ->
+      let v', _ =
+        match df with
+        | Def -> VID.gen_def m_sp_opt var
+        | _ -> VID.gen_val m_sp_opt var
+      in
+      name = v'
+
+let is_var_with_name ~name = function Dvar v -> has_name ~name v | _ -> false
+
+let find_first_and_split f l =
+  let rec loop acc = function
+    | [] -> None
+    | hd :: tl ->
+        if f hd then Some (hd, List.rev_append acc tl) else loop (hd :: acc) tl
+  in
+  loop [] l
+
+let rec format_dexpr_assign ~(env : Env.t) v fmt (de : expr) =
+  let format_dexpr = format_dexpr ~env in
+  let default_print () = Format.fprintf fmt "%s =@ %a" v format_dexpr de in
+  if env.dgfip_flags.flg_trace then default_print ()
+  else
+    match de with
+    | Dvar evar ->
+        let should_print =
+          env.dgfip_flags.flg_trace || not (has_name ~name:v evar)
+        in
+        if should_print then default_print () else ()
+    | Dand l -> begin
+        match find_first_and_split (is_var_with_name ~name:v) l with
+        | None -> default_print ()
+        | Some (_, l') ->
+            Format.fprintf fmt "%s &=@ %a" v format_dexpr (dand l')
+      end
+    | Dor l -> begin
+        match find_first_and_split (is_var_with_name ~name:v) l with
+        | None -> default_print ()
+        | Some (_, l') -> Format.fprintf fmt "%s |=@ %a" v format_dexpr (dor l')
+      end
+    | Dbinop ((("+" | "*") as op), e1, e2) ->
+        if is_var_with_name ~name:v e1 then
+          Format.fprintf fmt "%s %s=@ %a" v op format_dexpr e2
+        else if is_var_with_name ~name:v e2 then
+          Format.fprintf fmt "%s %s=@ %a" v op format_dexpr e1
+        else default_print ()
+    | Dbinop ((("-" | "/") as op), e1, e2) ->
+        if is_var_with_name ~name:v e1 then
+          Format.fprintf fmt "%s %s=@ %a" v op format_dexpr e2
+        else default_print ()
+    | Dtrue | Dfalse | Dlit _ | Dvarinfo _ | Dvarspace _ | Dunop _ | Dbinop _
+    | Dfun _ | Dite _ | Dtyp _ | Dinstr _ | Ddirect _ ->
+        default_print ()
+
+and format_dexpr ~env fmt (de : expr) =
   let format_dexpr = format_dexpr ~env in
   match de with
   | Dtrue -> Format.fprintf fmt "1"
@@ -721,25 +781,25 @@ let rec format_dexpr ~(env : Types.env) fmt (de : expr) =
   | Dbinop (op, de1, de2) -> begin
       match op with
       | ">" ->
-          Format.fprintf fmt "@[<hov 2>(GT_E((%a),(%a))@])" format_dexpr de1
+          Format.fprintf fmt "@[<hov 2>(GT_E(%a,%a)@])" format_dexpr de1
             format_dexpr de2
       | "<" ->
-          Format.fprintf fmt "@[<hov 2>(LT_E((%a),(%a))@])" format_dexpr de1
+          Format.fprintf fmt "@[<hov 2>(LT_E(%a,%a)@])" format_dexpr de1
             format_dexpr de2
       | ">=" ->
-          Format.fprintf fmt "@[<hov 2>(GE_E((%a),(%a))@])" format_dexpr de1
+          Format.fprintf fmt "@[<hov 2>(GE_E(%a,%a)@])" format_dexpr de1
             format_dexpr de2
       | "<=" ->
-          Format.fprintf fmt "@[<hov 2>(LE_E((%a),(%a))@])" format_dexpr de1
+          Format.fprintf fmt "@[<hov 2>(LE_E(%a,%a)@])" format_dexpr de1
             format_dexpr de2
       | "==" ->
-          Format.fprintf fmt "@[<hov 2>(EQ_E((%a),(%a))@])" format_dexpr de1
+          Format.fprintf fmt "@[<hov 2>(EQ_E(%a,%a)@])" format_dexpr de1
             format_dexpr de2
       | "!=" ->
-          Format.fprintf fmt "@[<hov 2>(NEQ_E((%a),(%a))@])" format_dexpr de1
+          Format.fprintf fmt "@[<hov 2>(NEQ_E(%a,%a)@])" format_dexpr de1
             format_dexpr de2
       | _ ->
-          Format.fprintf fmt "@[<hov 2>((%a)@ %s (%a)@])" format_dexpr de1 op
+          Format.fprintf fmt "@[<hov 2>(%a@ %s %a@])" format_dexpr de1 op
             format_dexpr de2
     end
   | Dfun (funname, des) ->
@@ -788,15 +848,17 @@ let format_local_declarations fmt (ld : local_decls) =
 let format_local_vars_defs ~env fmt (lv : local_vars) =
   let lv = List.rev lv in
   let format_one_assign fmt (_, { slot; subexpr }) =
-    Format.fprintf fmt "@;@[<hov 2>%a =@ %a;@]" format_slot slot
-      (format_dexpr ~env) subexpr
+    let v = Format.asprintf "%a" format_slot slot in
+    Format.fprintf fmt "@;@[<hov 2>%a;@]" (format_dexpr_assign ~env v) subexpr
   in
   List.iter (format_one_assign fmt) lv
 
 let format_assign ~env (var : string) fmt ((e, _kind, lv) : t) =
-  Format.fprintf fmt "%a@;@[<hov 2>%s =@ %a;@]"
+  Format.fprintf fmt "%a@;@[<hov 2>%a;@]"
     (format_local_vars_defs ~env)
-    lv var (format_dexpr ~env) e
+    lv
+    (format_dexpr_assign ~env var)
+    e
 
 let format_set_vars ~env fmt (set_vars : (dflag * string * t) list) =
   List.iter
@@ -876,29 +938,7 @@ let unop op se =
         (build_transitive_composition ~safe_def
            { set_vars = []; def_test; value_comp }))
 
-let conditional cond thenval elseval =
-  (* make_let cond (fun dc vc -> *)
-  (*     make_let thenval (fun dt vt -> *)
-  (*         make_let elseval (fun de ve -> *)
-  (*             let def_test = DE.deand [ dc; DE.deite (DE.devar vc) dt de ] in *)
-  (*             let value_comp = Constr.Ite (vc, vt, ve) in *)
-  (*             AtomicExpr *)
-  (*               (build_transitive_composition ~safe_def:false *)
-  (*                  { set_vars = []; def_test; value_comp })))) *)
-
-  (* let set_vars = cond.set_vars @ thenval.set_vars @ elseval.set_vars in *)
-  (* let def_test = *)
-  (*   DE.deand *)
-  (*     [ *)
-  (*       cond.def_test; *)
-  (*       DE.deite (DE.devar cond.value_comp) thenval.def_test elseval.def_test; *)
-  (*     ] *)
-  (* in *)
-  (* let value_comp = *)
-  (*   Constr.Ite (cond.value_comp, thenval.value_comp, elseval.value_comp) *)
-  (* in *)
-  (* build_transitive_composition { set_vars; def_test; value_comp } *)
-  Cond (cond, thenval, elseval)
+let conditional cond thenval elseval = Cond (cond, thenval, elseval)
 
 module Func = struct
   let supzero se =
@@ -934,8 +974,8 @@ module Func = struct
     make_let se (fun vardef varval ->
         let value_comp = Constr.Fun ("my_arr", [ varval ]) in
         (* Here we boldly assume that rounding value of `undef` will give zero,
-       given the invariant. Pretty sure that not true, in case of doubt, turn
-       `safe_def` to false *)
+           given the invariant. Pretty sure that not true, in case of doubt, turn
+           `safe_def` to false *)
         atomic
         @@ build_transitive_composition ~safe_def:true
              { set_vars = []; def_test = vardef; value_comp })

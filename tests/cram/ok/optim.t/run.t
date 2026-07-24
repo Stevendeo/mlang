@@ -15,13 +15,13 @@ Mlang avec l'optimisation remplaçant les accès mémoire au TGV via irdata par 
     {
       register int int0;
       register double real0;
-      int0 = ((def_saisie[0/*X*/]) || (def_saisie[1/*Y*/]));
-      (def_calculee[0/*Z*/]) = ((def_saisie[0/*X*/]) && int0);
-      if ((def_calculee[0/*Z*/])) {
-        real0 = (((saisie[0/*X*/])) - ((saisie[1/*Y*/])));
-        real0 = ((real0) + ((saisie[0/*X*/])));
-        (calculee[0/*Z*/]) = (((saisie[0/*X*/])) * (real0));
-      } else (calculee[0/*Z*/]) = 0.0;
+      int0 = (def_saisie[0/*X*/] || def_saisie[1/*Y*/]);
+      def_calculee[0/*Z*/] = (def_saisie[0/*X*/] && int0);
+      if (def_calculee[0/*Z*/]) {
+        real0 = (saisie[0/*X*/] - saisie[1/*Y*/]);
+        real0 += saisie[0/*X*/];
+        calculee[0/*Z*/] = (saisie[0/*X*/] * real0);
+      } else calculee[0/*Z*/] = 0.0;
     }
   
     irdata->nb_refs_target = sav35_nb_refs_target;
@@ -52,13 +52,13 @@ Mlang avec l'optimisation vérifiant si une règle peut être arrêtée ou non
     {
       register int int0;
       register double real0;
-      int0 = ((irdata->def_saisie[0/*X*/]) || (irdata->def_saisie[1/*Y*/]));
-      (irdata->def_calculee[0/*Z*/]) = ((irdata->def_saisie[0/*X*/]) && int0);
-      if ((irdata->def_calculee[0/*Z*/])) {
-        real0 = (((irdata->saisie[0/*X*/])) - ((irdata->saisie[1/*Y*/])));
-        real0 = ((real0) + ((irdata->saisie[0/*X*/])));
-        (irdata->calculee[0/*Z*/]) = (((irdata->saisie[0/*X*/])) * (real0));
-      } else (irdata->calculee[0/*Z*/]) = 0.0;
+      int0 = (irdata->def_saisie[0/*X*/] || irdata->def_saisie[1/*Y*/]);
+      irdata->def_calculee[0/*Z*/] = (irdata->def_saisie[0/*X*/] && int0);
+      if (irdata->def_calculee[0/*Z*/]) {
+        real0 = (irdata->saisie[0/*X*/] - irdata->saisie[1/*Y*/]);
+        real0 += irdata->saisie[0/*X*/];
+        irdata->calculee[0/*Z*/] = (irdata->saisie[0/*X*/] * real0);
+      } else irdata->calculee[0/*Z*/] = 0.0;
     }
   
     irdata->nb_refs_target = sav35_nb_refs_target;
@@ -89,13 +89,13 @@ Mlang avec l'optimisation supprimant les variables boolénnes redondantes dans l
     {
       register int int0;
       register double real0;
-      int0 = ((irdata->def_saisie[0/*X*/]) || (irdata->def_saisie[1/*Y*/]));
-      (irdata->def_calculee[0/*Z*/]) = ((irdata->def_saisie[0/*X*/]) && int0);
-      if ((irdata->def_calculee[0/*Z*/])) {
-        real0 = (((irdata->saisie[0/*X*/])) - ((irdata->saisie[1/*Y*/])));
-        real0 = ((real0) + ((irdata->saisie[0/*X*/])));
-        (irdata->calculee[0/*Z*/]) = (((irdata->saisie[0/*X*/])) * (real0));
-      } else (irdata->calculee[0/*Z*/]) = 0.0;
+      int0 = (irdata->def_saisie[0/*X*/] || irdata->def_saisie[1/*Y*/]);
+      irdata->def_calculee[0/*Z*/] = (irdata->def_saisie[0/*X*/] && int0);
+      if (irdata->def_calculee[0/*Z*/]) {
+        real0 = (irdata->saisie[0/*X*/] - irdata->saisie[1/*Y*/]);
+        real0 += irdata->saisie[0/*X*/];
+        irdata->calculee[0/*Z*/] = (irdata->saisie[0/*X*/] * real0);
+      } else irdata->calculee[0/*Z*/] = 0.0;
     }
   
     irdata->nb_refs_target = sav35_nb_refs_target;
@@ -126,12 +126,12 @@ Mlang avec l'optimisation des formules booléennes
     irdata->nb_refs_target = 0;
     {
       register double real0;
-      (irdata->def_calculee[0/*Z*/]) = (irdata->def_saisie[0/*X*/]);
-      if ((irdata->def_calculee[0/*Z*/])) {
-        real0 = (((irdata->saisie[0/*X*/])) - ((irdata->saisie[1/*Y*/])));
-        real0 = ((real0) + ((irdata->saisie[0/*X*/])));
-        (irdata->calculee[0/*Z*/]) = (((irdata->saisie[0/*X*/])) * (real0));
-      } else (irdata->calculee[0/*Z*/]) = 0.0;
+      irdata->def_calculee[0/*Z*/] = irdata->def_saisie[0/*X*/];
+      if (irdata->def_calculee[0/*Z*/]) {
+        real0 = (irdata->saisie[0/*X*/] - irdata->saisie[1/*Y*/]);
+        real0 += irdata->saisie[0/*X*/];
+        irdata->calculee[0/*Z*/] = (irdata->saisie[0/*X*/] * real0);
+      } else irdata->calculee[0/*Z*/] = 0.0;
     }
   
     irdata->nb_refs_target = sav35_nb_refs_target;
@@ -155,12 +155,12 @@ Mlang avec toutes les optimisations
     irdata->nb_refs_target = 0;
     {
       register double real0;
-      (def_calculee[0/*Z*/]) = (def_saisie[0/*X*/]);
-      if ((def_calculee[0/*Z*/])) {
-        real0 = (((saisie[0/*X*/])) - ((saisie[1/*Y*/])));
-        real0 = ((real0) + ((saisie[0/*X*/])));
-        (calculee[0/*Z*/]) = (((saisie[0/*X*/])) * (real0));
-      } else (calculee[0/*Z*/]) = 0.0;
+      def_calculee[0/*Z*/] = def_saisie[0/*X*/];
+      if (def_calculee[0/*Z*/]) {
+        real0 = (saisie[0/*X*/] - saisie[1/*Y*/]);
+        real0 += saisie[0/*X*/];
+        calculee[0/*Z*/] = (saisie[0/*X*/] * real0);
+      } else calculee[0/*Z*/] = 0.0;
     }
   
     irdata->nb_refs_target = sav35_nb_refs_target;
