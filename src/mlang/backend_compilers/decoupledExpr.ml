@@ -506,7 +506,7 @@ let make_let body followup =
   | AtomicExpr e -> begin
       match followup e.def_test e.value_comp with
       | AtomicExpr e' ->
-          atomic @@ { e' with set_vars = e.set_vars @ e'.set_vars }
+          atomic @@ { e' with set_vars = e'.set_vars @ e.set_vars }
       | _ ->
           make_generic_let (fun vardef varval ->
               Let
