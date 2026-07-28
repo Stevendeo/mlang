@@ -243,11 +243,11 @@ and funcall p f args =
   | _ -> assert false (* should not happen *)
 
 and attribute p acc attr =
-  D.make_let (code_access p acc) (fun vardef varval ->
+  D.make_let (code_access p acc) (fun _vardef varval ->
       let def_test =
         D.DE.deand
           [
-            vardef;
+            (* vardef; *)
             D.DE.devar @@ C.Fun (Pp.spr "attribut_%s_def" attr, [ varval ]);
           ]
       and value_comp = C.Fun (Pp.spr "attribut_%s" attr, [ varval ]) in
@@ -270,8 +270,7 @@ and is_type p acc typ =
         D.dfun_with_ptr "est_type" (fun ~ptrdef ~ptrval ->
             [ varval; C.Typ typ; ptrdef; ptrval ])
       in
-      D.atomic
-        { d_fun with def_test = D.DE.deand [ vardef; d_fun.def_test ] })
+      D.atomic { d_fun with def_test = D.DE.deand [ vardef; d_fun.def_test ] })
 
 and same_variable p acc0 acc1 =
   D.make_let (code_access p acc0) (fun d0 v0 ->
@@ -292,8 +291,7 @@ and in_domain (p : Mir.program) acc cvm =
         D.dfun_with_ptr "dans_domaine" (fun ~ptrdef ~ptrval ->
             [ varval; C.Lit (float_of_int id_cv); ptrdef; ptrval ])
       in
-      D.atomic
-        { d_fun with def_test = D.DE.deand [ vardef; d_fun.def_test ] })
+      D.atomic { d_fun with def_test = D.DE.deand [ vardef; d_fun.def_test ] })
 
 and generate_c_expr (p : Mir.program) (e : Mir.expression Pos.marked) :
     D.expression_composition =
