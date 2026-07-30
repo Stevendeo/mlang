@@ -83,10 +83,14 @@ void infoTemps(uint64_t temps_ms) {
   uint64_t sec = (temps_ms - min * 60000)/1000;
   uint64_t mse = temps_ms - min*60000 - sec*1000;
   fprintf(stdout, "IACT014 | Temps calcul effectif total: %lums (", temps_ms);
-  if (min > 0) fprintf(stdout, "%lumn", min);
+  if (min > 0) fprintf(stdout, "%lum", min);
   if (sec > 0) fprintf(stdout, "%lus" , sec);
   if (mse > 0) fprintf(stdout, "%lums", mse);
   fprintf(stdout, ")\n");
+}
+
+void infoActCpl(void) {
+  fprintf(stdout, "IACT015 | complétion IRJ\n");
 }
 
 /* discos */
@@ -223,6 +227,22 @@ void anoOptsDefVarArg(char *arg) {
   fprintf(stdout, "ALDC013 | variable indefinissable : %s\n", arg);
 }
 
+void anoOptsDstAbs(void) {
+  fprintf(stdout, "ALDC014 | répertoire de destination manquant (-desination ? | -dst ?)\n");
+}
+
+void anoOptsDstDup(char *dst0, char *dst1) {
+  fprintf(stdout, "ALDC015 | destinations surnuméraires contradictoires (%s <> %s)\n", dst0, dst1);
+}
+
+void anoOptsDstAbsent(void) {
+  fprintf(stdout, "ALDC016 | répertoire de destination non spécifié\n");
+}
+
+void anoOptsDstRep(char *dst) {
+  fprintf(stdout, "ALDC017 | répertoire de destination inaccessible (%s)\n", dst);
+}
+
 void anoLigneInvalide(int ligne, int err) {
   fprintf(stdout, "AFMT000 | ligne %d invalide (%d)\n", ligne, err);
 }
@@ -253,5 +273,9 @@ void anoValeurFausse(char *nom, double val, double valRes) {
 
 void anoTesteeNonRestituee(char *var) {
   fprintf(stdout, "ATRT003 | variable testee non-restituee : %s\n", var);
+}
+
+void anoLimNbFich(char *fich) {
+  fprintf(stdout, "ASYS001 | trop de doublons du même nom de fichier (%s)\n", fich);
 }
 

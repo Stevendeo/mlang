@@ -18,47 +18,70 @@ MPP_FUNCTION_BACKEND?=enchainement_primitif
 MPP_FUNCTION?=enchainement_primitif_interpreteur
 SOURCE_EXT_DIR=$(ROOT_DIR)/m_ext/$(YEAR)
 REPO?=ir
-# Add a TESTS_DIR for 2025 when available
+
+# Paramètres pour les millésimes
 ifeq ($(REPO),svn)
   SOURCE_FILES?=$(call source_dir_sans_cibles_m,$(ROOT_DIR)/ir-calcul/M_SVN/$(YEAR)/code_m/)
-  SOURCE_EXT_FILES?=\
-    $(SOURCE_EXT_DIR)/cibles.m \
-    $(SOURCE_EXT_DIR)/codes_1731.m \
-    $(SOURCE_EXT_DIR)/commence_par_5.m \
-    $(SOURCE_EXT_DIR)/commence_par_7.m \
-    $(SOURCE_EXT_DIR)/commence_par_H.m \
-    $(SOURCE_EXT_DIR)/correctif.m \
-    $(SOURCE_EXT_DIR)/main.m
-  TESTS_DIR?=$(ROOT_DIR)/tests/$(YEAR)/fuzzing
+  SOURCE_EXT_DIR=$(ROOT_DIR)/m_ext/$(YEAR)
+  ifeq ($(filter x$(MODE), xc xcorr xcorrectif), x$(MODE))
+    SOURCE_EXT_FILES?=\
+      $(SOURCE_EXT_DIR)/cibles.m \
+      $(SOURCE_EXT_DIR)/primitif.m \
+      $(SOURCE_EXT_DIR)/cibles_corr.m \
+      $(SOURCE_EXT_DIR)/codes_1731.m \
+      $(SOURCE_EXT_DIR)/commence_par_5.m \
+      $(SOURCE_EXT_DIR)/commence_par_7.m \
+      $(SOURCE_EXT_DIR)/commence_par_H.m \
+      $(SOURCE_EXT_DIR)/correctif.m \
+      $(SOURCE_EXT_DIR)/main_corr.m
+  else
+    SOURCE_EXT_FILES?=\
+      $(SOURCE_EXT_DIR)/cibles.m \
+      $(SOURCE_EXT_DIR)/primitif.m \
+      $(SOURCE_EXT_DIR)/main.m
+  endif
 else ifeq ($(filter $(YEAR), 2022 2023 2024), $(YEAR))
   SOURCE_FILES?=$(call source_dir_sans_cibles_m,$(ROOT_DIR)/ir-calcul/sources$(YEAR)*/)
-  SOURCE_EXT_FILES?=\
-    $(SOURCE_EXT_DIR)/cibles.m \
-    $(SOURCE_EXT_DIR)/codes_1731.m \
-    $(SOURCE_EXT_DIR)/commence_par_5.m \
-    $(SOURCE_EXT_DIR)/commence_par_7.m \
-    $(SOURCE_EXT_DIR)/commence_par_H.m \
-    $(SOURCE_EXT_DIR)/correctif.m \
-    $(SOURCE_EXT_DIR)/main.m
-  TESTS_DIR?=$(ROOT_DIR)/tests/$(YEAR)/fuzzing
+  ifeq ($(filter x$(MODE), xc xcorr xcorrectif), x$(MODE))
+    SOURCE_EXT_FILES?=\
+      $(SOURCE_EXT_DIR)/cibles.m \
+      $(SOURCE_EXT_DIR)/primitif.m \
+      $(SOURCE_EXT_DIR)/cibles_corr.m \
+      $(SOURCE_EXT_DIR)/codes_1731.m \
+      $(SOURCE_EXT_DIR)/commence_par_5.m \
+      $(SOURCE_EXT_DIR)/commence_par_7.m \
+      $(SOURCE_EXT_DIR)/commence_par_H.m \
+      $(SOURCE_EXT_DIR)/correctif.m \
+      $(SOURCE_EXT_DIR)/main_corr.m
+  else
+    SOURCE_EXT_FILES?=\
+      $(SOURCE_EXT_DIR)/cibles.m \
+      $(SOURCE_EXT_DIR)/primitif.m \
+      $(SOURCE_EXT_DIR)/main.m
+  endif
 else ifeq ($(filter $(YEAR), 2018 2019 2020 2021), $(YEAR))
   SOURCE_FILES?=$(call source_dir,$(ROOT_DIR)/ir-calcul/sources$(YEAR)*/)
-  SOURCE_EXT_FILES?=$(call source_dir_ext,$(ROOT_DIR)/m_ext/$(YEAR)/)
-  TESTS_DIR?=$(ROOT_DIR)/tests/$(YEAR)/fuzzing
+  SOURCE_EXT_FILES?=$(call source_dir_ext,$(SOURCE_EXT_DIR))
 else ifeq ($(filter $(YEAR), 0), $(YEAR))
-  SOURCE_FILES?=#$(call source_dir,$(ROOT_DIR)/m_ext/$(YEAR)/src/)
-  SOURCE_EXT_FILES?=$(call source_dir_ext,$(ROOT_DIR)/m_ext/$(YEAR)/)
-  TESTS_DIR?=$(ROOT_DIR)/tests/$(YEAR)
+  SOURCE_FILES?=
+  SOURCE_EXT_FILES?=$(call source_dir_ext,$(SOURCE_EXT_DIR))
 else
-  $(warning WARNING: there is no default configuration for year: $(YEAR))
-  $(warning WARNING: example specification files and fuzzer tests are not included for year: $(YEAR))
+  $(warning ATTENTION: auncune configuration trouvée pour l'année $(YEAR))
 endif
 
-# Positionne l'année pour les tests fuzzés
-ifeq ($(filter $(YEAR), 2024), $(YEAR))
+# Paramètres pour les tests millésimés
+TEST_VAR_DEFS=
+ifeq ($(filter $(YEAR), 2025), $(YEAR))
+  TESTS_DIR?=$(ROOT_DIR)/tests/$(YEAR)/fuzzing
+else ifeq ($(filter $(YEAR), 2024), $(YEAR))
   TEST_VAR_DEFS=-D ANCSDED=2026 -D V_MILLESIME=defaut
+  TESTS_DIR?=$(ROOT_DIR)/tests/$(YEAR)/fuzzing
+else ifeq ($(filter $(YEAR), 2018 2019 2020 2021 2022 2023 2024 2025), $(YEAR))
+  TESTS_DIR?=$(ROOT_DIR)/tests/$(YEAR)/fuzzing
+else ifeq ($(filter $(YEAR), 0), $(YEAR))
+  TESTS_DIR?=$(ROOT_DIR)/tests/$(YEAR)
 else
-  TEST_VAR_DEFS=
+  $(warning ATTENTION: aucun test défini pour l'année $(YEAR))
 endif
 
 ##################################################
@@ -81,7 +104,7 @@ MLANG_DEFAULT_OPTS=\
 # It so can't be overriden by conditional operator ?=
 # We check the origin of CC value to not override CL argument or explicit environment.
 ifeq ($(origin CC),default)
-  CC=clang
+  CC=gcc
 endif
 
 # Options pour le compilateur C
@@ -96,8 +119,8 @@ BACKEND_CFLAGS?=$(COMMON_CFLAGS) $(COMPILER_SPECIFIC_CFLAGS)
 # Directory of the driver sources for tax calculator
 DRIVER_DIR?=c_driver
 # Driver sources for tax calculator
-DRIVER_H_FILES?=aide.h chaine.h commun.h fichiers.h format.h ida.h irj.h liste.h mem.h options.h traitement.h utils.h
-DRIVER_C_FILES?=aide.c chaine.c commun.c fichiers.c format.c ida.c irdata.c irj.c liste.c main.c mem.c options.c traitement.c utils.c
+DRIVER_H_FILES?=aide.h chaine.h commun.h fichiers.h format.h ida.h irj.h liste.h mem.h options.h traitement.h utils.h completion.h
+DRIVER_C_FILES?=aide.c chaine.c commun.c fichiers.c format.c ida.c irdata.c irj.c liste.c main.c mem.c options.c traitement.c utils.c completion.c
 DRIVER_FILES?=$(DRIVER_H_FILES) $(DRIVER_C_FILES)
 
 # Flag to disable binary dump comparison
