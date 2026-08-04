@@ -2,7 +2,7 @@
 
 (name mlang)
 
-(version 191-38-g5382b858-dirty)
+(version %%VERSION%%)
 
 (cram enable)
 

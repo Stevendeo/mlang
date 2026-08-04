@@ -1207,7 +1207,7 @@ let generate_function_tmp_decls (oc : Format.formatter) (tf : Mir.target) =
   let nb_args = List.length tf.target_args in
   pr "@;@[<v 2>{";
   pr "@;int i;";
-  pr "@;T_varinfo *info;";
+  (* pr "@;T_varinfo *info;"; *)
   pr "@;irdata->tmps[irdata->tmps_org].def = 0;";
   pr "@;irdata->tmps[irdata->tmps_org].val = 0.0;";
   pr "@;irdata->tmps[irdata->tmps_org].info = NULL;";
@@ -1312,7 +1312,7 @@ let generate_cible_tmp_decls (oc : Format.formatter) (tf : Mir.target) =
   if tf.target_sz_tmps > 0 then (
     pr "@;@[<v 2>{";
     pr "@;int i;";
-    pr "@;T_varinfo *info;";
+    (* pr "@;T_varinfo *info;"; *)
     pr "@;@[<v 2>@[<hov 2>for (i = 0;@ i < %d;@ i++) {@]" tf.target_sz_tmps;
     pr "@;irdata->tmps[irdata->tmps_org + i].def = 0;";
     pr "@;irdata->tmps[irdata->tmps_org + i].val = 0.0;";
