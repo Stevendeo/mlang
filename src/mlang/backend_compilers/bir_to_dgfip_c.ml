@@ -247,30 +247,26 @@ and generate_c_expr (p : Mir.program) (e : Mir.expression Pos.marked) :
   | NbBloquantes -> D.Func.nb_bloquantes ()
   | NbCategory _ | FuncCallLoop _ | Loop _ -> assert false
 
-let generate_expr_with_res_in p dgfip_flags oc res_def res_val expr =
-  generate_c_expr p expr |> D.write_c_expr dgfip_flags oc res_def res_val
+let generate_expr_with_res_in ~env oc res_def res_val expr =
+  generate_c_expr env.prog expr |> D.write_c_expr ~env oc res_def res_val
 
-let generate_m_assign ~env (p : Mir.program) (dgfip_flags : Dgfip_options.flags)
-    (m_sp_opt : Com.var_space) (var : Com.Var.t) (oc : Format.formatter)
+let generate_m_assign ~env oc (m_sp_opt : Com.var_space) (var : Com.Var.t)
     (expr : Mir.expression Pos.marked) : unit =
   let var_def = D.generate_variable ~env ~def_flag:true m_sp_opt var in
   let var_val = D.generate_variable ~env m_sp_opt var in
-  generate_expr_with_res_in ~env p dgfip_flags oc var_def var_val expr;
+  generate_expr_with_res_in ~env oc var_def var_val expr;
   (* If the trace flag is set, we print the value of all non-temp variables *)
-  if dgfip_flags.flg_trace && not (Com.Var.is_temp var) then
+  if env.dgfip_flags.flg_trace && not (Com.Var.is_temp var) then
     Pp.fpr oc "@;aff2(\"%s\", irdata, %s);"
       (Pos.unmark var.Com.Var.name)
       (VID.gen_pos_from_start var)
 
-let generate_var_def ~env (p : Mir.program) (dgfip_flags : Dgfip_options.flags)
-    (m_sp_opt : Com.var_space) (var : Com.Var.t)
-    (vexpr : Mir.expression Pos.marked) (oc : Format.formatter) : unit =
-  generate_m_assign ~env p dgfip_flags m_sp_opt var oc vexpr
+let generate_var_def ~env oc (m_sp_opt : Com.var_space) (var : Com.Var.t)
+    (vexpr : Mir.expression Pos.marked) : unit =
+  generate_m_assign ~env oc m_sp_opt var vexpr
 
-let generate_var_def_tab ~env (p : Mir.program)
-    (dgfip_flags : Dgfip_options.flags) (m_sp_opt : Com.var_space)
-    (var : Com.Var.t) (vidx : Mir.m_expression) (vexpr : Mir.m_expression)
-    (oc : Format.formatter) : unit =
+let generate_var_def_tab ~env oc (m_sp_opt : Com.var_space) (var : Com.Var.t)
+    (vidx : Mir.m_expression) (vexpr : Mir.m_expression) : unit =
   let pr fmt = Format.fprintf oc fmt in
   pr "@;@[<v 2>{";
   let idx_tab = Com.Var.loc_tab_idx var in
@@ -279,40 +275,39 @@ let generate_var_def_tab ~env (p : Mir.program)
   let idx_def = idx ^ "_def" in
   let idx_val = idx ^ "_val" in
   pr "@;char %s;@;double %s;@;int %s;" idx_def idx_val idx;
-  generate_expr_with_res_in ~env p dgfip_flags oc idx_def idx_val vidx;
+  generate_expr_with_res_in oc ~env idx_def idx_val vidx;
   pr "@;%s = (int)%s;" idx idx_val;
   pr "@;@[<v 2>if (%s && 0 <= %s && %s < info->size) {" idx_def idx idx;
   let res = D.fresh_c_local "res" in
   let res_def = res ^ "_def" in
   let res_val = res ^ "_val" in
   pr "@;char %s;@;double %s;" res_def res_val;
-  generate_expr_with_res_in ~env p dgfip_flags oc res_def res_val vexpr;
+  generate_expr_with_res_in oc ~env res_def res_val vexpr;
   pr "@;ecris_tabaccess(irdata, %s, %d, %s, %s, %s, %s);"
     (VID.gen_var_space_id m_sp_opt var)
     idx_tab idx_def idx_val res_def res_val;
   pr "@]@;}";
   pr "@]@;}"
 
-let generate_event_field_def ~env (p : Mir.program)
-    (dgfip_flags : Dgfip_options.flags) (m_sp_opt : Com.var_space)
+let generate_event_field_def ~(env : Env.t) oc (m_sp_opt : Com.var_space)
     (idx_expr : Mir.expression Pos.marked) (field : string)
     (vidx_opt : Mir.expression Pos.marked option)
-    (expr : Mir.expression Pos.marked) (oc : Format.formatter) : unit =
+    (expr : Mir.expression Pos.marked) : unit =
   let pr fmt = Format.fprintf oc fmt in
   pr "@;@[<v 2>{";
   let idx = D.fresh_c_local "idx" in
   let idx_def = idx ^ "_def" in
   let idx_val = idx ^ "_val" in
   pr "@;char %s;@;double %s;@;int %s;" idx_def idx_val idx;
-  generate_expr_with_res_in ~env p dgfip_flags oc idx_def idx_val idx_expr;
+  generate_expr_with_res_in ~env oc idx_def idx_val idx_expr;
   pr "@;%s = (int)%s;" idx idx_val;
   pr "@;@[<v 2>if (%s && 0 <= %s && %s < irdata->nb_events) {" idx_def idx idx;
   let res = D.fresh_c_local "res" in
   let res_def = res ^ "_def" in
   let res_val = res ^ "_val" in
   pr "@;char %s;@;double %s;" res_def res_val;
-  generate_expr_with_res_in ~env p dgfip_flags oc res_def res_val expr;
-  if (StrMap.find field p.program_event_fields).is_var then (
+  generate_expr_with_res_in ~env oc res_def res_val expr;
+  if (StrMap.find field env.prog.program_event_fields).is_var then (
     match vidx_opt with
     | None ->
         pr
@@ -325,7 +320,7 @@ let generate_event_field_def ~env (p : Mir.program)
         let i_def = i ^ "_def" in
         let i_val = i ^ "_val" in
         pr "@;char %s;@;double %s;@;int %s;" i_def i_val i;
-        generate_expr_with_res_in ~env p dgfip_flags oc i_def i_val ei;
+        generate_expr_with_res_in ~env oc i_def i_val ei;
         pr "@;%s = (int)%s;" i i_val;
         pr
           "@;\
@@ -339,10 +334,9 @@ let generate_event_field_def ~env (p : Mir.program)
   pr "@]@;}";
   pr "@]@;}"
 
-let generate_event_field_ref ~env (p : Mir.program)
-    (dgfip_flags : Dgfip_options.flags) (idx_expr : Mir.expression Pos.marked)
-    (field : string) (var : Com.Var.t) (oc : Format.formatter) : unit =
-  if (StrMap.find field p.program_event_fields).is_var then (
+let generate_event_field_ref ~env oc (idx_expr : Mir.expression Pos.marked)
+    (field : string) (var : Com.Var.t) : unit =
+  if (StrMap.find field env.prog.program_event_fields).is_var then (
     let pr fmt = Format.fprintf oc fmt in
     let idx = D.fresh_c_local "idx" in
     let idx_def = idx ^ "_def" in
@@ -350,30 +344,27 @@ let generate_event_field_ref ~env (p : Mir.program)
     let var_info_ptr = VID.gen_info_ptr var in
     pr "@;@[<v 2>{";
     pr "@;char %s;@;double %s;@;int %s;" idx_def idx_val idx;
-    generate_expr_with_res_in ~env p dgfip_flags oc idx_def idx_val idx_expr;
+    generate_expr_with_res_in ~env oc idx_def idx_val idx_expr;
     pr "@;%s = (int)%s;" idx idx_val;
     pr "@;@[<v 2>if (%s && 0 <= %s && %s < irdata->nb_events) {" idx_def idx idx;
     pr "@;irdata->events[%s]->field_%s_var = %s;" idx field var_info_ptr;
     pr "@]@;}";
     pr "@]@;}")
 
-let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
-    (p : Mir.program) (oc : Format.formatter) (stmt : Mir.m_instruction) =
+let rec generate_stmt (env : Env.t) oc (stmt : Mir.m_instruction) =
   let pr fmt = Format.fprintf oc fmt in
   match Pos.unmark stmt with
   | Affectation (Pos.Mark (SingleFormula (VarDecl (m_acc, expr)), _)) -> (
       match Pos.unmark m_acc with
-      | VarAccess (m_sp_opt, v) ->
-          generate_var_def ~env p dgfip_flags m_sp_opt v expr oc
+      | VarAccess (m_sp_opt, v) -> generate_var_def ~env oc m_sp_opt v expr
       | TabAccess ((m_sp_opt, v), m_idx) ->
-          generate_var_def_tab ~env p dgfip_flags m_sp_opt v m_idx expr oc
+          generate_var_def_tab ~env oc m_sp_opt v m_idx expr
       | FieldAccess (m_sp_opt, i, f, _) ->
           let fn = Pos.unmark f in
-          generate_event_field_def ~env p dgfip_flags m_sp_opt i fn None expr oc
-      )
+          generate_event_field_def ~env oc m_sp_opt i fn None expr)
   | Affectation (Pos.Mark (SingleFormula (EventFieldRef (idx, f, _, var)), _))
     ->
-      generate_event_field_ref ~env p dgfip_flags idx (Pos.unmark f) var oc
+      generate_event_field_ref ~env oc idx (Pos.unmark f) var
   | Affectation (Pos.Mark (MultipleFormulaes _, _)) -> assert false
   | IfThenElse (cond_expr, iftrue, iffalse) ->
       pr "@;@[<v 2>{";
@@ -381,13 +372,12 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
       let cond_def = cond ^ "_def" in
       let cond_val = cond ^ "_val" in
       pr "@;char %s;@;double %s;" cond_def cond_val;
-      generate_expr_with_res_in ~env p dgfip_flags oc cond_def cond_val
-        cond_expr;
+      generate_expr_with_res_in ~env oc cond_def cond_val cond_expr;
       pr "@;@[<v 2>if (%s && %s != 0.0) {" cond_def cond_val;
-      pr "%a" (generate_stmts env dgfip_flags p) iftrue;
+      pr "%a" (generate_stmts env) iftrue;
       if iffalse <> [] then (
         pr "@]@;@[<v 2>} else if (%s) {" cond_def;
-        pr "%a" (generate_stmts env dgfip_flags p) iffalse);
+        pr "%a" (generate_stmts env) iffalse);
       pr "@]@;}";
       pr "@]@;}"
   | Switch (e, l) ->
@@ -425,7 +415,7 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
         match e with
         | SESameVariable _ -> pr "{@;"
         | SEValue e ->
-            generate_expr_with_res_in ~env p dgfip_flags oc exp_def exp_val e;
+            generate_expr_with_res_in ~env oc exp_def exp_val e;
             pr "@;@[<v 2>if (%s) {@;" exp_def
       in
       pr "/* Switch cases  */@;";
@@ -436,8 +426,7 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
           | `Float v ->
               assert (not is_var_switch);
               pr "if (EQ_E((%s),(%#.19g))) {@;@[<v 2>%a@]@;}" exp_val v
-                (generate_stmts env dgfip_flags p)
-                br
+                (generate_stmts env) br
           | `Var v ->
               assert is_var_switch;
               let e = var_of_switch () in
@@ -449,11 +438,8 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
               let ex =
                 Pos.same (Com.SameVariable (v, Pos.same compared_var e)) e
               in
-              generate_expr_with_res_in ~env p dgfip_flags oc is_same_def
-                is_same_val ex;
-              pr "if (%s) {@;@[<v 2>%a@]@;}" is_same_val
-                (generate_stmts env dgfip_flags p)
-                br
+              generate_expr_with_res_in ~env oc is_same_def is_same_val ex;
+              pr "if (%s) {@;@[<v 2>%a@]@;}" is_same_val (generate_stmts env) br
         in
         let rec loop_else = function
           | [] -> (
@@ -462,12 +448,10 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
               | [], _ -> ()
               | hd :: _, [] ->
                   pr "/* Default switch case */@;";
-                  pr "@;@[<v 2>%a@]" (generate_stmts env dgfip_flags p) hd
+                  pr "@;@[<v 2>%a@]" (generate_stmts env) hd
               | hd :: _, _ ->
                   pr "/* Default switch case */@;";
-                  pr "@;else {@[<v 2>%a@]@;}"
-                    (generate_stmts env dgfip_flags p)
-                    hd)
+                  pr "@;else {@[<v 2>%a@]@;}" (generate_stmts env) hd)
           | c :: tl ->
               pr "else {@;@[<v 2>  ";
               pp_case c;
@@ -487,7 +471,7 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
         | [] -> ()
         | hd :: _ ->
             pr "/* Undefined switch case */@;";
-            pr " else %a" (generate_stmts env dgfip_flags p) hd
+            pr " else %a" (generate_stmts env) hd
       in
       pr "@]}"
   | WhenDoElse (wdl, ed) ->
@@ -500,11 +484,10 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
       pr "@;char %s;@;double %s;" cond_def cond_val;
       let rec aux = function
         | (expr, dl, _) :: l ->
-            generate_expr_with_res_in ~env p dgfip_flags oc cond_def cond_val
-              expr;
+            generate_expr_with_res_in ~env oc cond_def cond_val expr;
             pr "@;@[<v 2>if(%s) {" cond_def;
             pr "@;if (! %s) goto %s;" cond_val goto_label;
-            pr "%a" (generate_stmts env dgfip_flags p) dl;
+            pr "%a" (generate_stmts env) dl;
             pr "@]@;}";
             aux l
         | [] -> ()
@@ -512,14 +495,14 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
       aux wdl;
       pr "@;goto %s;" fin_label;
       pr "@;%s:" goto_label;
-      pr "%a" (generate_stmts env dgfip_flags p) (Pos.unmark ed);
+      pr "%a" (generate_stmts env) (Pos.unmark ed);
       pr "@;%s:{}" fin_label;
       pr "@]@;}"
   | VerifBlock stmts ->
       let goto_label = D.fresh_c_local "verif_block" in
       pr "@;@[<v 2>{";
       pr "@;if (setjmp(irdata->jmp_bloq) != 0) goto %s;" goto_label;
-      pr "%a" (generate_stmts env dgfip_flags p) stmts;
+      pr "%a" (generate_stmts env) stmts;
       pr "%s:;" goto_label;
       pr "@]@;}"
   | Print (std, args) ->
@@ -561,8 +544,7 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
                   pr "@;@[<v 2>{";
                   pr "T_varinfo *info;";
                   let idx_tab = Com.Var.loc_tab_idx v in
-                  generate_expr_with_res_in ~env p dgfip_flags oc print_def
-                    print_val m_idx;
+                  generate_expr_with_res_in ~env oc print_def print_val m_idx;
                   pr "info = lis_tabaccess_varinfo(irdata, %d, %s, %s);" idx_tab
                     print_def print_val;
                   let fld =
@@ -576,10 +558,11 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
                   let fld =
                     match info with Com.Name -> "name" | Com.Alias -> "alias"
                   in
-                  let ef = StrMap.find (Pos.unmark f) p.program_event_fields in
+                  let ef =
+                    StrMap.find (Pos.unmark f) env.prog.program_event_fields
+                  in
                   if ef.is_var then (
-                    generate_expr_with_res_in ~env p dgfip_flags oc print_def
-                      print_val e;
+                    generate_expr_with_res_in ~env oc print_def print_val e;
                     pr "@;%s = (int)%s;" print print_val;
                     pr "@;@[<v 2>if (%s && 0 <= %s && %s < irdata->nb_events) {"
                       print_def print print;
@@ -590,14 +573,12 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
                       print_std pr_ctx print (Pos.unmark f) fld;
                     pr "@]@;}"))
           | PrintIndent e ->
-              generate_expr_with_res_in ~env p dgfip_flags oc print_def
-                print_val e;
+              generate_expr_with_res_in ~env oc print_def print_val e;
               pr "@;@[<v 2>if (%s) {" print_def;
               pr "@;set_print_indent(%s, %s, %s);" print_std pr_ctx print_val;
               pr "@]@;}"
           | PrintExpr (e, min, max) ->
-              generate_expr_with_res_in ~env p dgfip_flags oc print_def
-                print_val e;
+              generate_expr_with_res_in ~env oc print_def print_val e;
               pr "@;@[<v 2>if (%s) {" print_def;
               pr "@;print_double(%s, %s, %s, %d, %d);" print_std pr_ctx
                 print_val min max;
@@ -607,7 +588,7 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
         args;
       pr "@]@;}"
   | ComputeTarget (Pos.Mark (tn, _), targs, m_sp_opt) ->
-      let target = StrMap.find tn p.program_targets in
+      let target = StrMap.find tn env.prog.program_targets in
       pr "@;@[<v 2>{";
       (match m_sp_opt with
       | None -> ()
@@ -640,8 +621,7 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
                 let idx_def = idx ^ "_def" in
                 let idx_val = idx ^ "_val" in
                 pr "@;char %s;@;double %s;@;int %s;" idx_def idx_val idx;
-                generate_expr_with_res_in ~env p dgfip_flags oc idx_def idx_val
-                  vidx;
+                generate_expr_with_res_in ~env oc idx_def idx_val vidx;
                 pr "@;%s = (int)%s;" idx idx_val;
                 pr "@;@[<v 2>if (%s && 0 <= %s && %s < info->size) {" idx_def
                   idx idx;
@@ -662,8 +642,7 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
                 let idx_def = idx ^ "_def" in
                 let idx_val = idx ^ "_val" in
                 pr "@;char %s;@;double %s;@;int %s;" idx_def idx_val idx;
-                generate_expr_with_res_in ~env p dgfip_flags oc idx_def idx_val
-                  e;
+                generate_expr_with_res_in ~env oc idx_def idx_val e;
                 pr "@;%s = (int)%s;" idx idx_val;
                 pr "@;@[<v 2>if (%s && 0 <= %s && %s < irdata->nb_events) {"
                   idx_def idx idx;
@@ -698,8 +677,8 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
         || target.target_stoppable
       then begin
         pr "@;if (irdata->abandon) {@;@[<v 2>";
-        Env.sanitize ~up_to:`Bottom env;
-        pr "@;%s;" @@ Env.goto_quit_label env;
+        Env.sanitize ~up_to:`Bottom ~env;
+        pr "@;%s;" @@ Env.goto_quit_label ~env;
         pr "@]@;}@;"
       end;
       pr "@]@;}@;"
@@ -710,7 +689,7 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
       let ref_space = VID.gen_ref_var_space_ptr var in
       let ref_def = Env.gen_def_ptr ~env None var in
       let ref_val = Env.gen_val_ptr ~env None var in
-      let scope = Env.fresh_scope ~var env in
+      let scope = Env.fresh_scope ~env var in
       (* !!! *)
       pr "@;@[<v 2>{";
       pr "@;%s = \"%s\";" ref_name (Com.Var.name_str var);
@@ -723,7 +702,7 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
               pr "@;%s = %s;" ref_space (VID.gen_var_space_id m_sp_opt v);
               pr "@;%s = %s;" ref_def (Env.gen_def_ptr ~env m_sp_opt var);
               pr "@;%s = %s;" ref_val (Env.gen_val_ptr ~env m_sp_opt var);
-              pr "%a" (generate_stmts env dgfip_flags p) stmts;
+              pr "%a" (generate_stmts env) stmts;
               pr "@]@;}"
           | Com.TabAccess ((m_sp_opt, var), vidx) ->
               pr "@;@[<v 2>{";
@@ -733,8 +712,7 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
               let idx_def = idx ^ "_def" in
               let idx_val = idx ^ "_val" in
               pr "@;char %s;@;double %s;@;int %s;" idx_def idx_val idx;
-              generate_expr_with_res_in ~env p dgfip_flags oc idx_def idx_val
-                vidx;
+              generate_expr_with_res_in ~env oc idx_def idx_val vidx;
               pr "@;%s = (int)%s;" idx idx_val;
               pr "@;@[<v 2>if (%s && 0 <= %s && %s < info->size) {" idx_def idx
                 idx;
@@ -746,7 +724,7 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
                 ref_info;
               pr "@;%s = lis_varinfo_val_ptr(irdata, %s, %s);" ref_val space_ptr
                 ref_info;
-              pr "%a" (generate_stmts env dgfip_flags p) stmts;
+              pr "%a" (generate_stmts env) stmts;
               pr "@]@;}";
               pr "@]@;}"
           | Com.FieldAccess (m_sp_opt, e, Pos.Mark (f, _), _) ->
@@ -755,7 +733,7 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
               let idx_def = idx ^ "_def" in
               let idx_val = idx ^ "_val" in
               pr "@;char %s;@;double %s;@;int %s;" idx_def idx_val idx;
-              generate_expr_with_res_in ~env p dgfip_flags oc idx_def idx_val e;
+              generate_expr_with_res_in ~env oc idx_def idx_val e;
               pr "@;%s = (int)%s;" idx idx_val;
               pr "@;@[<v 2>if (%s && 0 <= %s && %s < irdata->nb_events) {"
                 idx_def idx idx;
@@ -765,7 +743,7 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
                 ref_info;
               pr "@;%s = lis_varinfo_val_ptr(irdata, %s, %s);" ref_val space_ptr
                 ref_info;
-              pr "%a" (generate_stmts env dgfip_flags p) stmts;
+              pr "%a" (generate_stmts env) stmts;
               pr "@]@;}";
               pr "@]@;}")
         al;
@@ -773,7 +751,9 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
         (fun (vcs, expr, m_sp_opt) ->
           Com.CatVar.Map.iter
             (fun vc _ ->
-              let vcd = Com.CatVar.Map.find vc p.program_var_categories in
+              let vcd =
+                Com.CatVar.Map.find vc env.prog.program_var_categories
+              in
               let ref_sp = VID.gen_var_space m_sp_opt in
               let ref_tab, _ktab = VID.gen_tab vcd.loc in
               let cond = D.fresh_c_local "cond" in
@@ -791,10 +771,9 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
               pr "@;%s = %s;" ref_space space_ptr;
               pr "@;%s = &(%s.def_%s[%s->idx]);" ref_def ref_sp ref_tab ref_info;
               pr "@;%s = &(%s.%s[%s->idx]);" ref_val ref_sp ref_tab ref_info;
-              generate_expr_with_res_in ~env p dgfip_flags oc cond_def cond_val
-                expr;
+              generate_expr_with_res_in ~env oc cond_def cond_val expr;
               pr "@;@[<hov 2>if (%s && %s != 0.0) {" cond_def cond_val;
-              pr "%a" (generate_stmts env dgfip_flags p) stmts;
+              pr "%a" (generate_stmts env) stmts;
               pr "@]@;}";
               pr "@]@;}";
               pr "@;tab_%s++;" it_name;
@@ -806,7 +785,7 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
       if scope.used_scope then
         pr "@;@]%s: ;} /* End of scope %s */" scope.sid scope.sid
       else pr "@;@]} /* End of scope %s */" scope.sid;
-      Env.pop_scope ~id:scope.sid env
+      Env.pop_scope ~scope_id:scope.sid ~env
   | Iterate_values (var, var_intervals, stmts) ->
       let itval_def = Env.gen_def ~env None var in
       (* !!! *)
@@ -820,7 +799,7 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
       let e1_val = Format.sprintf "e1_val%s" postfix in
       let step_def = Format.sprintf "step_def%s" postfix in
       let step_val = Format.sprintf "step_val%s" postfix in
-      let scope = Env.fresh_scope ~var env in
+      let scope = Env.fresh_scope var ~env in
       pr "@;@[<v 2>{";
       List.iter
         (fun (e0, e1, step) ->
@@ -829,9 +808,9 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
           pr "@;char %s;@;double %s;" e0_def e0_val;
           pr "@;char %s;@;double %s;" e1_def e1_val;
           pr "@;char %s;@;double %s;" step_def step_val;
-          generate_expr_with_res_in ~env p dgfip_flags oc e0_def e0_val e0;
-          generate_expr_with_res_in ~env p dgfip_flags oc e1_def e1_val e1;
-          generate_expr_with_res_in ~env p dgfip_flags oc step_def step_val step;
+          generate_expr_with_res_in ~env oc e0_def e0_val e0;
+          generate_expr_with_res_in ~env oc e1_def e1_val e1;
+          generate_expr_with_res_in ~env oc step_def step_val step;
           pr "@;@[<v 2>if(%s && %s && %s && %s != 0.0) {" e0_def e1_def step_def
             step_val;
           pr
@@ -841,7 +820,7 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
             i_val e0_val step_val i_val e1_val i_val e1_val i_val i_val step_val;
           pr "@;%s = 1;" itval_def;
           pr "@;%s = %s;" itval_val i_val;
-          pr "%a" (generate_stmts env dgfip_flags p) stmts;
+          pr "%a" (generate_stmts env) stmts;
           pr "@]@;}";
           pr "@]@;}";
           pr "@]@;}")
@@ -849,7 +828,7 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
       if scope.used_scope then
         pr "@;@]%s: ;} /* End of scope %s */" scope.sid scope.sid
       else pr "@;@]} /* End of scope %s */" scope.sid;
-      Env.pop_scope ~id:scope.sid env
+      Env.pop_scope ~scope_id:scope.sid ~env
   | ArrangeEvents (sort, filter, add, stmts) ->
       let events_sav = D.fresh_c_local "events_sav" in
       let events_tmp = D.fresh_c_local "events_tmp" in
@@ -863,7 +842,7 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
         pr "@;irdata->events = %s;" events_sav;
         pr "@;irdata->nb_events = %s;" nb_events_sav
       in
-      let id = Env.add_sanitizer ~f:pp_sanitize env in
+      let sid = Env.add_sanitizer ~env pp_sanitize in
       pr "@;@[<v 2>{";
       pr "@;T_event **%s = irdata->events;" events_sav;
       pr "@;int %s = irdata->nb_events;" nb_events_sav;
@@ -878,7 +857,7 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
           let cond_def = cond ^ "_def" in
           let cond_val = cond ^ "_val" in
           pr "@;char %s;@;double %s;" cond_def cond_val;
-          generate_expr_with_res_in ~env p dgfip_flags oc cond_def cond_val expr;
+          generate_expr_with_res_in ~env oc cond_def cond_val expr;
           pr "@;%s = (int)%s;" nb_add cond_val;
           pr "@;if (%s < 0) %s = 0;" nb_add nb_add;
           pr "@;@[<v 2>if (%s && 0 < %s) {" cond_def nb_add;
@@ -891,12 +870,12 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
           StrMap.iter
             (fun f (ef : Com.event_field) ->
               if ef.is_var then
-                let _, var = StrMap.min_binding p.program_vars in
+                let _, var = StrMap.min_binding env.prog.program_vars in
                 pr "@;%s->field_%s_var = %s;" evt f (VID.gen_info_ptr var)
               else (
                 pr "@;%s->field_%s_def = 0;" evt f;
                 pr "@;%s->field_%s_val = 0.0;" evt f))
-            p.program_event_fields;
+            env.prog.program_event_fields;
           pr "@;%s[%s] = %s;" events_tmp cpt_k evt;
           pr "@]@;}";
           pr "@]@;@[<v 2>} else {";
@@ -922,7 +901,7 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
           pr "@;char %s;@;double %s;" cond_def cond_val;
           pr "@;%s = 1;" ref_def;
           pr "@;%s = (double)%s;" ref_val cpt_j;
-          generate_expr_with_res_in ~env p dgfip_flags oc cond_def cond_val expr;
+          generate_expr_with_res_in ~env oc cond_def cond_val expr;
           pr "@;@[<v 2>if (%s && %s != 0.0) {" cond_def cond_val;
           pr "@;%s[%s] = irdata->events[%s];" events_tmp cpt_i cpt_j;
           pr "@;%s++;" cpt_i;
@@ -986,7 +965,7 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
           pr "@;%s = (double)i;" ref0_val;
           pr "@;%s = 1;" ref1_def;
           pr "@;%s = (double)j;" ref1_val;
-          generate_expr_with_res_in ~env p dgfip_flags oc cmp_def cmp_val expr;
+          generate_expr_with_res_in ~env oc cmp_def cmp_val expr;
           pr "@;cpt = %s && %s != 0.0;" cmp_def cmp_val;
           (* ----------- *)
           pr "@]@;}";
@@ -1007,8 +986,8 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
           pr "@;free(b);";
           pr "@]@;}"
       | None -> ());
-      pr "%a" (generate_stmts env dgfip_flags p) stmts;
-      Env.pop_sanitizer ~id env;
+      pr "%a" (generate_stmts env) stmts;
+      Env.pop_sanitizer ~sid ~env;
       pr "@]@;}"
   | Restore (al, var_params, evts, evtfs, stmts) ->
       pr "@;@[<v 2>{";
@@ -1018,7 +997,7 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
         pr "@;env_restaurer(&%s);@;" rest_name;
         pr "@;env_restaurer_evt(&%s);@;" rest_evt_name
       in
-      let id = Env.add_sanitizer ~f:pp_sanitize env in
+      let sid = Env.add_sanitizer ~env pp_sanitize in
       pr "@;T_env_sauvegarde *%s = NULL;" rest_name;
       pr "@;T_env_sauvegarde_evt *%s = NULL;" rest_evt_name;
       List.iter
@@ -1038,8 +1017,7 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
               let idx_def = idx ^ "_def" in
               let idx_val = idx ^ "_val" in
               pr "@;char %s;@;double %s;@;int %s;" idx_def idx_val idx;
-              generate_expr_with_res_in ~env p dgfip_flags oc idx_def idx_val
-                vidx;
+              generate_expr_with_res_in ~env oc idx_def idx_val vidx;
               pr "@;%s = (int)%s;" idx idx_val;
               pr "@;@[<v 2>if (%s && 0 <= %s && %s < info->size) {" idx_def idx
                 idx;
@@ -1059,7 +1037,7 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
               let idx_def = idx ^ "_def" in
               let idx_val = idx ^ "_val" in
               pr "@;char %s;@;double %s;@;int %s;" idx_def idx_val idx;
-              generate_expr_with_res_in ~env p dgfip_flags oc idx_def idx_val e;
+              generate_expr_with_res_in ~env oc idx_def idx_val e;
               pr "@;%s = (int)%s;" idx idx_val;
               pr "@;@[<v 2>if (%s && 0 <= %s && %s < irdata->nb_events) {"
                 idx_def idx idx;
@@ -1078,7 +1056,9 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
           let it_name = D.fresh_c_local "iterate" in
           Com.CatVar.Map.iter
             (fun vc _ ->
-              let vcd = Com.CatVar.Map.find vc p.program_var_categories in
+              let vcd =
+                Com.CatVar.Map.find vc env.prog.program_var_categories
+              in
               let ref_sp = VID.gen_var_space_id_opt m_sp_opt in
               let ref_tab, _ = VID.gen_tab vcd.loc in
               let ref_name = VID.gen_ref_name_ptr var in
@@ -1101,8 +1081,7 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
                 ref_sp ref_tab ref_info;
               pr "@;%s = &(irdata->var_spaces[%s].%s[%s->idx]);" ref_val ref_sp
                 ref_tab ref_info;
-              generate_expr_with_res_in ~env p dgfip_flags oc cond_def cond_val
-                expr;
+              generate_expr_with_res_in ~env oc cond_def cond_val expr;
               pr "@;@[<v 2>if (%s && %s != 0.0) {" cond_def cond_val;
               pr "@;env_sauvegarder(&%s, %s, %s, %s);" rest_name ref_def ref_val
                 (VID.gen_size var);
@@ -1121,7 +1100,7 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
           pr "@;@[<v 2>{";
           pr "@;char %s;@;double %s;" idx_def idx_val;
           pr "@;int %s;" idx;
-          generate_expr_with_res_in ~env p dgfip_flags oc idx_def idx_val expr;
+          generate_expr_with_res_in ~env oc idx_def idx_val expr;
           pr "@;%s = (int)%s;" idx idx_val;
           pr "@;@[<v 2>if (%s && 0 <= %s && %s < irdata->nb_events) {" idx_def
             idx idx;
@@ -1146,7 +1125,7 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
           pr "@;char %s;@;double %s;" cond_def cond_val;
           pr "@;%s = 1;" ref_def;
           pr "@;%s = (double)%s;" ref_val idx;
-          generate_expr_with_res_in ~env p dgfip_flags oc cond_def cond_val expr;
+          generate_expr_with_res_in ~env oc cond_def cond_val expr;
           pr "@;@[<v 2>if (%s && %s != 0.0) {" cond_def cond_val;
           pr "@;env_sauvegarder_evt(&%s, irdata->events[%s]);@;" rest_evt_name
             idx;
@@ -1155,8 +1134,8 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
           pr "@]@;}";
           pr "@]@;}")
         evtfs;
-      pr "%a" (generate_stmts env dgfip_flags p) stmts;
-      Env.pop_sanitizer ~id env;
+      pr "%a" (generate_stmts env) stmts;
+      Env.pop_sanitizer ~sid ~env;
       pr "@]@;}"
   | RaiseError (m_err, var_opt) ->
       let err = Pos.unmark m_err in
@@ -1172,33 +1151,31 @@ let rec generate_stmt (env : env) (dgfip_flags : Dgfip_options.flags)
   | ExportErrors -> pr "@;exporte_erreur(irdata);"
   | FinalizeErrors -> pr "@;finalise_erreur(irdata);"
   | Stop (SKId None) -> (
-      match Env.goto_current_label env with
+      match Env.goto_current_label ~env with
       | None -> Format.ksprintf failwith "Stop instruction with no scope"
       | Some goto ->
-          Env.sanitize ~up_to:`NextId env;
+          Env.sanitize ~up_to:`NextId ~env;
           pr "@;%s;" goto)
   | Stop (SKId (Some id)) -> (
-      match Env.goto_label_from ~scope_id:id env with
+      match Env.goto_label_from ~scope_id:id ~env with
       | None -> Format.ksprintf failwith "Stop %s instruction with no scope" id
       | Some goto ->
-          Env.sanitize ~up_to:(`Id id) env;
+          Env.sanitize ~up_to:(`Id id) ~env;
           pr "@;%s;" goto)
   | Stop SKApplication ->
-      Env.sanitize ~up_to:`Bottom env;
+      Env.sanitize ~up_to:`Bottom ~env;
       pr "@;irdata->abandon = 1;";
-      pr "@;%s;" @@ Env.goto_quit_label env
-  | Stop SKTarget | Stop SKFun -> pr "@;%s;" @@ Env.goto_quit_label env
+      pr "@;%s;" @@ Env.goto_quit_label ~env
+  | Stop SKTarget | Stop SKFun -> pr "@;%s;" @@ Env.goto_quit_label ~env
   | ComputeDomain _ | ComputeChaining _ | ComputeVerifs _ -> assert false
 
-and generate_stmts (env : env) (dgfip_flags : Dgfip_options.flags)
-    (p : Mir.program) (oc : Format.formatter) (stmts : Mir.m_instruction list) =
-  List.iter (generate_stmt env dgfip_flags p oc) stmts
+and generate_stmts (env : Env.t) oc (stmts : Mir.m_instruction list) =
+  List.iter (generate_stmt env oc) stmts
 
 (* Non recursive wrapper for generate_stmts, adds the quit_label. *)
-let generate_stmts (env : env) (dgfip_flags : Dgfip_options.flags)
-    (p : Mir.program) (oc : Format.formatter) (stmts : Mir.m_instruction list) =
+let generate_stmts (env : Env.t) oc (stmts : Mir.m_instruction list) =
   let pr fmt = Format.fprintf oc fmt in
-  generate_stmts env dgfip_flags p oc stmts;
+  generate_stmts env oc stmts;
   if env.uses_quit_label then
     pr "@;%s: /* Exit label %s*/;@;" env.quit_label env.quit_label
 
@@ -1262,7 +1239,7 @@ let generate_function_prototype (add_semicolon : bool) (oc : Format.formatter)
 
 let generate_function (dgfip_flags : Dgfip_options.flags) (p : Mir.program)
     (oc : Format.formatter) (fn : string) =
-  let env = Env.empty_env ~name:fn in
+  let env = Env.empty_env ~dgfip_flags ~prog:p ~name:fn in
   let pr fmt = Format.fprintf oc fmt in
   let fd = StrMap.find fn p.program_functions in
   pr "@;@[<v 2>%a {" (generate_function_prototype false) fd;
@@ -1277,7 +1254,7 @@ let generate_function (dgfip_flags : Dgfip_options.flags) (p : Mir.program)
   pr "@;irdata->nb_refs_target = %d;" fd.target_nb_refs;
   pr "@;";
   if dgfip_flags.flg_trace then pr "@;aff1(\"debut %s\\n\");" fn;
-  pr "@;%a" (generate_stmts env dgfip_flags p) fd.target_prog;
+  pr "@;%a" (generate_stmts env) fd.target_prog;
 
   if dgfip_flags.flg_trace then pr "@;aff1(\"fin %s\\n\");" fn;
   pr "@;";
@@ -1354,7 +1331,7 @@ let print_local_variables env oc =
  *)
 let generate_target (dgfip_flags : Dgfip_options.flags) (p : Mir.program)
     (final_oc : Format.formatter) (f : string) =
-  let env = Env.empty_env ~name:f in
+  let env = Env.empty_env ~name:f ~dgfip_flags ~prog:p in
   let buff = Buffer.create 1 in
   let oc = Format.formatter_of_buffer buff in
   let tmp_pr m = Format.fprintf oc m in
@@ -1375,7 +1352,7 @@ let generate_target (dgfip_flags : Dgfip_options.flags) (p : Mir.program)
   tmp_pr "@;irdata->nb_refs_target = %d;" tf.target_nb_refs;
   tmp_pr "@;";
   if dgfip_flags.flg_trace then tmp_pr "@;aff1(\"debut %s\\n\");" f;
-  tmp_pr "%a" (generate_stmts env dgfip_flags p) tf.target_prog;
+  tmp_pr "%a" (generate_stmts env) tf.target_prog;
   tmp_pr "@;/* End of printing */";
   if dgfip_flags.flg_trace then tmp_pr "@;aff1(\"fin %s\\n\");" f;
   tmp_pr "@;";

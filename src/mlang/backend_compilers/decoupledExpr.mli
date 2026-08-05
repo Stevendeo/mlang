@@ -140,7 +140,6 @@ type local_decls
 
 val write_c_expr :
   env:Env.t ->
-  Dgfip_options.flags ->
   Format.formatter ->
   string ->
   string ->
