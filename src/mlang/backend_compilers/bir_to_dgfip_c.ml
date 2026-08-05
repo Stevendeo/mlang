@@ -1317,7 +1317,7 @@ let print_local_variables env oc =
   if env.uses_base_def then pr "@;char *def_base = irdata->def_base;";
   if env.uses_base_val then pr "@;double *base = irdata->base;";
   if env.uses_curr_varspace then
-    pr "@;T_var_space var_space = irdata->var_space_courant;@;"
+    pr "@;T_var_space var_space = irdata->var_space_courant;"
 
 (* We generate the target in five steps:
    - first, the function declaration and the variables always defined;
@@ -1341,27 +1341,24 @@ let generate_target (dgfip_flags : Dgfip_options.flags) (p : Mir.program)
   let sav_nb_tmps = Pp.spr "%s_nb_tmps_target" sav in
   let sav_nb_refs = Pp.spr "%s_nb_refs_target" sav in
   (* Step 1: Declaration of the target function. *)
-  final_pr "@.@[<v 2>%a {" (generate_target_prototype false) f;
+  final_pr "@;@[<v 2>%a {" (generate_target_prototype false) f;
   final_pr "@;int %s = irdata->nb_tmps_target;" sav_nb_tmps;
   final_pr "@;int %s = irdata->nb_refs_target;" sav_nb_refs;
   (* Step 2: Stopping to print stuff here. Delaying in a buffer. *)
-  tmp_pr "@;/* Printing target */";
-  tmp_pr "@;%a" generate_cible_tmp_decls tf;
+  tmp_pr "@;@[<v 2>%a" generate_cible_tmp_decls tf;
   tmp_pr "@;irdata->nb_tmps_target = %d;"
     (StrMap.fold (fun _ v n -> n + Com.Var.size v) tf.target_tmp_vars 0);
   tmp_pr "@;irdata->nb_refs_target = %d;" tf.target_nb_refs;
-  tmp_pr "@;";
   if dgfip_flags.flg_trace then tmp_pr "@;aff1(\"debut %s\\n\");" f;
   tmp_pr "%a" (generate_stmts env) tf.target_prog;
-  tmp_pr "@;/* End of printing */";
   if dgfip_flags.flg_trace then tmp_pr "@;aff1(\"fin %s\\n\");" f;
-  tmp_pr "@;";
+  tmp_pr "@]@.";
   (* Step 3: Given the state of the environment, adding some declarations at the
      beginning of the function. *)
   if Utils.Config.optim_local_var_for_arrays () then
     print_local_variables env final_oc;
   (* Step 4: Printing what was put in the buffer *)
-  final_pr "%s@;" (Buffer.contents buff);
+  final_pr "%s" (Buffer.contents buff);
   (* Step 5: Print the rest *)
   if tf.target_nb_refs > 0 then
     final_pr "@;irdata->refs_org = irdata->refs_org - %d;" tf.target_nb_refs;
@@ -1415,7 +1412,7 @@ let generate_c_program (dgfip_flags : Dgfip_options.flags) (p : Mir.program)
               let fn = Filename.concat folder (file_str ^ ".c") in
               let oc = open_out fn in
               let fmt = Format.formatter_of_out_channel oc in
-              Format.fprintf fmt "#include \"mlang.h\"@;@;";
+              Format.fprintf fmt "#include \"mlang.h\"@;";
               Some (oc, fmt)
         in
         StrMap.update file_str update filemap)

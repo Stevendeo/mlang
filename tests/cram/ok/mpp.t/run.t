@@ -12,20 +12,14 @@
   $ mlang aiguillage.m --mpp_function aigui_test -A app --income-year=2020 --dgfip_options="-m2020,-X" --backend dgfip_c --output output/enchain.c --no_nondet_display
   $ cat output/m_aiguillage.c
   #include "mlang.h" 
-  
   struct S_discord * aigui_test(T_irdata* irdata) {
     int sav0_nb_tmps_target = irdata->nb_tmps_target;
     int sav0_nb_refs_target = irdata->nb_refs_target;
-    char *def_saisie = irdata->def_saisie;
-    double *saisie = irdata->saisie;
     char *def_calculee = irdata->def_calculee;
     double *calculee = irdata->calculee;
-    char *def_base = irdata->def_base;
-    double *base = irdata->base;
-    T_var_space var_space = irdata->var_space_courant;
+  
     irdata->nb_tmps_target = 0;
     irdata->nb_refs_target = 0;
-    
     {
       (def_calculee[0/*X*/]) = 1;
       (calculee[0/*X*/]) = 0.0;
@@ -238,8 +232,7 @@
       }
       print_string(stdout, &(irdata->ctx_pr_out), "\012");
     }
-    label_aigui_test: ;
-    
+  
     irdata->nb_refs_target = sav0_nb_refs_target;
     irdata->nb_tmps_target = sav0_nb_tmps_target;
     return irdata->discords;
@@ -248,17 +241,12 @@
   struct S_discord * aiguillage_val(T_irdata* irdata) {
     int sav7_nb_tmps_target = irdata->nb_tmps_target;
     int sav7_nb_refs_target = irdata->nb_refs_target;
-    char *def_saisie = irdata->def_saisie;
-    double *saisie = irdata->saisie;
     char *def_calculee = irdata->def_calculee;
     double *calculee = irdata->calculee;
-    char *def_base = irdata->def_base;
-    double *base = irdata->base;
-    T_var_space var_space = irdata->var_space_courant;
+  
     irdata->refs_org = irdata->refs_org + 1;
     irdata->nb_tmps_target = 0;
     irdata->nb_refs_target = 1;
-    
     {
       char exp8_def;
       double exp8_val;
@@ -302,28 +290,22 @@
             (calculee[2/*Z*/]) = 0.0;
           } else (calculee[2/*Z*/]) = 0.0;
         }}
-      label_aiguillage_val: ;
-      
-      irdata->refs_org = irdata->refs_org - 1;
-      irdata->nb_refs_target = sav7_nb_refs_target;
-      irdata->nb_tmps_target = sav7_nb_tmps_target;
-      return irdata->discords;
-    }
+  
+    irdata->refs_org = irdata->refs_org - 1;
+    irdata->nb_refs_target = sav7_nb_refs_target;
+    irdata->nb_tmps_target = sav7_nb_tmps_target;
+    return irdata->discords;
+  }
   
   struct S_discord * aiguillage_var(T_irdata* irdata) {
     int sav9_nb_tmps_target = irdata->nb_tmps_target;
     int sav9_nb_refs_target = irdata->nb_refs_target;
-    char *def_saisie = irdata->def_saisie;
-    double *saisie = irdata->saisie;
     char *def_calculee = irdata->def_calculee;
     double *calculee = irdata->calculee;
-    char *def_base = irdata->def_base;
-    double *base = irdata->base;
-    T_var_space var_space = irdata->var_space_courant;
+  
     irdata->refs_org = irdata->refs_org + 1;
     irdata->nb_tmps_target = 0;
     irdata->nb_refs_target = 1;
-    
     {
       char exp10_def;
       double exp10_val;{
@@ -426,8 +408,7 @@
       }
       /* End of switch cases & default */
       }
-    label_aiguillage_var: ;
-    
+  
     irdata->refs_org = irdata->refs_org - 1;
     irdata->nb_refs_target = sav9_nb_refs_target;
     irdata->nb_tmps_target = sav9_nb_tmps_target;
@@ -459,7 +440,6 @@
   $ mlang conditions.m --mpp_function cond -A app --income-year=2020 --dgfip_options="-m2020,-X" --backend dgfip_c --output output/conditions.c --no_nondet_display
   $ cat output/m_conditions.c
   #include "mlang.h" 
-  
   struct S_discord * cond(T_irdata* irdata) {
     int sav35_nb_tmps_target = irdata->nb_tmps_target;
     int sav35_nb_refs_target = irdata->nb_refs_target;
@@ -467,12 +447,9 @@
     double *saisie = irdata->saisie;
     char *def_calculee = irdata->def_calculee;
     double *calculee = irdata->calculee;
-    char *def_base = irdata->def_base;
-    double *base = irdata->base;
-    T_var_space var_space = irdata->var_space_courant;
+  
     irdata->nb_tmps_target = 0;
     irdata->nb_refs_target = 0;
-    
     {
       char cond36_def;
       double cond36_val;
@@ -496,8 +473,7 @@
         }
       }
     }
-    label_cond: ;
-    
+  
     irdata->nb_refs_target = sav35_nb_refs_target;
     irdata->nb_tmps_target = sav35_nb_tmps_target;
     return irdata->discords;
