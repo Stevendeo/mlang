@@ -262,10 +262,10 @@ let or_ (e1 : builder) (e2 : builder) (stacks : local_stacks) (ctx : local_vars)
   | Dfalse, _ -> (e2, Def, lv2)
   | _, Dfalse -> (e1, Def, lv1)
   | Dvar v1, Dvar v2 when v1 = v2 -> (e1, Def, lv1)
-  | Dor l1, Dor l2 -> (Dor (l1 @ l2), Def, lv2 @ lv1)
-  | _, Dor l -> (Dor (e1 :: l), Def, lv2 @ lv1)
-  | Dor l, _ -> (Dor (l @ [ e2 ]), Def, lv2 @ lv1)
-  | _, _ -> (Dor [ e1; e2 ], Def, lv2 @ lv1)
+  | Dor l1, Dor l2 -> (dor (l1 @ l2), Def, lv2 @ lv1)
+  | _, Dor l -> (dor (e1 :: l), Def, lv2 @ lv1)
+  | Dor l, _ -> (dor (l @ [ e2 ]), Def, lv2 @ lv1)
+  | _, _ -> (dor [ e1; e2 ], Def, lv2 @ lv1)
 
 let not_ (e : builder) (stacks : local_stacks) (ctx : local_vars) =
   let _, lv, e = push_with_kind stacks ctx Def e in
@@ -715,7 +715,7 @@ let find_first_and_split f l =
 
 let rec format_dexpr_assign ~(env : Env.t) v fmt (de : expr) =
   let format_dexpr = format_dexpr ~env in
-  let default_print () = Format.fprintf fmt "%s =@ %a" v format_dexpr de in
+  let default_print () = Format.fprintf fmt "%s@ =@ %a" v format_dexpr de in
   if env.dgfip_flags.flg_trace then default_print ()
   else
     match de with
@@ -728,22 +728,23 @@ let rec format_dexpr_assign ~(env : Env.t) v fmt (de : expr) =
         match find_first_and_split (is_var_with_name ~name:v) l with
         | None -> default_print ()
         | Some (_, l') ->
-            Format.fprintf fmt "%s &=@ %a" v format_dexpr (dand l')
+            Format.fprintf fmt "%s@ &=@ %a" v format_dexpr (dand l')
       end
     | Dor l -> begin
         match find_first_and_split (is_var_with_name ~name:v) l with
         | None -> default_print ()
-        | Some (_, l') -> Format.fprintf fmt "%s |=@ %a" v format_dexpr (dor l')
+        | Some (_, l') ->
+            Format.fprintf fmt "%s@ |=@ %a" v format_dexpr (dor l')
       end
     | Dbinop ((("+" | "*") as op), e1, e2) ->
         if is_var_with_name ~name:v e1 then
-          Format.fprintf fmt "%s %s=@ %a" v op format_dexpr e2
+          Format.fprintf fmt "%s@ %s=@ %a" v op format_dexpr e2
         else if is_var_with_name ~name:v e2 then
-          Format.fprintf fmt "%s %s=@ %a" v op format_dexpr e1
+          Format.fprintf fmt "%s@ %s=@ %a" v op format_dexpr e1
         else default_print ()
     | Dbinop ((("-" | "/") as op), e1, e2) ->
         if is_var_with_name ~name:v e1 then
-          Format.fprintf fmt "%s %s=@ %a" v op format_dexpr e2
+          Format.fprintf fmt "%s@ %s=@ %a" v op format_dexpr e2
         else default_print ()
     | Dtrue | Dfalse | Dlit _ | Dvarinfo _ | Dvarspace _ | Dunop _ | Dbinop _
     | Dfun _ | Dite _ | Dtyp _ | Dinstr _ | Ddirect _ ->
