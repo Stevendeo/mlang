@@ -20,6 +20,7 @@ extern void infoNbKc(int kc, int tot);
 extern void infoNonRec(char *dir);
 extern void infoLien(char *nom);
 extern void infoTemps(uint64_t temps_us);
+extern void infoTempsAct(uint64_t temps_us);
 extern void infoActCpl(void);
 
 extern int discoOptsRecDup(int b);

@@ -79,18 +79,37 @@ void infoLien(char *nom) {
 }
 
 void infoTemps(uint64_t temps_ms) {
-  uint64_t min = temps_ms/60000;
-  uint64_t sec = (temps_ms - min * 60000)/1000;
-  uint64_t mse = temps_ms - min*60000 - sec*1000;
-  fprintf(stdout, "IACT014 | Temps calcul effectif total: %lums (", temps_ms);
-  if (min > 0) fprintf(stdout, "%lum", min);
-  if (sec > 0) fprintf(stdout, "%lus" , sec);
-  if (mse > 0) fprintf(stdout, "%lums", mse);
-  fprintf(stdout, ")\n");
+  uint64_t min = temps_ms / 60000;
+  uint64_t sec = (temps_ms - min * 60000) / 1000;
+  uint64_t mse = temps_ms - min * 60000 - sec * 1000;
+  fprintf(stdout, "IACT014 | Temps calcul effectif total: %lums", temps_ms);
+  if (temps_ms > 0) {
+    fprintf(stdout, " (");
+    if (min > 0) fprintf(stdout, "%lum", min);
+    if (sec > 0) fprintf(stdout, "%lus" , sec);
+    if (mse > 0) fprintf(stdout, "%lums", mse);
+    fprintf(stdout, ")");
+  }
+  fprintf(stdout, "\n");
 }
 
 void infoActCpl(void) {
   fprintf(stdout, "IACT015 | complétion IRJ\n");
+}
+
+void infoTempsAct(uint64_t temps_ms) {
+  uint64_t min = temps_ms / 60000;
+  uint64_t sec = (temps_ms - min * 60000) / 1000;
+  uint64_t mse = temps_ms - min * 60000 - sec * 1000;
+  fprintf(stdout, "IACT015 | Temps calcul net: %lums", temps_ms);
+  if (temps_ms > 0) {
+    fprintf(stdout, " (");
+    if (min > 0) fprintf(stdout, "%lum", min);
+    if (sec > 0) fprintf(stdout, "%lus" , sec);
+    if (mse > 0) fprintf(stdout, "%lums", mse);
+    fprintf(stdout, ")");
+  }
+  fprintf(stdout, "\n");
 }
 
 /* discos */

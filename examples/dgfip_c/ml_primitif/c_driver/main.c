@@ -22,13 +22,14 @@ T_tas tasGbl = NULL;
 
 void itereFichiers(
   L_char lf, int rec,
-  int (*traiteFich)(char *, T_options), T_options opts,
-  int *nbOk, int *nbKo, int *nbKc
+  void (*traiteFich)(char *, T_options, T_resultat), T_options opts,
+  int *nbOk, int *nbKo, int *nbKc, uint64_t *temps_ms
 ) {
-  int resultat;
+  S_resultat res;
   *nbOk = 0;
   *nbKo = 0;
   *nbKc = 0;
+  *temps_ms = 0;
   if (lf == NULL || opts == NULL) return;
   while (lf != NIL(char)) {
     L_char lfSav = NULL;
@@ -70,11 +71,12 @@ void itereFichiers(
     estr = estReg(fich);
     if (! discoStat(fich, estr) && estr) {
       infoReg(nomFich);
-      resultat = traiteFich(fich, opts);
+      traiteFich(fich, opts, &res);
 /* traitement */
-      switch (resultat) {
+      switch (res.ok) {
         case 1:
           (*nbOk)++;
+          *temps_ms += res.temps_ms;
           infoOk(nomFich);
           break;
         case 0:
@@ -107,6 +109,7 @@ int main(int argc, char **argv) {
   switch (opts->action) {
     case ACT_TRT: {
       int nbOk = 0, nbKo = 0, nbKc = 0;
+      uint64_t temps_act_ms = 0;
       uint64_t temps_ms = 0;
       clock_t start, end;
 
@@ -114,19 +117,21 @@ int main(int argc, char **argv) {
       itereFichiers(
         opts->args.trt.fichiers, opts->args.trt.recursif,
         traitement, opts,
-        &nbOk, &nbKo, &nbKc
+        &nbOk, &nbKo, &nbKc, &temps_act_ms
       );
-      end = clock ();
+      end = clock();
       temps_ms = (end -  start) * 1000 / CLOCKS_PER_SEC; 
       infoNbOk(nbOk, nbOk + nbKo);
       infoNbKo(nbKo, nbOk + nbKo);
       infoNbKc(nbKc, nbOk + nbKo + nbKc);
+      infoTempsAct(temps_act_ms);
       infoTemps(temps_ms);
       res = (nbKo == 0);
       break;
     }
     case ACT_FMT: {
       int nbOk = 0, nbKo = 0, nbKc = 0;
+      uint64_t temps_act_ms = 0;
       uint64_t temps_ms = 0;
       clock_t start, end;
 
@@ -134,9 +139,9 @@ int main(int argc, char **argv) {
       itereFichiers(
         opts->args.fmt.fichiers, opts->args.fmt.recursif,
         verifieFormat, opts,
-        &nbOk, &nbKo, &nbKc
+        &nbOk, &nbKo, &nbKc, &temps_act_ms
       );
-      end = clock ();
+      end = clock();
       temps_ms = (end -  start) * 1000 / CLOCKS_PER_SEC;
       infoNbOk(nbOk, nbOk + nbKc);
       infoNbKc(nbKc, nbOk + nbKc);
@@ -146,6 +151,7 @@ int main(int argc, char **argv) {
     }
     case ACT_CPL: {
       int nbOk = 0, nbKo = 0, nbKc = 0;
+      uint64_t temps_act_ms = 0;
       uint64_t temps_ms = 0;
       clock_t start, end;
 
@@ -153,9 +159,9 @@ int main(int argc, char **argv) {
       itereFichiers(
         opts->args.trt.fichiers, opts->args.trt.recursif,
         completion, opts,
-        &nbOk, &nbKo, &nbKc
+        &nbOk, &nbKo, &nbKc, &temps_act_ms
       );
-      end = clock ();
+      end = clock();
       temps_ms = (end -  start) * 1000 / CLOCKS_PER_SEC; 
       infoNbOk(nbOk, nbOk + nbKo);
       infoNbKo(nbKo, nbOk + nbKo);

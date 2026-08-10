@@ -1,6 +1,8 @@
 #ifndef __OPTIONS_H__
 #define __OPTIONS_H__
 
+#include <stdint.h>
+
 #include <mem.h>
 #include <liste.h>
 #include <commun.h>
@@ -46,5 +48,12 @@ typedef struct S_options {
 typedef struct S_options * T_options;
 
 extern T_options analyseLdc(T_tas tas, int argc, char **argv);
+
+typedef struct S_resultat {
+  int ok;
+  uint64_t temps_ms;
+} S_resultat;
+
+typedef struct S_resultat * T_resultat;
 
 #endif /* __OPTIONS_H__ */

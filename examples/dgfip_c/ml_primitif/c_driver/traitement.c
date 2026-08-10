@@ -196,7 +196,7 @@ int controleResultat(T_tas tas, T_options opts, T_irdata *tgv, L_S_varVal res, L
 #define ECRIS_VAR(nom, val) \
   if (! ecrisVar(tgv, nom, 1, val)) { \
     anoVarAbs(nom); \
-    ok = -1; \
+    res->ok = -1; \
     goto fin; \
   }
 
@@ -289,7 +289,7 @@ int estDansDefs(L_S_varVal defs, char *nom) {
   return 0;
 }
 
-int traitementAux(T_tas tasTrt, char *chemin, T_options opts, T_irdata *tgv) {
+void traitementAux(T_tas tasTrt, char *chemin, T_options opts, T_irdata *tgv, T_resultat res) {
   T_fich fich = NULL;
   T_irj irj = NULL;
   int code = IRJ_CODE_VIDE;
@@ -303,8 +303,9 @@ int traitementAux(T_tas tasTrt, char *chemin, T_options opts, T_irdata *tgv) {
   L_char ctlRap = NULL;
   int anneeCalc = 0;
   int anneeRevenu = 0;
-  int ok = 1;
 
+  res->ok = 1;
+  res->temps_ms = 0;
   estCorr = FAUX;
   resPrim = NIL(S_varVal);
   ctlPrim = NIL(char);
@@ -314,7 +315,7 @@ int traitementAux(T_tas tasTrt, char *chemin, T_options opts, T_irdata *tgv) {
   fich = ouvreFich(tasTrt, chemin);
   if (fich == NULL) {
     discoFichier(chemin, -1);
-    ok = -1;
+    res->ok = -1;
     goto fin;
   }
   irj = creeIrj(tasTrt, opts->args.trt.strict);
@@ -342,7 +343,7 @@ int traitementAux(T_tas tasTrt, char *chemin, T_options opts, T_irdata *tgv) {
             if (vv == NULL) {
               if (opts->args.trt.strict) {
                 anoVarAbs(irj->args.defVar.var);
-                ok = -1;
+                res->ok = -1;
                 goto fin;
               }
             } else {
@@ -357,13 +358,13 @@ int traitementAux(T_tas tasTrt, char *chemin, T_options opts, T_irdata *tgv) {
             if (vv == NULL) {
               if (opts->args.trt.strict) {
                 anoVarAbs(irj->args.defVar.var);
-                ok = -1; 
+                res->ok = -1; 
                 goto fin;
               }
             } else {
               if (opts->args.trt.strict && ! vv->varinfo->est_restituee) {
                 anoVarNonRestituee(irj->args.defVar.var);
-                ok = -1; 
+                res->ok = -1; 
                 goto fin;
               } else if (vv->varinfo->est_restituee) {
                 resRap = CONS(tasTrt, S_varVal, vv, resRap);
@@ -373,7 +374,7 @@ int traitementAux(T_tas tasTrt, char *chemin, T_options opts, T_irdata *tgv) {
             break;
           }
           default:
-            ok = -1;
+            res->ok = -1;
             goto fin;
         }
         break;
@@ -388,7 +389,7 @@ int traitementAux(T_tas tasTrt, char *chemin, T_options opts, T_irdata *tgv) {
             estCorr = VRAI;
             break;
           default:
-            ok = -1;
+            res->ok = -1;
             goto fin;
         }
         break;
@@ -398,19 +399,19 @@ int traitementAux(T_tas tasTrt, char *chemin, T_options opts, T_irdata *tgv) {
 
           if (rap == NULL) {
             anoVarAbs(irj->args.defRap.code);
-            ok = -1; 
+            res->ok = -1; 
             goto fin;
           }
           rappels = CONS(tasTrt, S_rap, rap, rappels);
           estCorr = VRAI;
         } else {
-          ok = -1; 
+          res->ok = -1; 
           goto fin;
         }
         break;
       case IRJ_INVALIDE:
       case IRJ_CODE_VIDE:
-        ok = -1;      
+        res->ok = -1;
         goto fin;
       default:
         break;
@@ -430,7 +431,7 @@ int traitementAux(T_tas tasTrt, char *chemin, T_options opts, T_irdata *tgv) {
   anneeRevenu = lisAnneeRevenu(tgv, anneeCalc);
   discoAnneeRevenu(anneeCalc, anneeRevenu);
   if (! ecrisRappels(tgv, rappels)) {
-    ok = -1;
+    res->ok = -1;
     goto fin;
   }
   if (! estDansDefs(opts->args.trt.defs, "V_ANCSDED")) {
@@ -440,36 +441,44 @@ int traitementAux(T_tas tasTrt, char *chemin, T_options opts, T_irdata *tgv) {
     ecrisVar(tgv, "V_MILLESIME", 1, anneeCalc);
   }
   switch (opts->args.trt.mode) {
-    /* do stuff */
+    clock_t start, end;
 
     case Primitif:
       initDefs(tgv, opts->args.trt.defs);
+      start = clock();
       enchainement_primitif_interpreteur(tgv);
-      ok = controleResultat(tasTrt, opts, tgv, resPrim, ctlPrim);
+      end = clock();
+      res->temps_ms = (end -  start) * 1000 / CLOCKS_PER_SEC; 
+      res->ok = controleResultat(tasTrt, opts, tgv, resPrim, ctlPrim);
       break;
     case Correctif:
       ecrisVar(tgv, "MODE_CORR", 1, 1.0);
       initDefs(tgv, opts->args.trt.defs);
+      start = clock();      
       enchainement_primitif_interpreteur(tgv);
-      ok = controleResultat(tasTrt, opts, tgv, resRap, ctlRap);
+      end = clock();
+      res->temps_ms = (end -  start) * 1000 / CLOCKS_PER_SEC;       
+      res->ok = controleResultat(tasTrt, opts, tgv, resRap, ctlRap);
       break;
   }
 
 fin:
   memLibere(nom);
   fermeFich(fich);
-  return ok;
+  return;
 }
 
-int traitement(char *chemin, T_options opts) {
+void traitement(char *chemin, T_options opts, T_resultat res) {
   T_tas tasTrt = NULL;
   T_irdata *tgv = NULL;
-  int ok = 0;
 
+  res->ok = 0;
+  res->temps_ms = 0;
   tasTrt = memCreeTas();
   tgv = cree_irdata();
-  ok = traitementAux(tasTrt, chemin, opts, tgv);
+  traitementAux(tasTrt, chemin, opts, tgv, res);
   detruis_irdata(tgv);  
   memLibereTas(tasTrt);
-  return ok;
+  return;
 }
+
