@@ -124,8 +124,8 @@ int main(int argc, char **argv) {
       infoNbOk(nbOk, nbOk + nbKo);
       infoNbKo(nbKo, nbOk + nbKo);
       infoNbKc(nbKc, nbOk + nbKo + nbKc);
-      infoTempsAct(temps_act_ms);
-      infoTemps(temps_ms);
+      infoTempsNet(temps_act_ms);
+      infoTempsBrut(temps_ms);
       res = (nbKo == 0);
       break;
     }
@@ -145,7 +145,7 @@ int main(int argc, char **argv) {
       temps_ms = (end -  start) * 1000 / CLOCKS_PER_SEC;
       infoNbOk(nbOk, nbOk + nbKc);
       infoNbKc(nbKc, nbOk + nbKc);
-      infoTemps(temps_ms);
+      infoTempsBrut(temps_ms);
       res = (nbKc == 0);
       break;
     }
@@ -166,7 +166,7 @@ int main(int argc, char **argv) {
       infoNbOk(nbOk, nbOk + nbKo);
       infoNbKo(nbKo, nbOk + nbKo);
       infoNbKc(nbKc, nbOk + nbKo + nbKc);
-      infoTemps(temps_ms);
+      infoTempsBrut(temps_ms);
       res = 1;
       break;
     }

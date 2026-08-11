@@ -78,37 +78,34 @@ void infoLien(char *nom) {
   fprintf(stdout, "IACT013 | le lien \"%s\" est ignoré\n", nom);
 }
 
-void infoTemps(uint64_t temps_ms) {
-  uint64_t min = temps_ms / 60000;
-  uint64_t sec = (temps_ms - min * 60000) / 1000;
-  uint64_t mse = temps_ms - min * 60000 - sec * 1000;
-  fprintf(stdout, "IACT014 | Temps calcul effectif total: %lums", temps_ms);
+void infoActCpl(void) {
+  fprintf(stdout, "IACT014 | complétion IRJ\n");
+}
+
+static void affTemps(FILE *file, uint64_t temps_ms) {
+  fprintf(file, "%lums", temps_ms);
   if (temps_ms > 0) {
-    fprintf(stdout, " (");
-    if (min > 0) fprintf(stdout, "%lum", min);
-    if (sec > 0) fprintf(stdout, "%lus" , sec);
-    if (mse > 0) fprintf(stdout, "%lums", mse);
+    uint64_t min = temps_ms / 60000;
+    uint64_t sec = (temps_ms - min * 60000) / 1000;
+    uint64_t mse = temps_ms - min * 60000 - sec * 1000;
+    
+    fprintf(file, " (");
+    if (min > 0) fprintf(file, "%lum", min);
+    if (sec > 0) fprintf(file, "%lus" , sec);
+    if (mse > 0) fprintf(file, "%lums", mse);
     fprintf(stdout, ")");
   }
+}
+
+void infoTempsNet(uint64_t temps_ms) {
+  fprintf(stdout, "IACT015 | Temps calcul net: ");
+  affTemps(stdout, temps_ms);
   fprintf(stdout, "\n");
 }
 
-void infoActCpl(void) {
-  fprintf(stdout, "IACT015 | complétion IRJ\n");
-}
-
-void infoTempsAct(uint64_t temps_ms) {
-  uint64_t min = temps_ms / 60000;
-  uint64_t sec = (temps_ms - min * 60000) / 1000;
-  uint64_t mse = temps_ms - min * 60000 - sec * 1000;
-  fprintf(stdout, "IACT015 | Temps calcul net: %lums", temps_ms);
-  if (temps_ms > 0) {
-    fprintf(stdout, " (");
-    if (min > 0) fprintf(stdout, "%lum", min);
-    if (sec > 0) fprintf(stdout, "%lus" , sec);
-    if (mse > 0) fprintf(stdout, "%lums", mse);
-    fprintf(stdout, ")");
-  }
+void infoTempsBrut(uint64_t temps_ms) {
+  fprintf(stdout, "IACT016 | Temps calcul brut: ");
+  affTemps(stdout, temps_ms);
   fprintf(stdout, "\n");
 }
 

@@ -21,9 +21,9 @@ REPO?=ir
 
 # Paramètres pour les millésimes
 ifeq ($(REPO),svn)
-  SOURCE_FILES?=$(call source_dir_sans_cibles_m,$(ROOT_DIR)/ir-calcul/M_SVN/$(YEAR)/code_m/)
-  SOURCE_EXT_DIR=$(ROOT_DIR)/m_ext/$(YEAR)
   ifeq ($(filter x$(MODE), xc xcorr xcorrectif), x$(MODE))
+    # 2025 37674
+    SOURCE_FILES?=$(call source_dir_sans_cibles_m,$(ROOT_DIR)/ir-calcul/M_SVN/$(YEAR).corr/code_m/)
     SOURCE_EXT_FILES?=\
       $(SOURCE_EXT_DIR)/cibles.m \
       $(SOURCE_EXT_DIR)/primitif.m \
@@ -35,6 +35,8 @@ ifeq ($(REPO),svn)
       $(SOURCE_EXT_DIR)/correctif.m \
       $(SOURCE_EXT_DIR)/main_corr.m
   else
+    # 2025 3.11 37626
+    SOURCE_FILES?=$(call source_dir_sans_cibles_m,$(ROOT_DIR)/ir-calcul/M_SVN/$(YEAR)/code_m/)
     SOURCE_EXT_FILES?=\
       $(SOURCE_EXT_DIR)/cibles.m \
       $(SOURCE_EXT_DIR)/primitif.m \
@@ -59,8 +61,11 @@ else ifeq ($(filter $(YEAR), 2022 2023 2024), $(YEAR))
       $(SOURCE_EXT_DIR)/primitif.m \
       $(SOURCE_EXT_DIR)/main.m
   endif
-else ifeq ($(filter $(YEAR), 2018 2019 2020 2021), $(YEAR))
+else ifeq ($(filter $(YEAR), 2019 2020 2021), $(YEAR))
   SOURCE_FILES?=$(call source_dir,$(ROOT_DIR)/ir-calcul/sources$(YEAR)*/)
+  SOURCE_EXT_FILES?=$(call source_dir_ext,$(SOURCE_EXT_DIR))
+else ifeq ($(filter $(YEAR), 2018), $(YEAR))
+  SOURCE_FILES?=$(call source_dir,$(ROOT_DIR)/ir-calcul/sources2018m_6_7*/)
   SOURCE_EXT_FILES?=$(call source_dir_ext,$(SOURCE_EXT_DIR))
 else ifeq ($(filter $(YEAR), 0), $(YEAR))
   SOURCE_FILES?=
@@ -72,16 +77,26 @@ endif
 # Paramètres pour les tests millésimés
 TEST_VAR_DEFS=
 ifeq ($(filter $(YEAR), 2025), $(YEAR))
+  # 2025 3.11 37626
   TESTS_DIR?=$(ROOT_DIR)/tests/$(YEAR)/fuzzing
 else ifeq ($(filter $(YEAR), 2024), $(YEAR))
+  # 2024 3.13 34996
   TEST_VAR_DEFS=-D ANCSDED=2026 -D V_MILLESIME=defaut
   TESTS_DIR?=$(ROOT_DIR)/tests/$(YEAR)/fuzzing
-else ifeq ($(filter $(YEAR), 2018 2019 2020 2021 2022 2023 2024 2025), $(YEAR))
+else ifeq ($(filter $(YEAR), 2018 2019 2020 2022 2023), $(YEAR))
+  # 2023 8.0 33095
+  # 2022 6.1 29657
+  # 2021 5.7 27852, tests fuzzés manquants
+  # 2020 6.5 25513
+  # 2019 8.0 22543
+  # 2018 06.7 19515, ne compile pas
+  # 2018 6.3 18591, ne compile pas
   TESTS_DIR?=$(ROOT_DIR)/tests/$(YEAR)/fuzzing
 else ifeq ($(filter $(YEAR), 0), $(YEAR))
   TESTS_DIR?=$(ROOT_DIR)/tests/$(YEAR)
 else
   $(warning ATTENTION: aucun test défini pour l'année $(YEAR))
+  TESTS_DIR?=$(ROOT_DIR)/tests/$(YEAR)
 endif
 
 ##################################################
