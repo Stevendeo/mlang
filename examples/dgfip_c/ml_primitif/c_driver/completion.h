@@ -6,7 +6,7 @@
 
 #include <options.h>
 
-extern int completion(char *chemin, T_options opts);
+extern void completion(char *chemin, T_options opts, T_resultat res);
 
 #endif /* __COMPLETION_H__ */
 

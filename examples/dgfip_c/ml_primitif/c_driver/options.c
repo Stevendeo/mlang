@@ -100,20 +100,20 @@ fin:
   opts->args.aid.err = VRAI; \
   return opts;
 
-T_options analyseLdcTraitement(T_tas tas, T_options opts, int argc, char **argv, int i) {
+T_options analyseLdcTrtOuCpl(T_tas tas, T_options opts, int argc, char **argv, int i, int estCpl) {
   int nbMode = 0;
   int nbAnnee = 0;
   int nbRec = 0;
   int nbStrict = 0;
+  int nbDest = 0;
 
-  infoActTrt();
-  opts->action = ACT_TRT;
   opts->args.trt.mode = Primitif;
   opts->args.trt.annee = ANNEE_REVENU + 1;
   opts->args.trt.recursif = FAUX;
   opts->args.trt.strict = FAUX;
   opts->args.trt.defs = NIL(S_varVal);
   opts->args.trt.fichiers = NIL(char);
+  opts->args.trt.dest = NULL;
   while (i < argc) {
     if (TEST_ARG(argv[i], "mode", "m")) {
       T_mode mode = Primitif;
@@ -207,6 +207,21 @@ T_options analyseLdcTraitement(T_tas tas, T_options opts, int argc, char **argv,
     } else if (strcmp(argv[i], "") != 0 && argv[i][0] != '-') {
       opts->args.trt.fichiers = CONS(tas, char, strCopie(tas, argv[i]), opts->args.trt.fichiers);
       i++;
+    } else if (estCpl && (TEST_ARG(argv[i], "destination", "dst"))) {
+      char *dest = "";
+
+      i++;
+      nbDest++;
+      if (argc <= i || strcmp(argv[i], "") == 0 || argv[i][0] == '-') {
+        TRT_ERR(anoOptsDstAbs())
+      }
+      dest = strCopie(tas, argv[i]);
+      i++;
+      if (nbDest > 1 && strcmp(opts->args.trt.dest, dest) != 0) {
+        TRT_ERR(anoOptsDstDup(opts->args.trt.dest, dest))
+      } else if (nbDest == 1) {
+        opts->args.trt.dest = dest;
+      }
     } else { 
       TRT_ERR(anoOptsInc(argv[i]))
     }
@@ -218,12 +233,36 @@ fin:
   if (nbMode == 0) {
     TRT_ERR(anoOptsModeAbsent())
   }
+  if (estCpl) {
+    int estr = 0;
+
+    if (nbDest == 0) {
+      TRT_ERR(anoOptsDstAbsent())
+    }
+    estr = estRep(opts->args.trt.dest);
+    if (estr == -1 || ! estr) {
+      TRT_ERR(anoOptsDstRep(opts->args.trt.dest))
+    }
+  } 
   discoOptsModeDup(nbMode > 1);  
   discoOptsAnneeParDefaut(opts->args.trt.annee, nbAnnee == 0);
   discoOptsAnneeDup(nbAnnee > 1);  
   discoOptsRecDup(nbRec > 1);
   discoOptsStrictDup(nbStrict > 1);
   return opts;
+}
+
+T_options analyseLdcTraitement(T_tas tas, T_options opts, int argc, char **argv, int i) {
+  infoActTrt();
+  opts->action = ACT_TRT;
+  return analyseLdcTrtOuCpl(tas, opts, argc, argv, i, 0);
+}
+
+T_options analyseLdcCompletion(T_tas tas, T_options opts, int argc, char **argv, int i) {
+  infoActCpl();
+  i++;
+  opts->action = ACT_CPL;
+  return analyseLdcTrtOuCpl(tas, opts, argc, argv, i, 1);
 }
 
 T_options analyseLdc(T_tas tas, int argc, char **argv) {
@@ -257,7 +296,11 @@ T_options analyseLdc(T_tas tas, int argc, char **argv) {
     return analyseLdcFormat(tas, opts, argc, argv, i);
   }
 
+  /* completion */
+  if (TEST_ARG(argv[i], "completion", "c")) {
+    return analyseLdcCompletion(tas, opts, argc, argv, i);
+  }
+
   /* traitement */
   return analyseLdcTraitement(tas, opts, argc, argv, i);
 }
-

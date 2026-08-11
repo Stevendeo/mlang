@@ -1,8 +1,6 @@
 # correctif
 # testé avec la révision 36674
 
-CPTOTO : calculee primrest = 0 : "";
-
 MAX_ID_EVT: calculee primrest = 0 : "" ;
 
 N_INDEFINIE : const = 0;
@@ -339,7 +337,6 @@ V_ACO_MTAP = 0;
 V_NEGACO = 0;
 nettoie_erreurs;
 calculer cible traite_double_liquidation_2;
-GLOBAL.CPTOTO = GLOBAL.CPTOTO + 1;
 
 cible enchaine_calcul_prim_copie:
 application: iliad;

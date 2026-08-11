@@ -110,25 +110,26 @@ void extraitTgv(T_options opts, FILE *destFile, T_irdata *tgv) {
   }
 }
 
-int completionAux(T_tas tas, T_options opts, char *chemin, char *dest, T_irdata *tgv) {
+void completionAux(T_tas tas, T_options opts, char *chemin, char *dest, T_irdata *tgv, T_resultat res) {
   T_fich fich = NULL;
   T_irj irj = NULL;
   int code = IRJ_CODE_VIDE;
   L_char lnom = NULL;
   char *nom = NULL;
-  int ok = 1;
   FILE *destFile = NULL;
 
+  res->ok = 1;
+  res->temps_ms = 0;
   destFile = fopen(dest, "w");
   if (destFile == NULL) {
     discoFichier(dest, -1);
-    ok = -1;
+    res->ok = -1;
     goto fin;
   }
   fich = ouvreFich(tas, chemin);
   if (fich == NULL) {
     discoFichier(chemin, -1);
-    ok = -1;
+    res->ok = -1;
     goto fin;
   }
   irj = creeIrj(tas, opts->args.trt.strict);
@@ -212,7 +213,7 @@ int completionAux(T_tas tas, T_options opts, char *chemin, char *dest, T_irdata 
             /* */
             break;
           default:
-            ok = -1;
+            res->ok = -1;
             goto fin;
         }
         break;
@@ -224,7 +225,7 @@ int completionAux(T_tas tas, T_options opts, char *chemin, char *dest, T_irdata 
             /* */
             break;
           default:
-            ok = -1;
+            res->ok = -1;
             goto fin;
         }
         break;
@@ -251,13 +252,13 @@ int completionAux(T_tas tas, T_options opts, char *chemin, char *dest, T_irdata 
           fprintf(destFile, "%06.0f/", irj->args.defRap.date);
           fprintf(destFile, "%0.0f\n", irj->args.defRap._2042_rect);
         } else {
-          ok = -1; 
+          res->ok = -1; 
           goto fin;
         }
         break;
       case IRJ_INVALIDE:
       case IRJ_CODE_VIDE:
-        ok = -1;      
+        res->ok = -1;      
         goto fin;
       default:
         break;
@@ -272,21 +273,21 @@ fin:
   fermeFich(fich);
   if (destFile != NULL) {
     fclose(destFile);
-    if (ok != 1) {
+    if (res->ok != 1) {
       remove(dest);
     }
   }
-  return ok;
+  return;
 }
 
-int completion(char *chemin, T_options opts) {
+void completion(char *chemin, T_options opts, T_resultat res) {
   T_tas tasCpl = NULL;
-  int ok = 0;
   T_irdata *tgv = NULL;
 
   tasCpl = memCreeTas();
   tgv = cree_irdata();
-  if (traitementAux(tasCpl, chemin, opts, tgv)) {
+  traitementAux(tasCpl, chemin, opts, tgv, res);
+  if (res->ok) {
     char *dest = NULL;
 
     dest = nomDestination(tasCpl, opts, chemin);
@@ -296,12 +297,13 @@ int completion(char *chemin, T_options opts) {
       anoLimNbFich(dest);
       goto fin;
     }
-    ok = completionAux(tasCpl, opts, chemin, dest, tgv);
+    completionAux(tasCpl, opts, chemin, dest, tgv, res);
   }
 
 fin:
+  res->temps_ms = 0;
   detruis_irdata(tgv);  
   memLibereTas(tasCpl);
-  return ok;
+  return;
 }
 
