@@ -9,7 +9,7 @@
   [RESULT] test.irj
   [RESULT] Aucun echec!
   [RESULT] Test exécuté!
-  $ mlang aiguillage.m --mpp_function aigui_test -A app --income-year=2020 --dgfip_options="-m2020,-X" --backend dgfip_c --output output/enchain.c > /dev/null
+  $ mlang aiguillage.m --mpp_function aigui_test -A app --income-year=2020 --dgfip_options="-m2020,-X" --backend dgfip_c --output output/enchain.c --no_nondet_display
   $ cat output/m_aiguillage.c
   #include "mlang.h" 
   
@@ -456,10 +456,7 @@
   [RESULT] test.irj
   [RESULT] Aucun echec!
   [RESULT] Test exécuté!
-  $ mlang conditions.m --mpp_function cond -A app --income-year=2020 --dgfip_options="-m2020,-X" --backend dgfip_c --output output/conditions.c
-  [RESULT] Parsing: conditions.m
-  Parsing: completed!
-  
+  $ mlang conditions.m --mpp_function cond -A app --income-year=2020 --dgfip_options="-m2020,-X" --backend dgfip_c --output output/conditions.c --no_nondet_display
   $ cat output/m_conditions.c
   #include "mlang.h" 
   
