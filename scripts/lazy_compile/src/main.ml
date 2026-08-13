@@ -100,8 +100,11 @@ let compile ~cfiles_dir ~config_file =
   let newly_compiled, ofiles =
     StrMap.fold
       (fun k (b : Dep_graph.compiled_status) (acc_comp, ofiles) ->
-        if b.recompiled then (k :: acc_comp, b.ofile :: ofiles)
-        else (acc_comp, b.ofile :: ofiles))
+        let acc_comp = if b.recompiled then k :: acc_comp else acc_comp
+        and ofiles =
+          if Filename.extension k = ".c" then b.ofile :: ofiles else ofiles
+        in
+        (acc_comp, ofiles))
       m ([], [])
   in
   let () =
@@ -142,7 +145,8 @@ let init ~cfiles_dir =
     | exception Sys_error _ -> Sys.mkdir (Cli.output_dir ()) 0o777
     | true -> ()
     | false ->
-        Format.ksprintf failwith "File %S is not a directory" (Cli.output_dir ())
+        Format.ksprintf failwith "File %S is not a directory"
+          (Cli.output_dir ())
   in
   ()
 

@@ -42,16 +42,13 @@ module Log = struct
 
   let warn : 'a. ('a, Format.formatter, unit) format -> 'a =
    fun ppf ->
-    if dbg () >= 1 then
-        Format.(fprintf std_formatter ("[WRN] " ^^ ppf ^^ "@."))
+    if dbg () >= 1 then Format.(fprintf std_formatter ("[WRN] " ^^ ppf ^^ "@."))
     else Format.(ifprintf std_formatter ppf)
 
   let debug : 'a. ('a, Format.formatter, unit) format -> 'a =
    fun ppf ->
-   if dbg () >= 2 then
-     Format.(fprintf std_formatter ("[DBG] " ^^ ppf ^^ "@."))
-   else
-     Format.(ifprintf std_formatter ppf)
+    if dbg () >= 2 then Format.(fprintf std_formatter ("[DBG] " ^^ ppf ^^ "@."))
+    else Format.(ifprintf std_formatter ppf)
 end
 
 (** Runs a command and returns its output as a string *)
@@ -81,7 +78,7 @@ let compile_file ~cfiles_dir ~cfile ~ofile =
   res
 
 let generate_binary ~dest ~ofiles =
-  let pedantic = if (Cli.pedantic () = 0) then "" else "--pedantic " in
+  let pedantic = if Cli.pedantic () = 0 then "" else "--pedantic " in
   let cmd =
     Format.asprintf "%s -std=c89 %s -O2 %a -o %s -lm" (Cli.cc ()) pedantic
       (Format.pp_print_list
@@ -94,3 +91,7 @@ let generate_binary ~dest ~ofiles =
   Log.log "%s" res;
   Log.log "Compilation of binary %S complete" dest;
   res
+
+let output_line oc str =
+  output_string oc str;
+  output_string oc "\n"

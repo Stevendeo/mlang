@@ -47,6 +47,9 @@ val compile_file : cfiles_dir:string -> cfile:string -> ofile:string -> string
 val generate_binary : dest:string -> ofiles:string list -> string
 (** From a list of .o files, generates a binary [dest]. *)
 
+val output_line : out_channel -> string -> unit
+(** Outputs a string, then a newline. *)
+
 (** Different logs helpers, using [Env.debug] to select which are active. *)
 module Log : sig
   val log : ('a, Format.formatter, unit) format -> 'a

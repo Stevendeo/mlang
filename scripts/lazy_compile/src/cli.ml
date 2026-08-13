@@ -82,9 +82,7 @@ let arg_pedantic =
 
 let arg_cc =
   Arg.(
-    value
-    & opt (some string) None
-    & info [ "cc" ] ~doc:"The compiler to use")
+    value & opt (some string) None & info [ "cc" ] ~doc:"The compiler to use")
 
 let init_vars cfiles_dir config_file (bin : string option) output_dir dep_graph
     debug pedantic cc =
@@ -110,6 +108,6 @@ let info =
 
 let read_args () =
   match Cmdliner.Cmd.eval_value @@ Cmdliner.Cmd.v info lcc_term with
-  | Ok (`Help | `Version) -> exit 0;
+  | Ok (`Help | `Version) -> exit 0
   | Ok _ -> ()
   | Error _e -> failwith "Cli failed"

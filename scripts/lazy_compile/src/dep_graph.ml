@@ -132,7 +132,7 @@ let rec add_file_to_graph ~cfiles_dir t filename =
     | _, cmd ->
         (* This is an external dependency. Running the command version to add
           it to the graph. *)
-        let edvers = run_command cmd in
+        let edvers = run_command cmd |> String.trim in
         {
           t with
           graph =
@@ -242,29 +242,164 @@ let make ~cfiles_dir ~ext_dep =
 
 let lazy_compile_version () = Digest.file Sys.argv.(0)
 
-(** Writes a (marshaled) graph. *)
-let write (g : t) =
-  let fname = Filename.concat (Cli.output_dir ()) (Cli.graph_filename ())
-  and lc_version = lazy_compile_version () in
-  let out = open_out fname in
-  try
-    Marshal.to_channel out (lc_version, g) [ No_sharing ];
-    close_out out
-  with exn ->
-    Log.err "Failing to write graph in %S: %s." fname (Printexc.to_string exn);
-    close_out out;
-    Sys.remove fname;
-    raise exn
-
-(** Reads a graph serialized by [write]. In case of failure, returns an empty
-    graph. *)
-let read () =
-  try
-    let c = open_in (Filename.concat (Cli.output_dir ()) (Cli.graph_filename ())) in
-    let lcversion, g = Marshal.from_channel c in
-    if lcversion = lazy_compile_version () then g
-    else begin
+(** Writes a graph under the following readable format: # Version <digest of the
+    binary> # Graph <filename1>:<file_kind1>:<payload1> ... # Cfiles <file1> ...
+    # External dependencies <(external dependency1 * command to get version1)>
+    ... . *)
+let read, write =
+  let exception Invalid_kind in
+  let exception Stop in
+  let version_header = "# Version"
+  and graph_header = "# Graph"
+  and cfiles_header = "# C files"
+  and extdep_header = "# External dependencies" in
+  let write_version oc =
+    output_line oc @@ Digest.to_hex @@ lazy_compile_version ()
+  and read_version ic = input_line ic |> Digest.from_hex
+  and write_file oc filename file =
+    let line =
+      match file with
+      | Mlang_gen { mname; mhash; mdeps } ->
+          Format.asprintf "mlang-file:%s:%s:%s:[%a]" mname filename
+            (Digest.to_hex mhash)
+            (Format.pp_print_list
+               ~pp_sep:(fun fmt _ -> Format.fprintf fmt ";")
+               Format.pp_print_string)
+            mdeps
+      | Ext_dep { edname; edvers } ->
+          Format.sprintf "ext-dep:%s:%s:%s" filename edname edvers
+    in
+    output_line oc line
+  and read_file =
+    let read_mlang_gen l =
+      Scanf.sscanf l "%[^:]:%[^:]:%[^:]:%[^:]:[%[^]]]"
+        (fun kind filename mname mhash mdeps ->
+          if kind = "mlang-file" then
+            ( filename,
+              Mlang_gen
+                {
+                  mname;
+                  mhash = Digest.from_hex mhash;
+                  mdeps = String.split_on_char ';' mdeps;
+                } )
+          else raise Invalid_kind)
+    and read_ext_dep l =
+      Scanf.sscanf l "%[^:]:%[^:]:%[^:]:%[^:]"
+        (fun kind filename edname edvers ->
+          if kind = "ext-dep" then (filename, Ext_dep { edname; edvers })
+          else raise Invalid_kind)
+    in
+    fun l ->
+      try read_mlang_gen l
+      with Invalid_kind | End_of_file -> (
+        try read_ext_dep l
+        with Invalid_kind | End_of_file ->
+          Format.ksprintf failwith "Reading file, cannot decode %S" l)
+  and write_cfile oc = output_line oc
+  and read_cfile l = l
+  and write_ext_dep oc (f, cmd) = output_line oc @@ Format.sprintf "%s:%s" f cmd
+  and read_ext_dep l =
+    try Scanf.sscanf l "%[^:]:%s" (fun i j -> (i, j))
+    with End_of_file ->
+      Format.ksprintf failwith "Reading ext-dep, cannot decode %S" l
+  in
+  let write oc g =
+    output_line oc version_header;
+    write_version oc;
+    output_line oc graph_header;
+    StrMap.iter (write_file oc) g.graph;
+    output_line oc cfiles_header;
+    List.iter (write_cfile oc) g.cfiles;
+    output_line oc extdep_header;
+    List.iter (write_ext_dep oc) g.ext_dep
+  and read ic =
+    while input_line ic <> version_header do
+      ()
+    done;
+    if read_version ic <> lazy_compile_version () then begin
       Log.warn "Newer version of lazy compile: ignoring old data.";
       empty
     end
-  with Failure _ | Sys_error _ | End_of_file -> empty
+    else begin
+      while input_line ic <> graph_header do
+        ()
+      done;
+      Log.debug "Reading graph...@.";
+      let graph =
+        let res = ref StrMap.empty in
+        let () =
+          try
+            while true do
+              let l = input_line ic in
+              Log.debug "Line %S@." l;
+              if l = cfiles_header then raise Stop;
+              let fname, f = read_file l in
+              res := StrMap.add fname f !res
+            done
+          with Stop -> ()
+        in
+        !res
+      in
+      Log.debug "Reading cfiles...@.";
+      let cfiles =
+        let res = ref [] in
+        let () =
+          try
+            while true do
+              let l = input_line ic in
+              Log.debug "Line %S@." l;
+              if l = extdep_header then raise Stop;
+              let f = read_cfile l in
+              res := f :: !res
+            done
+          with Stop -> ()
+        in
+        !res
+      in
+      Log.debug "Reading external dependencies...@.";
+      let ext_dep =
+        let res = ref [] in
+        let () =
+          try
+            while true do
+              let l = try input_line ic with End_of_file -> raise Stop in
+              Log.debug "Line %S@." l;
+              let f = read_ext_dep l in
+              res := f :: !res
+            done
+          with Stop -> ()
+        in
+        !res
+      in
+      { graph; cfiles; ext_dep }
+    end
+  in
+  (read, write)
+
+let read () =
+  match
+    open_in (Filename.concat (Cli.output_dir ()) (Cli.graph_filename ()))
+  with
+  | exception Sys_error _ -> empty
+  | c -> (
+      let clean () = close_in c in
+      try
+        let res = read c in
+        clean ();
+        res
+      with e ->
+        clean ();
+        raise e)
+
+let write t =
+  let c =
+    open_out (Filename.concat (Cli.output_dir ()) (Cli.graph_filename ()))
+  in
+  let clean () = close_out c in
+  try
+    let res = write c t in
+    clean ();
+    res
+  with e ->
+    clean ();
+    raise e
