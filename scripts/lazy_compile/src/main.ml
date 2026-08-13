@@ -138,11 +138,11 @@ let init ~cfiles_dir =
   in
   (* Checking existence of output dir *)
   let () =
-    match Sys.is_directory Env.output_dir with
-    | exception Sys_error _ -> Sys.mkdir Env.output_dir 0o777
+    match Sys.is_directory @@ Cli.output_dir () with
+    | exception Sys_error _ -> Sys.mkdir (Cli.output_dir ()) 0o777
     | true -> ()
     | false ->
-        Format.ksprintf failwith "File %S is not a directory" Env.output_dir
+        Format.ksprintf failwith "File %S is not a directory" (Cli.output_dir ())
   in
   ()
 

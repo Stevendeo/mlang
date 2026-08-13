@@ -12,7 +12,7 @@ Lancez `lcc` avec:
 - `-B` le nom du binaire à générer (optionnel si vous ne voulez que compiler les
   fichiers C).
 
-Cing variables d'environnement peuvent également être redéfinies:
+Cinq variables d'environnement peuvent également être redéfinies:
 
 - `OUTPUT_DIR` est le dossier où seront générés les fichiers .o (par defaut: `"output"`);
 - `DEPGRAPH_FILENAME` est le fichier contenant le graphe de dépendance (ce fichier est utilisé pour stocker les résultats de compilation) (par defaut: `".depgraph"`);

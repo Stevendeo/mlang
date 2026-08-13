@@ -5,8 +5,8 @@ opam exec -- ocamlfind ocamlc \
      -linkpkg \
      -I _build \
      -o _build/lcc \
+     _build/cli.mli _build/cli.ml \
      _build/utils.mli _build/utils.ml \
      _build/dep_graph.mli _build/dep_graph.ml \
-     _build/cli.mli _build/cli.ml \
      _build/main.ml &&
 cp _build/lcc lcc

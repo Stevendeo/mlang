@@ -19,4 +19,14 @@ val cfiles_dir : unit -> string
 
 val config_file : unit -> string
 
+val output_dir : unit -> string
+
+val graph_filename : unit -> string
+
+val debug : unit -> int
+
+val pedantic : unit -> int
+
+val cc : unit -> string
+
 val read_args : unit -> unit

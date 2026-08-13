@@ -144,7 +144,7 @@ let rec add_file_to_graph ~cfiles_dir t filename =
 
 (** Returns the name of the compilation output file. *)
 let output_file_name cfile =
-  Filename.concat Env.output_dir (Filename.chop_extension cfile ^ ".o")
+  Filename.concat (Cli.output_dir ()) (Filename.chop_extension cfile ^ ".o")
 
 (** Intermediary function; From an [old] dependency map corresponding to an old
     compilation, and a [new_] dependency map built from a configuration file,
@@ -173,14 +173,13 @@ let rec compile_node_ ~cfiles_dir ~(old : t) ~(new_ : t)
       in
       (compiled, should_recompile)
   | Mlang_gen { mname; mhash; mdeps } -> (
-    let ofile = output_file_name mname in
-    let compile () =
-      if Filename.extension mname = ".h" then begin
+      let ofile = output_file_name mname in
+      let compile () =
+        if Filename.extension mname = ".h" then begin
           Log.debug "Skipping header file %S" mname;
-          compiled, true
+          (compiled, true)
         end
-      else
-        begin
+        else begin
           Log.debug "Compiling mlang generated file %S" mname;
           Log.debug "Dependencies: %i" (List.length mdeps);
           let (res : string) =
@@ -245,7 +244,7 @@ let lazy_compile_version () = Digest.file Sys.argv.(0)
 
 (** Writes a (marshaled) graph. *)
 let write (g : t) =
-  let fname = Filename.concat Env.output_dir Env.graph_filename
+  let fname = Filename.concat (Cli.output_dir ()) (Cli.graph_filename ())
   and lc_version = lazy_compile_version () in
   let out = open_out fname in
   try
@@ -261,7 +260,7 @@ let write (g : t) =
     graph. *)
 let read () =
   try
-    let c = open_in (Filename.concat Env.output_dir Env.graph_filename) in
+    let c = open_in (Filename.concat (Cli.output_dir ()) (Cli.graph_filename ())) in
     let lcversion, g = Marshal.from_channel c in
     if lcversion = lazy_compile_version () then g
     else begin
