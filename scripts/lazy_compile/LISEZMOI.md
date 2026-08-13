@@ -2,11 +2,11 @@
 
 ## Comment compiler
 
-Le script `build.sh` compile le script et génère le binaire `lazy_compile`.
+Le script `build.sh` compile le script et génère le binaire `lcc`.
 
 ## Utilisation
 
-Lancez `lazy_compile` avec:
+Lancez `lcc` avec:
 - `-F` le dossier contenant les fichiers C à compiler;
 - `-C` le fichier de configuration.
 

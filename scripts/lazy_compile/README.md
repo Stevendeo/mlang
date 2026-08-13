@@ -6,7 +6,7 @@ Simply run the build script in `build.sh`
 
 ## Usage
 
-Run `lazy_compile` with:
+Run `lcc` with:
 - `-F` the C files directory, containing the files to compile;
 - `-C` the configuration file.
 

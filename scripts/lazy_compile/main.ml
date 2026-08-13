@@ -14,7 +14,7 @@
 (******************************************************************************)
 (** Usage:
 
-    $ lazy_compile -F [FILEDIR] -C [CONFIGFILE]
+    $ lcc -F [FILEDIR] -C [CONFIGFILE]
 
     Can be configured with additional environment variables.
     - [OUTPUT_DIR]: the dir to write the .o files (default: output). Generated
