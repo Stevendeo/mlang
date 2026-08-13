@@ -12,6 +12,9 @@
 (* concédants successifs qu'une responsabilité restreinte.                    *)
 (*                                                                            *)
 (******************************************************************************)
+
+val bin : unit -> string option
+
 val cfiles_dir : unit -> string
 
 val config_file : unit -> string

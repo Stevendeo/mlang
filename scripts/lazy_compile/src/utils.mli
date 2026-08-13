@@ -56,6 +56,13 @@ val pp_str_map :
 val run_command : string -> string
 (** Runs a command and outputs its result as a string *)
 
+val compile_file : cfiles_dir:string -> cfile:string -> ofile:string -> string
+(** Compiles a [cfile] into a .o file ([ofile]). Includes [cfiles_dir] to the
+    compilation options. *)
+
+val generate_binary : dest:string -> ofiles:string list -> string
+(** From a list of .o files, generates a binary [dest]. *)
+
 (** Different logs helpers, using [Env.debug] to select which are active. *)
 module Log : sig
   val log : ('a, Format.formatter, unit) format -> 'a

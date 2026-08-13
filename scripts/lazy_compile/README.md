@@ -8,7 +8,8 @@ Simply run the build script in `build.sh`
 
 Run `lcc` with:
 - `-F` the C files directory, containing the files to compile;
-- `-C` the configuration file.
+- `-C` the configuration file;
+- `-B` the binary name to generate (optional if you only want to compile a few files).
 
 Five environment variables can also be defined:
 

@@ -18,6 +18,8 @@ let cfiles_dir_ref = ref `Uninit
 
 let config_file_ref = ref `Uninit
 
+let bin_ref = ref (`Init None)
+
 let get (type t) (v : [ `Uninit | `Init of t ] ref) : t =
   match !v with `Uninit -> failwith "Uninitialized option" | `Init v -> v
 
@@ -32,6 +34,10 @@ let cfiles_dir () = get cfiles_dir_ref
 
 let config_file () = get config_file_ref
 
+let set_bin f = set (Some f) bin_ref
+
+let bin () = get bin_ref
+
 (* -- Cmdliner -- *)
 
 let arg_cfiles_dir =
@@ -42,11 +48,18 @@ let arg_config_file =
   Arg.(
     value & opt (some string) None & info [ "config"; "C" ] ~doc:"Config file")
 
-let init_vars cfiles_dir config_file =
-  Option.iter set_config_file config_file;
-  Option.iter set_cfiles_dir cfiles_dir
+let arg_bin =
+  Arg.(
+    value
+    & opt (some string) None
+    & info [ "bin"; "B" ] ~doc:"Generates the binary")
 
-let lcc_term = Term.(const init_vars $ arg_cfiles_dir $ arg_config_file)
+let init_vars cfiles_dir config_file bin =
+  Option.iter set_config_file config_file;
+  Option.iter set_cfiles_dir cfiles_dir;
+  Option.iter set_bin bin
+
+let lcc_term = Term.(const init_vars $ arg_cfiles_dir $ arg_config_file $ arg_bin)
 
 let info =
   let doc = "Lazy C compiler" in

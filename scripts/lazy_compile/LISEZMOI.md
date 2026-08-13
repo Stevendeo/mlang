@@ -8,7 +8,9 @@ Le script `build.sh` compile le script et génère le binaire `lcc`.
 
 Lancez `lcc` avec:
 - `-F` le dossier contenant les fichiers C à compiler;
-- `-C` le fichier de configuration.
+- `-C` le fichier de configuration;
+- `-B` le nom du binaire à générer (optionnel si vous ne voulez que compiler les
+  fichiers C).
 
 Cing variables d'environnement peuvent également être redéfinies:
 

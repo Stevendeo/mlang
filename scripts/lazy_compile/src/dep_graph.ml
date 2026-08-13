@@ -14,6 +14,8 @@
 (******************************************************************************)
 open Utils
 
+type compiled_status = { recompiled : bool; ofile : string }
+
 type file =
   (* Files that needs to be compiled.  *)
   | Mlang_gen of {
@@ -144,19 +146,6 @@ let rec add_file_to_graph ~cfiles_dir t filename =
 let output_file_name cfile =
   Filename.concat Env.output_dir (Filename.chop_extension cfile ^ ".o")
 
-(** Compiles [cfile]. *)
-let compile_file ~cfiles_dir ~cfile ~ofile =
-  let pedantic = if Env.pedantic = "0" then "" else "--pedantic " in
-  let cmd =
-    Format.sprintf "%s -std=c89 -I%s %s -O2 -c %s -o %s" Env.cc cfiles_dir
-      pedantic cfile ofile
-  in
-  Log.log "Compiling file %S..." cfile;
-  let res = run_command cmd in
-  Log.log "%s" res;
-  Log.log "Compilation of file %S complete-> %S" cfile ofile;
-  res
-
 (** Intermediary function; From an [old] dependency map corresponding to an old
     compilation, and a [new_] dependency map built from a configuration file,
     compiles a graph node (that should come from [new_]). The [compiled] map
@@ -168,7 +157,8 @@ let compile_file ~cfiles_dir ~cfile ~ofile =
     checks if one needed to be recompiled: if so, maps it in [compiled] to
     [true], otherwise to [false]. *)
 let rec compile_node_ ~cfiles_dir ~(old : t) ~(new_ : t)
-    (compiled : bool StrMap.t) : file -> bool StrMap.t * bool = function
+    (compiled : compiled_status StrMap.t) :
+    file -> compiled_status StrMap.t * bool = function
   | Ext_dep { edname; edvers } ->
       let should_recompile =
         match StrMap.find edname old.graph with
@@ -183,20 +173,31 @@ let rec compile_node_ ~cfiles_dir ~(old : t) ~(new_ : t)
       in
       (compiled, should_recompile)
   | Mlang_gen { mname; mhash; mdeps } -> (
-      Log.debug "Compiling mlang generated file %S" mname;
-      Log.debug "Dependencies: %i" (List.length mdeps);
-      let ofile = output_file_name mname in
-      let compile () =
-        let (_ : string) =
-          compile_file ~cfiles_dir
-            ~cfile:(Filename.concat cfiles_dir mname)
-            ~ofile
-        in
-        (StrMap.add mname true compiled, true)
+    let ofile = output_file_name mname in
+    let compile () =
+      if Filename.extension mname = ".h" then begin
+          Log.debug "Skipping header file %S" mname;
+          compiled, true
+        end
+      else
+        begin
+          Log.debug "Compiling mlang generated file %S" mname;
+          Log.debug "Dependencies: %i" (List.length mdeps);
+          let (res : string) =
+            Utils.compile_file ~cfiles_dir
+              ~cfile:(Filename.concat cfiles_dir mname)
+              ~ofile
+          in
+          Log.log "Result: %s" res;
+          (StrMap.add mname { recompiled = true; ofile } compiled, true)
+        end
       in
-      let dont_recompile () = (StrMap.add mname false compiled, false) in
+      let dont_recompile () =
+        Log.debug "Not compiling mlang generated file %S" mname;
+        (StrMap.add mname { recompiled = false; ofile } compiled, false)
+      in
       match StrMap.find mname compiled with
-      | b -> (compiled, b)
+      | b -> (compiled, b.recompiled)
       | exception Not_found -> (
           (* Compiles dependencies *)
           let compiled, should_recompile =

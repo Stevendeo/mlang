@@ -18,6 +18,8 @@
     digest in the two graph, its compilation (and the compilation of all the
     files depending on it) must be restarted. *)
 
+type compiled_status = { recompiled : bool; ofile : string }
+
 type t
 
 exception MissingFileDeclaration of string
@@ -31,7 +33,8 @@ val make : cfiles_dir:string -> ext_dep:(string * string) list -> t
 (** Reads the cfiles_dir directory and builds the corresponding dependency
     graph. *)
 
-val compile : cfiles_dir:string -> old:t -> new_:t -> bool Utils.StrMap.t
+val compile :
+  cfiles_dir:string -> old:t -> new_:t -> compiled_status Utils.StrMap.t
 (** Compiles the graph files in the correct dependency order. [old] holds the
     previous dependency graph, so that only files that have been updated are
     recompiled. *)

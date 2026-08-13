@@ -94,18 +94,36 @@ let compile ~cfiles_dir ~config_file =
     Dep_graph.make ~cfiles_dir ~ext_dep
   in
   Log.debug "New graph: %a" Dep_graph.pp new_;
-  let m : bool StrMap.t = Dep_graph.compile ~cfiles_dir ~old ~new_ in
-  let newly_compiled =
-    StrMap.fold (fun k b acc -> if b then k :: acc else acc) m []
+  let m : Dep_graph.compiled_status StrMap.t =
+    Dep_graph.compile ~cfiles_dir ~old ~new_
   in
-  if newly_compiled = [] then
-    Log.log "Nothing changed. Not recompiling project."
-  else (
-    Log.log "Compilation over.";
-    Log.log "Files compiled: %a"
-      (pp_list ~sep:", " ~pp:Format.pp_print_string)
-      newly_compiled;
-    Dep_graph.write new_)
+  let newly_compiled, ofiles =
+    StrMap.fold
+      (fun k (b : Dep_graph.compiled_status) (acc_comp, ofiles) ->
+        if b.recompiled then (k :: acc_comp, b.ofile :: ofiles)
+        else (acc_comp, b.ofile :: ofiles))
+      m ([], [])
+  in
+  let () =
+    if newly_compiled = [] then
+      Log.log "Nothing changed. Not recompiling project."
+    else (
+      Log.log "Compilation over.";
+      Log.log "Files compiled: %a"
+        (pp_list ~sep:", " ~pp:Format.pp_print_string)
+        newly_compiled;
+      Dep_graph.write new_)
+  in
+  let () =
+    match Cli.bin () with
+    | None -> ()
+    | Some dest ->
+        Log.log "Generating binary %S" dest;
+        let res : string = Utils.generate_binary ~dest ~ofiles in
+        Log.debug "%s" res;
+        Log.log "Binary %S generated" dest
+  in
+  ()
 
 (** Checks the cfiles dir exists. Also, creates the output dir if it does not
     exist. *)
