@@ -1,1 +1,2 @@
-rm *.cmi *.cmo lcc
+rm -rf _build
+rm -f lcc

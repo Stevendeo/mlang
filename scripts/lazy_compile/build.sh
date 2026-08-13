@@ -1,8 +1,12 @@
+mkdir -p _build
+cp -f src/*.ml* _build/
 opam exec -- ocamlfind ocamlc \
      -package str -package unix -package cmdliner \
      -linkpkg \
-     -o lcc \
-     utils.mli utils.ml \
-     dep_graph.mli dep_graph.ml \
-     cli.mli cli.ml \
-     main.ml
+     -I _build \
+     -o _build/lcc \
+     _build/utils.mli _build/utils.ml \
+     _build/dep_graph.mli _build/dep_graph.ml \
+     _build/cli.mli _build/cli.ml \
+     _build/main.ml &&
+cp _build/lcc lcc
