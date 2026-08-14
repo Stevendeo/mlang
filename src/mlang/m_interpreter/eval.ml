@@ -356,13 +356,16 @@ module Make (N : Number.S) (Tracer : Tracers.S) :
           evaluate_same_variable ctx m_acc0 m_acc1
       | InDomain (m_acc, cvm) -> evaluate_in_domain ctx m_acc cvm
       | NbAnomalies ->
-          Number (N.of_float @@ float_of_int @@ Anomaly.nb_anomalies ctx)
+          Number (N.of_float @@ float_of_int @@ Anomaly.nb_anomalies ctx.ctx_ano)
       | NbDiscordances ->
-          Number (N.of_float @@ float_of_int @@ Anomaly.nb_discordances ctx)
+          Number
+            (N.of_float @@ float_of_int @@ Anomaly.nb_discordances ctx.ctx_ano)
       | NbInformatives ->
-          Number (N.of_float @@ float_of_int @@ Anomaly.nb_informatives ctx)
+          Number
+            (N.of_float @@ float_of_int @@ Anomaly.nb_informatives ctx.ctx_ano)
       | NbBloquantes ->
-          Number (N.of_float @@ float_of_int @@ Anomaly.nb_bloquantes ctx)
+          Number
+            (N.of_float @@ float_of_int @@ Anomaly.nb_bloquantes ctx.ctx_ano)
       | NbCategory _ | FuncCallLoop _ | Loop _ -> assert false
     in
     fail_if_nan_or_inf e out;
@@ -677,12 +680,13 @@ module Make (N : Number.S) (Tracer : Tracers.S) :
     let then_ () = ctx.ctx_events <- List.tl ctx.ctx_events in
     evaluate_stmts ~then_ canBlock ctx stmts
 
-  and evaluate_raise_error canBlock ctx m_err var_opt =
+  and evaluate_raise_error canBlock (ctx : ctx) m_err var_opt =
     let is_blocking =
-      Anomaly.raise ctx (Pos.unmark m_err) (Option.map Pos.unmark var_opt)
+      Anomaly.raise ctx.ctx_ano (Pos.unmark m_err)
+        (Option.map Pos.unmark var_opt)
     in
     Tracer.register_ano ctx.tracer_ctx m_err;
-    if is_blocking && ctx.ctx_nb_bloquantes >= 4 && canBlock then
+    if is_blocking && Anomaly.nb_bloquantes ctx.ctx_ano >= 4 && canBlock then
       raise BlockingError
 
   and evaluate_stmt (canBlock : bool) (ctx : ctx) (stmt : Mir.m_instruction) :
@@ -709,10 +713,11 @@ module Make (N : Number.S) (Tracer : Tracers.S) :
         evaluate_arrange_events canBlock ctx sort filter add stmts
     | Com.RaiseError (m_err, var_opt) ->
         evaluate_raise_error canBlock ctx m_err var_opt
-    | Com.CleanErrors -> Anomaly.clean ctx
-    | Com.CleanFinalizedErrors -> Anomaly.clean_finalized ctx
-    | Com.FinalizeErrors -> Anomaly.finalize ~mode_corr:(mode_corr ctx) ctx
-    | Com.ExportErrors -> Anomaly.export ~mode_corr:(mode_corr ctx) ctx
+    | Com.CleanErrors -> Anomaly.clean ctx.ctx_ano
+    | Com.CleanFinalizedErrors -> Anomaly.clean_finalized ctx.ctx_ano
+    | Com.FinalizeErrors ->
+        Anomaly.finalize ~mode_corr:(mode_corr ctx) ctx.ctx_ano
+    | Com.ExportErrors -> Anomaly.export ~mode_corr:(mode_corr ctx) ctx.ctx_ano
     | Com.ComputeDomain _ | Com.ComputeChaining _ | Com.ComputeVerifs _ ->
         assert false
 
@@ -948,7 +953,7 @@ let evaluate_program ?(dbg_info : Dbg_info.t option) (p : Mir.program)
   in
   let anoSet =
     let fold res (e, _) = Com.Error.Set.add e res in
-    List.fold_left fold Com.Error.Set.empty ctx.ctx_exported_anos
+    List.fold_left fold Com.Error.Set.empty (Anomaly.exported ctx.ctx_ano)
   in
   let dbg_info = Interp.get_dbg_info ctx in
   (varMap, anoSet, dbg_info)

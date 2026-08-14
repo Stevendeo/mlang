@@ -43,14 +43,7 @@ type ('a, 'tc) t = {
   ctx_tab_map : Com.Var.t Array.t;
   ctx_pr_out : Printer.t;
   ctx_pr_err : Printer.t;
-  mutable ctx_anos : (Com.Error.t * string option) list;
-  mutable ctx_nb_anos : int;
-  mutable ctx_nb_discos : int;
-  mutable ctx_nb_infos : int;
-  mutable ctx_nb_bloquantes : int;
-  mutable ctx_archived_anos : StrSet.t;
-  mutable ctx_finalized_anos : (Com.Error.t * string option) list;
-  mutable ctx_exported_anos : (Com.Error.t * string option) list;
+  ctx_ano : Anomaly.t;
   mutable ctx_events :
     ('a value, Com.Var.t) Com.event_value Array.t Array.t list;
   tracer_ctx : 'tc;
@@ -183,14 +176,7 @@ module Make (N : Number.S) (Tracer : Tracers.S) = struct
         ctx_tab_map;
         ctx_pr_out = Printer.make Com.StdOut;
         ctx_pr_err = Printer.make Com.StdErr;
-        ctx_anos = [];
-        ctx_nb_anos = 0;
-        ctx_nb_discos = 0;
-        ctx_nb_infos = 0;
-        ctx_nb_bloquantes = 0;
-        ctx_archived_anos = StrSet.empty;
-        ctx_finalized_anos = [];
-        ctx_exported_anos = [];
+        ctx_ano = Anomaly.empty ();
         ctx_events = [];
         tracer_ctx;
       }
