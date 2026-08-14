@@ -127,20 +127,12 @@
   $ mlang test.m --mpp_function fun_test -A mon_application --income-year=2020 --dgfip_options="-m2020,-X" --backend dgfip_c --output output/enchain.c > /dev/null
   $ cat output/m_test.c
   #include "mlang.h" 
-  
   struct S_discord * fun_test(T_irdata* irdata) {
     int sav35_nb_tmps_target = irdata->nb_tmps_target;
     int sav35_nb_refs_target = irdata->nb_refs_target;
-    char *def_saisie = irdata->def_saisie;
-    double *saisie = irdata->saisie;
-    char *def_calculee = irdata->def_calculee;
-    double *calculee = irdata->calculee;
-    char *def_base = irdata->def_base;
-    double *base = irdata->base;
-    T_var_space var_space = irdata->var_space_courant;
+  
     irdata->nb_tmps_target = 0;
     irdata->nb_refs_target = 0;
-    
     {
       test_abs(irdata);
     }
@@ -217,8 +209,7 @@
       test_type(irdata);
     }
     
-    label_fun_test: ;
-    
+  
     irdata->nb_refs_target = sav35_nb_refs_target;
     irdata->nb_tmps_target = sav35_nb_tmps_target;
     return irdata->discords;
@@ -227,16 +218,9 @@
   struct S_discord * initalise_tab(T_irdata* irdata) {
     int sav36_nb_tmps_target = irdata->nb_tmps_target;
     int sav36_nb_refs_target = irdata->nb_refs_target;
-    char *def_saisie = irdata->def_saisie;
-    double *saisie = irdata->saisie;
-    char *def_calculee = irdata->def_calculee;
-    double *calculee = irdata->calculee;
-    char *def_base = irdata->def_base;
-    double *base = irdata->base;
-    T_var_space var_space = irdata->var_space_courant;
+  
     {
       int i;
-      T_varinfo *info;
       for (i = 0; i < 1; i++) {
         irdata->tmps[irdata->tmps_org + i].def = 0;
         irdata->tmps[irdata->tmps_org + i].val = 0.0;
@@ -246,7 +230,6 @@
     }
     irdata->nb_tmps_target = 0;
     irdata->nb_refs_target = 0;
-    
     {
       {
         double i_val37;
@@ -301,9 +284,8 @@
           }
         }
       }
-      label_I_0:;} /* End of scope label_I_0 */
-    label_initalise_tab: ;
-    
+      } /* End of scope label_I_0 */
+  
     irdata->tmps_org = irdata->tmps_org - 1;
     irdata->nb_refs_target = sav36_nb_refs_target;
     irdata->nb_tmps_target = sav36_nb_tmps_target;
@@ -313,16 +295,9 @@
   struct S_discord * reinitialise_tab(T_irdata* irdata) {
     int sav40_nb_tmps_target = irdata->nb_tmps_target;
     int sav40_nb_refs_target = irdata->nb_refs_target;
-    char *def_saisie = irdata->def_saisie;
-    double *saisie = irdata->saisie;
-    char *def_calculee = irdata->def_calculee;
-    double *calculee = irdata->calculee;
-    char *def_base = irdata->def_base;
-    double *base = irdata->base;
-    T_var_space var_space = irdata->var_space_courant;
+  
     {
       int i;
-      T_varinfo *info;
       for (i = 0; i < 1; i++) {
         irdata->tmps[irdata->tmps_org + i].def = 0;
         irdata->tmps[irdata->tmps_org + i].val = 0.0;
@@ -332,7 +307,6 @@
     }
     irdata->nb_tmps_target = 0;
     irdata->nb_refs_target = 0;
-    
     {
       {
         double i_val41;
@@ -387,9 +361,8 @@
           }
         }
       }
-      label_I_1:;} /* End of scope label_I_1 */
-    label_reinitialise_tab: ;
-    
+      } /* End of scope label_I_1 */
+  
     irdata->tmps_org = irdata->tmps_org - 1;
     irdata->nb_refs_target = sav40_nb_refs_target;
     irdata->nb_tmps_target = sav40_nb_tmps_target;
@@ -399,16 +372,9 @@
   struct S_discord * test_abs(T_irdata* irdata) {
     int sav44_nb_tmps_target = irdata->nb_tmps_target;
     int sav44_nb_refs_target = irdata->nb_refs_target;
-    char *def_saisie = irdata->def_saisie;
-    double *saisie = irdata->saisie;
-    char *def_calculee = irdata->def_calculee;
-    double *calculee = irdata->calculee;
-    char *def_base = irdata->def_base;
-    double *base = irdata->base;
-    T_var_space var_space = irdata->var_space_courant;
+  
     irdata->nb_tmps_target = 0;
     irdata->nb_refs_target = 0;
-    
     {
       char print45_def;
       double print45_val;
@@ -485,8 +451,7 @@
         set_print_indent(stdout, &(irdata->ctx_pr_out), print49_val);
       }
     }
-    label_test_abs: ;
-    
+  
     irdata->nb_refs_target = sav44_nb_refs_target;
     irdata->nb_tmps_target = sav44_nb_tmps_target;
     return irdata->discords;
@@ -495,16 +460,9 @@
   struct S_discord * test_afficher(T_irdata* irdata) {
     int sav50_nb_tmps_target = irdata->nb_tmps_target;
     int sav50_nb_refs_target = irdata->nb_refs_target;
-    char *def_saisie = irdata->def_saisie;
-    double *saisie = irdata->saisie;
-    char *def_calculee = irdata->def_calculee;
-    double *calculee = irdata->calculee;
-    char *def_base = irdata->def_base;
-    double *base = irdata->base;
-    T_var_space var_space = irdata->var_space_courant;
+  
     irdata->nb_tmps_target = 0;
     irdata->nb_refs_target = 0;
-    
     {
       char print51_def;
       double print51_val;
@@ -603,8 +561,7 @@
         set_print_indent(stdout, &(irdata->ctx_pr_out), print60_val);
       }
     }
-    label_test_afficher: ;
-    
+  
     irdata->nb_refs_target = sav50_nb_refs_target;
     irdata->nb_tmps_target = sav50_nb_tmps_target;
     return irdata->discords;
@@ -613,16 +570,9 @@
   struct S_discord * test_arr(T_irdata* irdata) {
     int sav61_nb_tmps_target = irdata->nb_tmps_target;
     int sav61_nb_refs_target = irdata->nb_refs_target;
-    char *def_saisie = irdata->def_saisie;
-    double *saisie = irdata->saisie;
-    char *def_calculee = irdata->def_calculee;
-    double *calculee = irdata->calculee;
-    char *def_base = irdata->def_base;
-    double *base = irdata->base;
-    T_var_space var_space = irdata->var_space_courant;
+  
     irdata->nb_tmps_target = 0;
     irdata->nb_refs_target = 0;
-    
     {
       char print62_def;
       double print62_val;
@@ -699,8 +649,7 @@
         set_print_indent(stdout, &(irdata->ctx_pr_out), print66_val);
       }
     }
-    label_test_arr: ;
-    
+  
     irdata->nb_refs_target = sav61_nb_refs_target;
     irdata->nb_tmps_target = sav61_nb_tmps_target;
     return irdata->discords;
@@ -709,16 +658,9 @@
   struct S_discord * test_attribut(T_irdata* irdata) {
     int sav67_nb_tmps_target = irdata->nb_tmps_target;
     int sav67_nb_refs_target = irdata->nb_refs_target;
-    char *def_saisie = irdata->def_saisie;
-    double *saisie = irdata->saisie;
-    char *def_calculee = irdata->def_calculee;
-    double *calculee = irdata->calculee;
-    char *def_base = irdata->def_base;
-    double *base = irdata->base;
-    T_var_space var_space = irdata->var_space_courant;
+  
     irdata->nb_tmps_target = 0;
     irdata->nb_refs_target = 0;
-    
     {
       char print68_def;
       double print68_val;
@@ -777,8 +719,7 @@
         set_print_indent(stdout, &(irdata->ctx_pr_out), print71_val);
       }
     }
-    label_test_attribut: ;
-    
+  
     irdata->nb_refs_target = sav67_nb_refs_target;
     irdata->nb_tmps_target = sav67_nb_tmps_target;
     return irdata->discords;
@@ -787,16 +728,11 @@
   struct S_discord * test_champ_evenement(T_irdata* irdata) {
     int sav72_nb_tmps_target = irdata->nb_tmps_target;
     int sav72_nb_refs_target = irdata->nb_refs_target;
-    char *def_saisie = irdata->def_saisie;
-    double *saisie = irdata->saisie;
     char *def_calculee = irdata->def_calculee;
     double *calculee = irdata->calculee;
-    char *def_base = irdata->def_base;
-    double *base = irdata->base;
-    T_var_space var_space = irdata->var_space_courant;
+  
     irdata->nb_tmps_target = 0;
     irdata->nb_refs_target = 0;
-    
     {
       char print73_def;
       double print73_val;
@@ -948,8 +884,7 @@
         set_print_indent(stdout, &(irdata->ctx_pr_out), print88_val);
       }
     }
-    label_test_champ_evenement: ;
-    
+  
     irdata->nb_refs_target = sav72_nb_refs_target;
     irdata->nb_tmps_target = sav72_nb_tmps_target;
     return irdata->discords;
@@ -958,16 +893,9 @@
   struct S_discord * test_champ_evenement_base(T_irdata* irdata) {
     int sav89_nb_tmps_target = irdata->nb_tmps_target;
     int sav89_nb_refs_target = irdata->nb_refs_target;
-    char *def_saisie = irdata->def_saisie;
-    double *saisie = irdata->saisie;
-    char *def_calculee = irdata->def_calculee;
-    double *calculee = irdata->calculee;
-    char *def_base = irdata->def_base;
-    double *base = irdata->base;
-    T_var_space var_space = irdata->var_space_courant;
+  
     irdata->nb_tmps_target = 0;
     irdata->nb_refs_target = 0;
-    
     {
       char print90_def;
       double print90_val;
@@ -1050,8 +978,7 @@
         set_print_indent(stdout, &(irdata->ctx_pr_out), print95_val);
       }
     }
-    label_test_champ_evenement_base: ;
-    
+  
     irdata->nb_refs_target = sav89_nb_refs_target;
     irdata->nb_tmps_target = sav89_nb_tmps_target;
     return irdata->discords;
@@ -1060,16 +987,9 @@
   struct S_discord * test_inf(T_irdata* irdata) {
     int sav96_nb_tmps_target = irdata->nb_tmps_target;
     int sav96_nb_refs_target = irdata->nb_refs_target;
-    char *def_saisie = irdata->def_saisie;
-    double *saisie = irdata->saisie;
-    char *def_calculee = irdata->def_calculee;
-    double *calculee = irdata->calculee;
-    char *def_base = irdata->def_base;
-    double *base = irdata->base;
-    T_var_space var_space = irdata->var_space_courant;
+  
     irdata->nb_tmps_target = 0;
     irdata->nb_refs_target = 0;
-    
     {
       char print97_def;
       double print97_val;
@@ -1146,8 +1066,7 @@
         set_print_indent(stdout, &(irdata->ctx_pr_out), print101_val);
       }
     }
-    label_test_inf: ;
-    
+  
     irdata->nb_refs_target = sav96_nb_refs_target;
     irdata->nb_tmps_target = sav96_nb_tmps_target;
     return irdata->discords;
@@ -1156,16 +1075,9 @@
   struct S_discord * test_max(T_irdata* irdata) {
     int sav102_nb_tmps_target = irdata->nb_tmps_target;
     int sav102_nb_refs_target = irdata->nb_refs_target;
-    char *def_saisie = irdata->def_saisie;
-    double *saisie = irdata->saisie;
-    char *def_calculee = irdata->def_calculee;
-    double *calculee = irdata->calculee;
-    char *def_base = irdata->def_base;
-    double *base = irdata->base;
-    T_var_space var_space = irdata->var_space_courant;
+  
     irdata->nb_tmps_target = 0;
     irdata->nb_refs_target = 0;
-    
     {
       char print103_def;
       double print103_val;
@@ -1258,8 +1170,7 @@
         set_print_indent(stdout, &(irdata->ctx_pr_out), print108_val);
       }
     }
-    label_test_max: ;
-    
+  
     irdata->nb_refs_target = sav102_nb_refs_target;
     irdata->nb_tmps_target = sav102_nb_tmps_target;
     return irdata->discords;
@@ -1268,16 +1179,9 @@
   struct S_discord * test_meme_variable(T_irdata* irdata) {
     int sav109_nb_tmps_target = irdata->nb_tmps_target;
     int sav109_nb_refs_target = irdata->nb_refs_target;
-    char *def_saisie = irdata->def_saisie;
-    double *saisie = irdata->saisie;
-    char *def_calculee = irdata->def_calculee;
-    double *calculee = irdata->calculee;
-    char *def_base = irdata->def_base;
-    double *base = irdata->base;
-    T_var_space var_space = irdata->var_space_courant;
+  
     irdata->nb_tmps_target = 0;
     irdata->nb_refs_target = 0;
-    
     {
       char print110_def;
       double print110_val;
@@ -1397,8 +1301,7 @@
         set_print_indent(stdout, &(irdata->ctx_pr_out), print117_val);
       }
     }
-    label_test_meme_variable: ;
-    
+  
     irdata->nb_refs_target = sav109_nb_refs_target;
     irdata->nb_tmps_target = sav109_nb_tmps_target;
     return irdata->discords;
@@ -1407,16 +1310,9 @@
   struct S_discord * test_min(T_irdata* irdata) {
     int sav118_nb_tmps_target = irdata->nb_tmps_target;
     int sav118_nb_refs_target = irdata->nb_refs_target;
-    char *def_saisie = irdata->def_saisie;
-    double *saisie = irdata->saisie;
-    char *def_calculee = irdata->def_calculee;
-    double *calculee = irdata->calculee;
-    char *def_base = irdata->def_base;
-    double *base = irdata->base;
-    T_var_space var_space = irdata->var_space_courant;
+  
     irdata->nb_tmps_target = 0;
     irdata->nb_refs_target = 0;
-    
     {
       char print119_def;
       double print119_val;
@@ -1509,8 +1405,7 @@
         set_print_indent(stdout, &(irdata->ctx_pr_out), print124_val);
       }
     }
-    label_test_min: ;
-    
+  
     irdata->nb_refs_target = sav118_nb_refs_target;
     irdata->nb_tmps_target = sav118_nb_tmps_target;
     return irdata->discords;
@@ -1519,16 +1414,9 @@
   struct S_discord * test_multimax(T_irdata* irdata) {
     int sav125_nb_tmps_target = irdata->nb_tmps_target;
     int sav125_nb_refs_target = irdata->nb_refs_target;
-    char *def_saisie = irdata->def_saisie;
-    double *saisie = irdata->saisie;
-    char *def_calculee = irdata->def_calculee;
-    double *calculee = irdata->calculee;
-    char *def_base = irdata->def_base;
-    double *base = irdata->base;
-    T_var_space var_space = irdata->var_space_courant;
+  
     irdata->nb_tmps_target = 0;
     irdata->nb_refs_target = 0;
-    
     {
       char print126_def;
       double print126_val;
@@ -1583,8 +1471,7 @@
         set_print_indent(stdout, &(irdata->ctx_pr_out), print129_val);
       }
     }
-    label_test_multimax: ;
-    
+  
     irdata->nb_refs_target = sav125_nb_refs_target;
     irdata->nb_tmps_target = sav125_nb_tmps_target;
     return irdata->discords;
@@ -1593,16 +1480,9 @@
   struct S_discord * test_multimax_base(T_irdata* irdata) {
     int sav130_nb_tmps_target = irdata->nb_tmps_target;
     int sav130_nb_refs_target = irdata->nb_refs_target;
-    char *def_saisie = irdata->def_saisie;
-    double *saisie = irdata->saisie;
-    char *def_calculee = irdata->def_calculee;
-    double *calculee = irdata->calculee;
-    char *def_base = irdata->def_base;
-    double *base = irdata->base;
-    T_var_space var_space = irdata->var_space_courant;
+  
     irdata->nb_tmps_target = 0;
     irdata->nb_refs_target = 0;
-    
     {
       char print131_def;
       double print131_val;
@@ -1767,8 +1647,7 @@
         set_print_indent(stdout, &(irdata->ctx_pr_out), print142_val);
       }
     }
-    label_test_multimax_base: ;
-    
+  
     irdata->nb_refs_target = sav130_nb_refs_target;
     irdata->nb_tmps_target = sav130_nb_tmps_target;
     return irdata->discords;
@@ -1777,16 +1656,9 @@
   struct S_discord * test_nb_evenements(T_irdata* irdata) {
     int sav143_nb_tmps_target = irdata->nb_tmps_target;
     int sav143_nb_refs_target = irdata->nb_refs_target;
-    char *def_saisie = irdata->def_saisie;
-    double *saisie = irdata->saisie;
-    char *def_calculee = irdata->def_calculee;
-    double *calculee = irdata->calculee;
-    char *def_base = irdata->def_base;
-    double *base = irdata->base;
-    T_var_space var_space = irdata->var_space_courant;
+  
     irdata->nb_tmps_target = 0;
     irdata->nb_refs_target = 0;
-    
     {
       char print144_def;
       double print144_val;
@@ -1905,8 +1777,7 @@
         set_print_indent(stdout, &(irdata->ctx_pr_out), print157_val);
       }
     }
-    label_test_nb_evenements: ;
-    
+  
     irdata->nb_refs_target = sav143_nb_refs_target;
     irdata->nb_tmps_target = sav143_nb_tmps_target;
     return irdata->discords;
@@ -1915,16 +1786,9 @@
   struct S_discord * test_nb_evenements_base(T_irdata* irdata) {
     int sav158_nb_tmps_target = irdata->nb_tmps_target;
     int sav158_nb_refs_target = irdata->nb_refs_target;
-    char *def_saisie = irdata->def_saisie;
-    double *saisie = irdata->saisie;
-    char *def_calculee = irdata->def_calculee;
-    double *calculee = irdata->calculee;
-    char *def_base = irdata->def_base;
-    double *base = irdata->base;
-    T_var_space var_space = irdata->var_space_courant;
+  
     irdata->nb_tmps_target = 0;
     irdata->nb_refs_target = 0;
-    
     {
       char print159_def;
       double print159_val;
@@ -1965,8 +1829,7 @@
         set_print_indent(stdout, &(irdata->ctx_pr_out), print161_val);
       }
     }
-    label_test_nb_evenements_base: ;
-    
+  
     irdata->nb_refs_target = sav158_nb_refs_target;
     irdata->nb_tmps_target = sav158_nb_tmps_target;
     return irdata->discords;
@@ -1975,16 +1838,9 @@
   struct S_discord * test_null(T_irdata* irdata) {
     int sav162_nb_tmps_target = irdata->nb_tmps_target;
     int sav162_nb_refs_target = irdata->nb_refs_target;
-    char *def_saisie = irdata->def_saisie;
-    double *saisie = irdata->saisie;
-    char *def_calculee = irdata->def_calculee;
-    double *calculee = irdata->calculee;
-    char *def_base = irdata->def_base;
-    double *base = irdata->base;
-    T_var_space var_space = irdata->var_space_courant;
+  
     irdata->nb_tmps_target = 0;
     irdata->nb_refs_target = 0;
-    
     {
       char print163_def;
       double print163_val;
@@ -2061,8 +1917,7 @@
         set_print_indent(stdout, &(irdata->ctx_pr_out), print167_val);
       }
     }
-    label_test_null: ;
-    
+  
     irdata->nb_refs_target = sav162_nb_refs_target;
     irdata->nb_tmps_target = sav162_nb_tmps_target;
     return irdata->discords;
@@ -2071,16 +1926,9 @@
   struct S_discord * test_positif(T_irdata* irdata) {
     int sav168_nb_tmps_target = irdata->nb_tmps_target;
     int sav168_nb_refs_target = irdata->nb_refs_target;
-    char *def_saisie = irdata->def_saisie;
-    double *saisie = irdata->saisie;
-    char *def_calculee = irdata->def_calculee;
-    double *calculee = irdata->calculee;
-    char *def_base = irdata->def_base;
-    double *base = irdata->base;
-    T_var_space var_space = irdata->var_space_courant;
+  
     irdata->nb_tmps_target = 0;
     irdata->nb_refs_target = 0;
-    
     {
       char print169_def;
       double print169_val;
@@ -2178,8 +2026,7 @@
         set_print_indent(stdout, &(irdata->ctx_pr_out), print175_val);
       }
     }
-    label_test_positif: ;
-    
+  
     irdata->nb_refs_target = sav168_nb_refs_target;
     irdata->nb_tmps_target = sav168_nb_tmps_target;
     return irdata->discords;
@@ -2188,16 +2035,9 @@
   struct S_discord * test_positif_ou_nul(T_irdata* irdata) {
     int sav176_nb_tmps_target = irdata->nb_tmps_target;
     int sav176_nb_refs_target = irdata->nb_refs_target;
-    char *def_saisie = irdata->def_saisie;
-    double *saisie = irdata->saisie;
-    char *def_calculee = irdata->def_calculee;
-    double *calculee = irdata->calculee;
-    char *def_base = irdata->def_base;
-    double *base = irdata->base;
-    T_var_space var_space = irdata->var_space_courant;
+  
     irdata->nb_tmps_target = 0;
     irdata->nb_refs_target = 0;
-    
     {
       char print177_def;
       double print177_val;
@@ -2290,8 +2130,7 @@
         set_print_indent(stdout, &(irdata->ctx_pr_out), print182_val);
       }
     }
-    label_test_positif_ou_nul: ;
-    
+  
     irdata->nb_refs_target = sav176_nb_refs_target;
     irdata->nb_tmps_target = sav176_nb_tmps_target;
     return irdata->discords;
@@ -2300,16 +2139,9 @@
   struct S_discord * test_present(T_irdata* irdata) {
     int sav183_nb_tmps_target = irdata->nb_tmps_target;
     int sav183_nb_refs_target = irdata->nb_refs_target;
-    char *def_saisie = irdata->def_saisie;
-    double *saisie = irdata->saisie;
-    char *def_calculee = irdata->def_calculee;
-    double *calculee = irdata->calculee;
-    char *def_base = irdata->def_base;
-    double *base = irdata->base;
-    T_var_space var_space = irdata->var_space_courant;
+  
     irdata->nb_tmps_target = 0;
     irdata->nb_refs_target = 0;
-    
     {
       char print184_def;
       double print184_val;
@@ -2384,8 +2216,7 @@
         set_print_indent(stdout, &(irdata->ctx_pr_out), print188_val);
       }
     }
-    label_test_present: ;
-    
+  
     irdata->nb_refs_target = sav183_nb_refs_target;
     irdata->nb_tmps_target = sav183_nb_tmps_target;
     return irdata->discords;
@@ -2394,16 +2225,9 @@
   struct S_discord * test_somme(T_irdata* irdata) {
     int sav189_nb_tmps_target = irdata->nb_tmps_target;
     int sav189_nb_refs_target = irdata->nb_refs_target;
-    char *def_saisie = irdata->def_saisie;
-    double *saisie = irdata->saisie;
-    char *def_calculee = irdata->def_calculee;
-    double *calculee = irdata->calculee;
-    char *def_base = irdata->def_base;
-    double *base = irdata->base;
-    T_var_space var_space = irdata->var_space_courant;
+  
     irdata->nb_tmps_target = 0;
     irdata->nb_refs_target = 0;
-    
     {
       char print190_def;
       double print190_val;
@@ -2496,8 +2320,7 @@
         set_print_indent(stdout, &(irdata->ctx_pr_out), print195_val);
       }
     }
-    label_test_somme: ;
-    
+  
     irdata->nb_refs_target = sav189_nb_refs_target;
     irdata->nb_tmps_target = sav189_nb_tmps_target;
     return irdata->discords;
@@ -2506,16 +2329,9 @@
   struct S_discord * test_supzero(T_irdata* irdata) {
     int sav196_nb_tmps_target = irdata->nb_tmps_target;
     int sav196_nb_refs_target = irdata->nb_refs_target;
-    char *def_saisie = irdata->def_saisie;
-    double *saisie = irdata->saisie;
-    char *def_calculee = irdata->def_calculee;
-    double *calculee = irdata->calculee;
-    char *def_base = irdata->def_base;
-    double *base = irdata->base;
-    T_var_space var_space = irdata->var_space_courant;
+  
     irdata->nb_tmps_target = 0;
     irdata->nb_refs_target = 0;
-    
     {
       char print197_def;
       double print197_val;
@@ -2612,8 +2428,7 @@
         set_print_indent(stdout, &(irdata->ctx_pr_out), print202_val);
       }
     }
-    label_test_supzero: ;
-    
+  
     irdata->nb_refs_target = sav196_nb_refs_target;
     irdata->nb_tmps_target = sav196_nb_tmps_target;
     return irdata->discords;
@@ -2622,16 +2437,9 @@
   struct S_discord * test_taille(T_irdata* irdata) {
     int sav203_nb_tmps_target = irdata->nb_tmps_target;
     int sav203_nb_refs_target = irdata->nb_refs_target;
-    char *def_saisie = irdata->def_saisie;
-    double *saisie = irdata->saisie;
-    char *def_calculee = irdata->def_calculee;
-    double *calculee = irdata->calculee;
-    char *def_base = irdata->def_base;
-    double *base = irdata->base;
-    T_var_space var_space = irdata->var_space_courant;
+  
     irdata->nb_tmps_target = 0;
     irdata->nb_refs_target = 0;
-    
     {
       char print204_def;
       double print204_val;
@@ -2690,8 +2498,7 @@
         set_print_indent(stdout, &(irdata->ctx_pr_out), print207_val);
       }
     }
-    label_test_taille: ;
-    
+  
     irdata->nb_refs_target = sav203_nb_refs_target;
     irdata->nb_tmps_target = sav203_nb_tmps_target;
     return irdata->discords;
@@ -2700,16 +2507,9 @@
   struct S_discord * test_type(T_irdata* irdata) {
     int sav208_nb_tmps_target = irdata->nb_tmps_target;
     int sav208_nb_refs_target = irdata->nb_refs_target;
-    char *def_saisie = irdata->def_saisie;
-    double *saisie = irdata->saisie;
-    char *def_calculee = irdata->def_calculee;
-    double *calculee = irdata->calculee;
-    char *def_base = irdata->def_base;
-    double *base = irdata->base;
-    T_var_space var_space = irdata->var_space_courant;
+  
     irdata->nb_tmps_target = 0;
     irdata->nb_refs_target = 0;
-    
     {
       char print209_def;
       double print209_val;
@@ -2992,8 +2792,7 @@
         set_print_indent(stdout, &(irdata->ctx_pr_out), print228_val);
       }
     }
-    label_test_type: ;
-    
+  
     irdata->nb_refs_target = sav208_nb_refs_target;
     irdata->nb_tmps_target = sav208_nb_tmps_target;
     return irdata->discords;

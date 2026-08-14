@@ -18,50 +18,58 @@
 type varinfo = Com.Var.t
 
 let gen_tab = function
-  | Com.CatVar.LocInput -> "saisie"
-  | Com.CatVar.LocComputed -> "calculee"
-  | Com.CatVar.LocBase -> "base"
+  | Com.CatVar.LocInput -> ("saisie", `Saisie)
+  | Com.CatVar.LocComputed -> ("calculee", `Calculee)
+  | Com.CatVar.LocBase -> ("base", `Base)
 
 let gen_tgv_def (m_sp_opt : Com.var_space) (l : Com.loc_tgv) vn =
-  let tab = gen_tab l.loc_cat in
+  let tab, kind = gen_tab l.loc_cat in
   match m_sp_opt with
   | Some (m_sp, _) ->
       let sp = Com.get_normal_var @@ Pos.unmark m_sp in
-      Pp.spr "(irdata->def_%s_%s[%d/*%s*/])" tab sp l.loc_idx vn
+      (Pp.spr "(irdata->def_%s_%s[%d/*%s*/])" tab sp l.loc_idx vn, kind)
   | None ->
       if Utils.Config.optim_local_var_for_arrays () then
-        Pp.spr "(def_%s[%d/*%s*/])" tab l.loc_idx vn
-      else Pp.spr "(irdata->def_%s[%d/*%s*/])" tab l.loc_idx vn
+        (Pp.spr "(def_%s[%d/*%s*/])" tab l.loc_idx vn, kind)
+      else (Pp.spr "(irdata->def_%s[%d/*%s*/])" tab l.loc_idx vn, kind)
 
 let gen_tgv_val (m_sp_opt : Com.var_space) (l : Com.loc_tgv) vn =
-  let tab = gen_tab l.loc_cat in
+  let tab, kind = gen_tab l.loc_cat in
   match m_sp_opt with
   | Some (m_sp, _) ->
       let sp = Com.get_normal_var @@ Pos.unmark m_sp in
-      Pp.spr "(irdata->%s_%s[%d/*%s*/])" tab sp l.loc_idx vn
+      (Pp.spr "(irdata->%s_%s[%d/*%s*/])" tab sp l.loc_idx vn, kind)
   | None ->
       if Utils.Config.optim_local_var_for_arrays () then
-        Pp.spr "(%s[%d/*%s*/])" tab l.loc_idx vn
-      else Pp.spr "(irdata->%s[%d/*%s*/])" tab l.loc_idx vn
+        (Pp.spr "(%s[%d/*%s*/])" tab l.loc_idx vn, kind)
+      else (Pp.spr "(irdata->%s[%d/*%s*/])" tab l.loc_idx vn, kind)
 
 let gen_tgv_def_ptr (m_sp_opt : Com.var_space) (l : Com.loc_tgv) vn =
-  Pp.spr "&%s" (gen_tgv_def m_sp_opt l vn)
+  let s, k = gen_tgv_def m_sp_opt l vn in
+  (Pp.spr "&%s" s, k)
 
 let gen_tgv_val_ptr (m_sp_opt : Com.var_space) (l : Com.loc_tgv) vn =
-  Pp.spr "&%s" (gen_tgv_val m_sp_opt l vn)
+  let s, k = gen_tgv_val m_sp_opt l vn in
+  (Pp.spr "&%s" s, k)
 
 let gen_tgv_info_ptr (l : Com.loc_tgv) vn =
   Pp.spr "I_(%s,%d/*%s*/)" l.loc_cat_str l.loc_cat_idx vn
 
 (* temporary variables accessors *)
 
-let gen_tmp_def (l : Com.loc_tmp) vn = Pp.spr "DT_((%d)/*%s*/)" l.loc_idx vn
+let gen_tmp_def (l : Com.loc_tmp) vn =
+  (Pp.spr "DT_((%d)/*%s*/)" l.loc_idx vn, `Temp)
 
-let gen_tmp_val (l : Com.loc_tmp) vn = Pp.spr "T_((%d)/*%s*/)" l.loc_idx vn
+let gen_tmp_val (l : Com.loc_tmp) vn =
+  (Pp.spr "T_((%d)/*%s*/)" l.loc_idx vn, `Temp)
 
-let gen_tmp_def_ptr (l : Com.loc_tmp) vn = Pp.spr "&(%s)" (gen_tmp_def l vn)
+let gen_tmp_def_ptr (l : Com.loc_tmp) vn =
+  let s, k = gen_tmp_def l vn in
+  (Pp.spr "&(%s)" s, k)
 
-let gen_tmp_val_ptr (l : Com.loc_tmp) vn = Pp.spr "&(%s)" (gen_tmp_val l vn)
+let gen_tmp_val_ptr (l : Com.loc_tmp) vn =
+  let s, k = gen_tmp_val l vn in
+  (Pp.spr "&(%s)" s, k)
 
 let gen_tmp_info_ptr (l : Com.loc_tmp) vn =
   Pp.spr "IT_((%d)/*%s*/)" l.loc_idx vn
@@ -70,23 +78,27 @@ let gen_tmp_info_ptr (l : Com.loc_tmp) vn =
 
 let gen_ref_def_ptr m_sp_opt i vn =
   match m_sp_opt with
-  | None -> Printf.sprintf "DR_((%d)/*%s*/)" i vn
+  | None -> (Printf.sprintf "DR_((%d)/*%s*/)" i vn, `Ref)
   | Some (_, i_sp) ->
       let info = Printf.sprintf "irdata->refs[irdata->refs_org + %d].info" i in
-      Printf.sprintf "lis_varinfo_def_ptr(irdata, %d, %s)" i_sp info
+      (Printf.sprintf "lis_varinfo_def_ptr(irdata, %d, %s)" i_sp info, `Ref)
 
 let gen_ref_val_ptr m_sp_opt i vn =
   match m_sp_opt with
-  | None -> Printf.sprintf "R_((%d)/*%s*/)" i vn
+  | None -> (Printf.sprintf "R_((%d)/*%s*/)" i vn, `Ref)
   | Some (_, i_sp) ->
       let info = Printf.sprintf "irdata->refs[irdata->refs_org + %d].info" i in
-      Printf.sprintf "lis_varinfo_val_ptr(irdata, %d, %s)" i_sp info
+      (Printf.sprintf "lis_varinfo_val_ptr(irdata, %d, %s)" i_sp info, `Ref)
 
 let gen_ref_info_ptr i vn = Printf.sprintf "IR_((%d)/*%s*/)" i vn
 
-let gen_ref_def m_sp_opt i vn = Pp.spr "*(%s)" (gen_ref_def_ptr m_sp_opt i vn)
+let gen_ref_def m_sp_opt i vn =
+  let s, k = gen_ref_def_ptr m_sp_opt i vn in
+  (Pp.spr "*(%s)" s, k)
 
-let gen_ref_val m_sp_opt i vn = Pp.spr "*(%s)" (gen_ref_val_ptr m_sp_opt i vn)
+let gen_ref_val m_sp_opt i vn =
+  let s, k = gen_ref_val_ptr m_sp_opt i vn in
+  (Pp.spr "*(%s)" s, k)
 
 (* generic accessors *)
 
@@ -164,7 +176,7 @@ let gen_var_space_id_opt = function
   | Some (_, i_sp) -> Pp.spr "%d" i_sp
 
 let gen_var_space = function
-  | None -> "(irdata->current_var_space)"
+  | None -> "(irdata->var_space_courant)"
   | Some (_, i_sp) -> Pp.spr "irdata->var_spaces[%d]" i_sp
 
 let gen_var_space_var (m_sp_opt : Com.var_space) (v : Com.Var.t) =

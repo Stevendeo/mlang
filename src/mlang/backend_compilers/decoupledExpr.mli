@@ -19,7 +19,12 @@ val fresh_c_local : string -> string
 *)
 
 val generate_variable :
-  ?def_flag:bool -> ?trace_flag:bool -> Com.var_space -> Com.Var.t -> string
+  ?def_flag:bool ->
+  ?trace_flag:bool ->
+  env:Env.t ->
+  Com.var_space ->
+  Com.Var.t ->
+  string
 
 type dflag = Def | Val | VarInfo | VarSpace
 
@@ -134,7 +139,7 @@ type local_decls
 (** Representation of local variables existing in an expression *)
 
 val write_c_expr :
-  Dgfip_options.flags ->
+  env:Env.t ->
   Format.formatter ->
   string ->
   string ->

@@ -124,7 +124,7 @@ endif
 
 # Options pour le compilateur C
 # Attention, très long à compiler avec GCC en O2/O3
-COMMON_CFLAGS?=-std=c89 -pedantic
+COMMON_CFLAGS?=-std=c89 -pedantic -Werror=uninitialized -Wunused
 ifdef OPTIM_FLAG
   COMPILER_SPECIFIC_CFLAGS=-O$(OPTIM_FLAG)
 endif

@@ -22,12 +22,12 @@ let fresh_c_local =
     incr c;
     s
 
-let generate_variable ?(def_flag = false) ?(trace_flag = false)
-    (m_sp_opt : Com.var_space) (var : Com.Var.t) : string =
+let generate_variable ?(def_flag = false) ?(trace_flag = false) ~env
+    (m_sp_opt : Com.var_space) (var : Com.Var.t) =
   try
-    if def_flag then VID.gen_def m_sp_opt var
+    if def_flag then Env.gen_def ~env m_sp_opt var
     else
-      let access_val = VID.gen_val m_sp_opt var in
+      let access_val = Env.gen_val ~env m_sp_opt var in
       (* When the trace flag is present, we print the value of the
          non-temporary variable being used *)
       if trace_flag && not (Com.Var.is_temp var) then
@@ -680,17 +680,17 @@ let format_slot fmt ({ kind; depth } : stack_slot) =
   in
   Format.fprintf fmt "%s%d" kind depth
 
-let format_expr_var (dgfip_flags : Dgfip_options.flags) fmt (ev : expr_var) =
+let format_expr_var ~(env : Types.env) fmt (ev : expr_var) =
   match ev with
   | Local slot -> format_slot fmt slot
   | M (m_sp_opt, var, df) ->
       let def_flag = df = Def in
       Format.fprintf fmt "%s"
-        (generate_variable ~trace_flag:dgfip_flags.flg_trace ~def_flag m_sp_opt
-           var)
+        (generate_variable ~env ~trace_flag:env.dgfip_flags.flg_trace ~def_flag
+           m_sp_opt var)
 
-let rec format_dexpr (dgfip_flags : Dgfip_options.flags) fmt (de : expr) =
-  let format_dexpr = format_dexpr dgfip_flags in
+let rec format_dexpr ~(env : Types.env) fmt (de : expr) =
+  let format_dexpr = format_dexpr ~env in
   match de with
   | Dtrue -> Format.fprintf fmt "1"
   | Dfalse -> Format.fprintf fmt "0"
@@ -702,7 +702,7 @@ let rec format_dexpr (dgfip_flags : Dgfip_options.flags) fmt (de : expr) =
       | _ ->
           (* Print literal floats as precisely as possible *)
           Format.fprintf fmt "%#.19g" f)
-  | Dvar evar -> format_expr_var dgfip_flags fmt evar
+  | Dvar evar -> format_expr_var ~env fmt evar
   | Dand l ->
       let sep = if Config.optim_simple_binary_op () then " & " else " && " in
       Format.fprintf fmt "@[<hov 2>(%a)@]"
@@ -748,7 +748,7 @@ let rec format_dexpr (dgfip_flags : Dgfip_options.flags) fmt (de : expr) =
            ~pp_sep:(fun fmt () -> Format.fprintf fmt ",@ ")
            format_dexpr)
         des
-  | Dvarinfo v -> format_varinfo dgfip_flags fmt v
+  | Dvarinfo v -> format_varinfo ~env fmt v
   | Dvarspace (m_sp_opt, v_opt) ->
       Format.fprintf fmt "@[%s@]"
         (match v_opt with
@@ -761,15 +761,15 @@ let rec format_dexpr (dgfip_flags : Dgfip_options.flags) fmt (de : expr) =
       Format.fprintf fmt "@[<hov 2>(%a ?@ %a@ : %a@])" format_dexpr dec
         format_dexpr det format_dexpr dee
 
-and format_varinfo dgfip_flags fmt : varinfo_access -> unit = function
+and format_varinfo ~env fmt : varinfo_access -> unit = function
   | VIvar v -> Format.fprintf fmt "%s" (VID.gen_info_ptr v)
   | VItab (v, def, value) ->
       Format.fprintf fmt "@[lis_tabaccess_varinfo(irdata, %d, %a, %a)@]"
-        (Com.Var.loc_tab_idx v) (format_dexpr dgfip_flags) def
-        (format_dexpr dgfip_flags) value
+        (Com.Var.loc_tab_idx v) (format_dexpr ~env) def (format_dexpr ~env)
+        value
   | VIfield (def, value, field) ->
       Format.fprintf fmt "@[event_field_%s_var(irdata, %a, %a)@]" field
-        (format_dexpr dgfip_flags) def (format_dexpr dgfip_flags) value
+        (format_dexpr ~env) def (format_dexpr ~env) value
 
 let format_local_declarations fmt (ld : local_decls) =
   for i = 0 to ld.def_stk_size do
@@ -785,23 +785,20 @@ let format_local_declarations fmt (ld : local_decls) =
     Format.fprintf fmt "@;@[<hov 2>int space%d;@]" i
   done
 
-let format_local_vars_defs (dgfip_flags : Dgfip_options.flags) fmt
-    (lv : local_vars) =
+let format_local_vars_defs ~env fmt (lv : local_vars) =
   let lv = List.rev lv in
   let format_one_assign fmt (_, { slot; subexpr }) =
     Format.fprintf fmt "@;@[<hov 2>%a =@ %a;@]" format_slot slot
-      (format_dexpr dgfip_flags) subexpr
+      (format_dexpr ~env) subexpr
   in
   List.iter (format_one_assign fmt) lv
 
-let format_assign (dgfip_flags : Dgfip_options.flags) (var : string) fmt
-    ((e, _kind, lv) : t) =
+let format_assign ~env (var : string) fmt ((e, _kind, lv) : t) =
   Format.fprintf fmt "%a@;@[<hov 2>%s =@ %a;@]"
-    (format_local_vars_defs dgfip_flags)
-    lv var (format_dexpr dgfip_flags) e
+    (format_local_vars_defs ~env)
+    lv var (format_dexpr ~env) e
 
-let format_set_vars (dgfip_flags : Dgfip_options.flags) fmt
-    (set_vars : (dflag * string * t) list) =
+let format_set_vars ~env fmt (set_vars : (dflag * string * t) list) =
   List.iter
     (fun ((kd, vn, _expr) : dflag * string * t) ->
       Pp.fpr fmt "@;%s %s;"
@@ -814,7 +811,7 @@ let format_set_vars (dgfip_flags : Dgfip_options.flags) fmt
     set_vars;
   List.iter
     (fun ((_kd, vn, expr) : dflag * string * t) ->
-      format_assign dgfip_flags vn fmt expr)
+      format_assign ~env vn fmt expr)
     set_vars
 
 (* Building basic expressions *)
@@ -1041,25 +1038,22 @@ module Func = struct
         d_fun args)
 end
 
-let write_atomic_decoupled_expr dgfip_flags oc res_def res_val
+let write_atomic_decoupled_expr ~(env : Env.t) oc res_def res_val
     (locals, set, def, value) =
   let pr form = Format.fprintf oc form in
   if is_always_true def then
     pr "@;@[<v 2>{%a%a%a%a@]@;}" format_local_declarations locals
-      (format_set_vars dgfip_flags)
-      set
-      (format_assign dgfip_flags res_def)
+      (format_set_vars ~env) set
+      (format_assign ~env res_def)
       def
-      (format_assign dgfip_flags res_val)
+      (format_assign ~env res_val)
       value
   else
     pr "@;@[<v 2>{%a%a%a@;@[<v 2>if (%s) {%a@]@;} else %s = 0.0;@]@;}"
-      format_local_declarations locals
-      (format_set_vars dgfip_flags)
-      set
-      (format_assign dgfip_flags res_def)
+      format_local_declarations locals (format_set_vars ~env) set
+      (format_assign ~env res_def)
       def res_def
-      (format_assign dgfip_flags res_val)
+      (format_assign ~env res_val)
       value res_val
 
 let fresh_cond_vars =
@@ -1070,31 +1064,30 @@ let fresh_cond_vars =
     incr cpt;
     (res_def, res_val)
 
-let rec write_decoupled_expr dgfip_flags oc =
+let rec write_decoupled_expr ~(env : Env.t) oc =
   let pr form = Format.fprintf oc form in
   fun res_def res_val -> function
-    | `Atom a -> write_atomic_decoupled_expr dgfip_flags oc res_def res_val a
+    | `Atom a -> write_atomic_decoupled_expr ~env oc res_def res_val a
     | `Cond (c, t, e) ->
         let d, v = fresh_cond_vars () in
         pr "@;{@[<v 2>";
         pr "@;int %s;" d;
         pr "@;double %s;" v;
-        write_decoupled_expr dgfip_flags oc d v c;
+        write_decoupled_expr ~env oc d v c;
         pr "@;if(%s == 0) {%s = 0; %s = 0.0;}" d res_def res_val;
         pr "@;else if (EQ_E(%s,0.0)) {@;@[<v 2>" v;
-        write_decoupled_expr dgfip_flags oc res_def res_val e;
+        write_decoupled_expr ~env oc res_def res_val e;
         pr "@;}@] else {@;@[<v 2>";
-        write_decoupled_expr dgfip_flags oc res_def res_val t;
+        write_decoupled_expr ~env oc res_def res_val t;
         pr "@;}@]";
         pr "@;}@]"
     | `Let (vardef, varval, body, followup) ->
         pr "@;{@[<v 2>";
         pr "@;int %s;" vardef;
         pr "@;double %s;" varval;
-        write_decoupled_expr dgfip_flags oc vardef varval body;
-        write_decoupled_expr dgfip_flags oc res_def res_val followup;
+        write_decoupled_expr ~env oc vardef varval body;
+        write_decoupled_expr ~env oc res_def res_val followup;
         pr "@;}@]"
 
-let write_c_expr dgfip_flags oc res_def res_val expr =
-  expr |> build_expression
-  |> write_decoupled_expr dgfip_flags oc res_def res_val
+let write_c_expr ~env oc res_def res_val expr =
+  expr |> build_expression |> write_decoupled_expr ~env oc res_def res_val
