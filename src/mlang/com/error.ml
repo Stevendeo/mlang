@@ -38,13 +38,12 @@ let pp_descr fmt err =
 
 let pp fmt err = Pp.fpr fmt "%s:%a" (Pos.unmark err.name) pp_descr err
 
-let compare (err1 : t) (err2 : t) = compare err1.name err2.name
+let error_compare (err1 : t) (err2 : t) =
+  compare (Pos.unmark err1.name) (Pos.unmark err2.name)
 
 type error_t = t
 
 let error_pp = pp
-
-let error_compare = compare
 
 module Set = struct
   include SetExt.Make (struct
