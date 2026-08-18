@@ -30,15 +30,13 @@ module Make (N : Number.S) = struct
 
   let invalid_expression_value (Pos.Mark (expr, pos)) value =
     let expr =
-      Format.asprintf "%a" (Com.Com_format.format_expression Com.Var.pp) expr
+      Format.asprintf "%a" (Com.Pretty.format_expression Com.Var.pp) expr
     in
     let value = Format.asprintf "%a" N.format_t value in
     raise ~pos @@ invalid_expression_value ~expr ~value
 
   let invalid_matching_in_switch ~case ~matched ~pos =
-    let case =
-      Format.asprintf "%a" (Com.Com_format.format_case Com.Var.pp) case
-    in
+    let case = Format.asprintf "%a" (Com.Pretty.format_case Com.Var.pp) case in
     let matched =
       match matched with
       | `Undefined -> `Undefined
@@ -46,7 +44,7 @@ module Make (N : Number.S) = struct
       | `Var v ->
           `Var
             (Format.asprintf "%a"
-               Com.(Com_format.format_access Var.pp)
+               Com.(Pretty.format_access Var.pp)
                (Pos.unmark v))
     in
     raise ~pos @@ invalid_matching_in_switch ~case ~matched
@@ -54,11 +52,10 @@ module Make (N : Number.S) = struct
   let wrong_arity ~func ~args ~pos =
     raise ~pos
     @@ wrong_arity
-         ~func:(Format.asprintf "%a" Com.Com_format.format_func func)
+         ~func:(Format.asprintf "%a" Com.Pretty.format_func func)
          ~arity:(Com.function_arity func) ~args
 
   let unimplemented ~func ~pos =
     raise ~pos
-    @@ unimplemented
-         ~func:(Format.asprintf "%a" Com.Com_format.format_func func)
+    @@ unimplemented ~func:(Format.asprintf "%a" Com.Pretty.format_func func)
 end

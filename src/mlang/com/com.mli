@@ -696,7 +696,7 @@ end
 
 (** {2 Pretty printing functions} *)
 
-module Com_format : sig
+module Pretty : sig
   val format_value_typ : Pp.t -> value_typ -> unit
 
   val format_literal : Pp.t -> literal -> unit

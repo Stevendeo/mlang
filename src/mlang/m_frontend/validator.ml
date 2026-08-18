@@ -926,9 +926,7 @@ let rec fold_var_expr (get_var : 'v -> string Pos.marked)
   | FuncCall (Pos.Mark (func_name, fpos), args) -> (
       let check_func arity =
         if arity > -1 && List.length args <> arity then begin
-          let func =
-            Format.asprintf "%a" Com.Com_format.format_func func_name
-          in
+          let func = Format.asprintf "%a" Com.Pretty.format_func func_name in
           error ~pos:expr_pos @@ ERR.wrong_arity_of_function ~func ~arity
         end;
         List.fold_left (fun acc e -> fold_aux acc e env) acc args
@@ -1766,7 +1764,7 @@ let rec check_instructions (env : var_env)
               let pp_v fmt (m : Com.m_var_name) =
                 Format.fprintf fmt "%s" (Com.get_var_name @@ Pos.unmark m)
               in
-              Format.asprintf "%a" (Com.Com_format.format_case pp_v) case
+              Format.asprintf "%a" (Com.Pretty.format_case pp_v) case
             in
             let _cases, env, rev_l', stop =
               List.fold_left

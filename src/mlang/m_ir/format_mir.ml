@@ -16,7 +16,7 @@
 let format_variable fmt (var : Com.Var.t) =
   Format.fprintf fmt "%s" (Pos.unmark var.name)
 
-let format_expression = Com.Com_format.format_expression format_variable
+let format_expression = Com.Pretty.format_expression format_variable
 
 let format_error fmt (err : Com.Error.t) =
   Format.fprintf fmt "erreur %s (%a)" (Pos.unmark err.name) Com.Error.pp_descr

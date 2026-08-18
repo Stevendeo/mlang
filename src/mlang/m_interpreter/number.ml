@@ -57,13 +57,13 @@ struct
 
   let format_value (fmt : Format.formatter) (x : N.t Types.value) =
     match x with
-    | Undefined -> Com.Com_format.format_literal fmt Com.Undefined
+    | Undefined -> Com.Pretty.format_literal fmt Com.Undefined
     | Number x -> N.format_t fmt x
 
   let format_value_prec (mi : int) (ma : int) (fmt : Format.formatter)
       (x : N.t Types.value) =
     match x with
-    | Undefined -> Com.Com_format.format_literal fmt Com.Undefined
+    | Undefined -> Com.Pretty.format_literal fmt Com.Undefined
     | Number x -> N.format_prec_t mi ma fmt x
 end
 

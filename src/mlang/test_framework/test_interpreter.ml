@@ -179,10 +179,9 @@ let check_vars (program : Mir.program) exp vars ign_vars : interp_error list =
               | None -> acc
               | Some err ->
                   let expected =
-                    Format.asprintf "%a" Com.Com_format.format_literal
-                      err.expected
+                    Format.asprintf "%a" Com.Pretty.format_literal err.expected
                   and evaluated =
-                    Format.asprintf "%a" Com.Com_format.format_literal err.value
+                    Format.asprintf "%a" Com.Pretty.format_literal err.value
                   in
                   Ppf.error_str
                   @@ Msg.ko_difference ~name:vname ~expected ~evaluated;
