@@ -12,6 +12,7 @@
 (* concédants successifs qu'une responsabilité restreinte.                    *)
 (*                                                                            *)
 (******************************************************************************)
+
 (** Here are all the types a value can have. Date types don't seem to be used at
     all though. *)
 type value_typ =
