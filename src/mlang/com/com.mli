@@ -656,7 +656,7 @@ val compare_value_typ : value_typ -> value_typ -> int
 val compare_var_space : var_space -> var_space -> int
 
 (** {2 Traversal} *)
-module Com_visit : sig
+module Visit : sig
   val expr_map_var : ('v -> 'w) -> 'v expression -> 'w expression
 
   val m_expr_map_var : ('v -> 'w) -> 'v m_expression -> 'w m_expression

@@ -14,7 +14,7 @@
 (******************************************************************************)
 include Core
 module Pretty = Pretty
-module Com_visit = Com_visit
+module Visit = Visit
 module Var = Var
 module CatVar = CatVar
 module Error = Error
