@@ -12,7 +12,7 @@
 (* concédants successifs qu'une responsabilité restreinte.                    *)
 (*                                                                            *)
 (******************************************************************************)
-open Comcom
+open Core
 
 type id = int
 

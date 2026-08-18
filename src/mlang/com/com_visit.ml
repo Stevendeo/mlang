@@ -12,7 +12,7 @@
 (* concédants successifs qu'une responsabilité restreinte.                    *)
 (*                                                                            *)
 (******************************************************************************)
-open Comcom
+open Core
 
 let rec access_map_var f = function
   | VarAccess (m_sp_opt, v) -> VarAccess (m_sp_opt, f v)

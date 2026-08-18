@@ -12,7 +12,7 @@
 (* concédants successifs qu'une responsabilité restreinte.                    *)
 (*                                                                            *)
 (******************************************************************************)
-include Comcom
+include Core
 module Com_format = Com_format
 module Com_visit = Com_visit
 module Var = Var

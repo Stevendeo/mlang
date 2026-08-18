@@ -12,7 +12,7 @@
 (* concédants successifs qu'une responsabilité restreinte.                    *)
 (*                                                                            *)
 (******************************************************************************)
-open Comcom
+open Core
 
 let format_value_typ fmt t =
   Pp.string fmt
