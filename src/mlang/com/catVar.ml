@@ -27,22 +27,20 @@ let pp fmt = function
   | Computed id ->
       Format.fprintf fmt "calculee%s" (if id.is_base then " base" else "")
 
-let compare a b =
+let cat_var_pp = pp
+
+let compare_t a b =
   match (a, b) with
   | Input _, Computed _ -> 1
   | Computed _, Input _ -> -1
   | Input id0, Input id1 -> StrSet.compare id0 id1
   | Computed c0, Computed c1 -> compare c0.is_base c1.is_base
 
-let cat_var_pp = pp
-
-let cat_var_compare = compare
-
 module Set = struct
   include SetExt.Make (struct
     type nonrec t = t
 
-    let compare = cat_var_compare
+    let compare = compare_t
   end)
 
   let pp ?(sep = ", ") ?(pp_elt = cat_var_pp) (_ : unit)
@@ -54,7 +52,7 @@ module Map = struct
   include MapExt.Make (struct
     type nonrec t = t
 
-    let compare = cat_var_compare
+    let compare = compare_t
   end)
 
   let pp ?(sep = "; ") ?(pp_key = cat_var_pp) ?(assoc = " => ")

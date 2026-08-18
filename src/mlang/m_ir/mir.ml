@@ -215,7 +215,7 @@ let rec expand_functions_expr (p : program) (e : 'var Com.expression Pos.marked)
   | InDomain (m_a, cvm) ->
       let a' = expand_functions_access p (Pos.unmark m_a) in
       let rec fold cv pos e_opt =
-        if Com.CatVar.compare cv Com.CatVar.all_inputs = 0 then
+        if Com.CatVar.compare_t cv Com.CatVar.all_inputs = 0 then
           let cv_input =
             p.program_var_categories
             |> Com.CatVar.Map.filter (fun k _ -> Com.CatVar.is_input k)

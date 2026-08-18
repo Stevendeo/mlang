@@ -43,7 +43,7 @@ module CatVar : sig
   val pp : Format.formatter -> t -> unit
   (** Pretty printer. *)
 
-  val compare : t -> t -> int
+  val compare_t : t -> t -> int
 
   module Set : SetExt.T with type elt = t
 

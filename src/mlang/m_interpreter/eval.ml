@@ -473,7 +473,7 @@ module Make (N : Number.S) (Tracer : Tracers.S) :
             StrMap.iter
               (fun _ v ->
                 if
-                  Com.CatVar.compare (Com.Var.cat v) vc = 0
+                  Com.CatVar.compare_t (Com.Var.cat v) vc = 0
                   && not (Com.Var.is_table v)
                 then (
                   let vsd, v, org = C.get_var ctx m_sp_opt v in
@@ -547,7 +547,7 @@ module Make (N : Number.S) (Tracer : Tracers.S) :
             (fun vc _ backup_vars ->
               StrMap.fold
                 (fun _ v backup_vars ->
-                  if Com.CatVar.compare (Com.Var.cat v) vc = 0 then (
+                  if Com.CatVar.compare_t (Com.Var.cat v) vc = 0 then (
                     let vsd, v', vorg = C.get_var ctx m_sp_opt v in
                     C.set_var_ref ctx var vsd v' vorg;
                     match evaluate_expr ctx expr with
