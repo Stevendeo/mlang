@@ -198,15 +198,32 @@ and same_variable p acc0 acc1 =
             { d_fun with def_test = D.DE.deand [ d0; d1; d_fun.def_test ] }))
 
 and in_domain (p : Mir.program) acc cvm =
-  assert (Com.CatVar.Map.cardinal cvm = 1);
-  let cv = fst @@ Com.CatVar.Map.min_binding cvm in
-  let id_cv = (Com.CatVar.Map.find cv p.program_var_categories).id_int in
-  D.make_let (code_access p acc) (fun vardef varval ->
-      let d_fun =
-        D.dfun_with_ptr "dans_domaine" (fun ~ptrdef ~ptrval ->
-            [ varval; C.Lit (float_of_int id_cv); ptrdef; ptrval ])
-      in
-      D.atomic { d_fun with def_test = D.DE.deand [ vardef; d_fun.def_test ] })
+  let ids =
+    Com.CatVar.Map.fold
+      (fun cv _ ids ->
+        let cv = Com.CatVar.Map.find cv p.program_var_categories in
+        cv.id_int :: ids)
+      cvm []
+  in
+  let atom_fn id_cv varval =
+    let d_fun =
+      D.dfun_with_ptr "dans_domaine" (fun ~ptrdef ~ptrval ->
+          [ varval; C.Lit (float_of_int id_cv); ptrdef; ptrval ])
+    in
+    D.atomic { d_fun with def_test = D.DE.detrue }
+  in
+  match ids with
+  | [] -> D.atomic @@ D.elit 0.0
+  | _ :: _ ->
+      D.make_let (code_access p acc) (fun _ varval ->
+         List.fold_left
+            (fun if_chain id ->
+              let cond = atom_fn id varval in
+              let then_ = D.atomic @@ D.elit 1.0 in
+              let else_ = if_chain in
+              D.conditional cond then_ else_)
+            (D.atomic @@ D.elit 0.0)
+            ids)
 
 and generate_c_expr (p : Mir.program) (e : Mir.expression Pos.marked) :
     D.expression_composition =
