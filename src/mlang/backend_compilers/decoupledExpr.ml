@@ -603,8 +603,7 @@ let dfun_with_ptr (f : string)
   in
   let def_test = DE.devar @@ Instr res_def in
   let value_comp = Constr.Instr res_val in
-  build_transitive_composition ~safe_def:false
-    { set_vars; def_test; value_comp }
+  build_transitive_composition ~safe_def:true { set_vars; def_test; value_comp }
 
 let eundefined () =
   { set_vars = []; def_test = DE.defalse; value_comp = Lit 0. }
