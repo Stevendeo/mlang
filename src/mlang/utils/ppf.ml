@@ -56,12 +56,6 @@ module ANSITerminal = struct
         [ ANSITerminal.Bold; ANSITerminal.black ]
         "[TIME] %.0f ms\n" delta
 
-  let format_with_style (styles : ANSITerminal.style list)
-      (str : ('a, unit, string) format) =
-    if true (* can depend on a stylr flag *) then
-      ANSITerminal.sprintf styles str
-    else Printf.sprintf str
-
   (** Prints [[DEBUG]] in purple on the terminal standard output as well as
       timing since last debug *)
   let debug_marker () =
@@ -171,125 +165,129 @@ module ANSITerminal = struct
       (fun str -> Format.printf "%a%s@." (fun _ -> result_marker) () str)
       ppf
 
+  let concat_with_line_depending_prefix_and_suffix (prefix : int -> string)
+      (suffix : int -> string) (ss : string list) =
+    match ss with
+    | hd :: rest ->
+        let out, _ =
+          List.fold_left
+            (fun (acc, i) s ->
+              ( (acc ^ prefix i ^ s
+                ^ if i = List.length ss - 1 then "" else suffix i),
+                i + 1 ))
+            ( (prefix 0 ^ hd ^ if 0 = List.length ss - 1 then "" else suffix 0),
+              1 )
+            rest
+        in
+        out
+    | [] -> prefix 0
+
+  let add_prefix_to_each_line (s : string) (prefix : int -> string) =
+    concat_with_line_depending_prefix_and_suffix
+      (fun i -> prefix i)
+      (fun _ -> "\n")
+      (String.split_on_char '\n' s)
+
   let indent_number (s : string) : int =
     try
       let rec aux (i : int) = if s.[i] = ' ' then aux (i + 1) else i in
       aux 0
     with Invalid_argument _ -> String.length s
 
+  let format_with_style (styles : ANSITerminal.style list)
+      (str : ('a, unit, string) format) =
+    if !Config.plain_output (* can depend on a stylr flag *) then
+      Printf.sprintf str
+    else ANSITerminal.sprintf styles str
+
+  let format_matched_line pos (line : string) (line_no : int) : string =
+    let line_indent = indent_number line in
+    let error_indicator_style = [ ANSITerminal.red; ANSITerminal.Bold ] in
+    let sline = Pos.get_start_line pos in
+    let eline = Pos.get_end_line pos in
+    let line_start_col =
+      if line_no = sline then Pos.get_start_column pos else 1
+    in
+    let line_end_col =
+      if line_no = eline then Pos.get_end_column pos else String.length line + 1
+    in
+    let line_length = String.length line + 1 in
+    line
+    ^
+    if line_no >= sline && line_no <= eline then
+      "\n"
+      ^
+      if line_no = sline && line_no = eline then
+        format_with_style error_indicator_style "%*s" (line_end_col - 1)
+          (String.make (line_end_col - line_start_col) '^')
+      else if line_no = sline && line_no <> eline then
+        format_with_style error_indicator_style "%*s" (line_length - 1)
+          (String.make (line_length - line_start_col) '^')
+      else if line_no <> sline && line_no <> eline then
+        format_with_style error_indicator_style "%*s%s" line_indent ""
+          (String.make (line_length - line_indent) '^')
+      else if line_no <> sline && line_no = eline then
+        format_with_style error_indicator_style "%*s%*s" line_indent ""
+          (line_end_col - 1 - line_indent)
+          (String.make (line_end_col - line_indent) '^')
+      else assert false (* should not happen *)
+    else ""
+
+  let format_lines pos lines =
+    let filename = Pos.get_file pos in
+    let sline = Pos.get_start_line pos in
+    let eline = Pos.get_end_line pos in
+    let blue_style = [ ANSITerminal.Bold; ANSITerminal.blue ] in
+    let spaces = int_of_float (log10 (float_of_int eline)) + 1 in
+    let lines =
+      List.mapi (fun i line -> format_matched_line pos line (i + sline)) lines
+    in
+    format_with_style blue_style "%*s--> %s\n%s" spaces "" filename
+      (add_prefix_to_each_line
+         (Printf.sprintf "\n%s" (String.concat "\n" lines))
+         (fun i ->
+           let cur_line = sline + i - 1 in
+           if
+             cur_line >= sline
+             && cur_line <= sline + (2 * (eline - sline))
+             && cur_line mod 2 = sline mod 2
+           then
+             format_with_style blue_style "%*d | " spaces
+               (sline + ((cur_line - sline) / 2))
+           else if cur_line >= sline && cur_line < sline then
+             format_with_style blue_style "%*d | " spaces cur_line
+           else if
+             cur_line <= sline + (2 * (eline - sline)) + 1
+             && cur_line > sline + (2 * (eline - sline)) + 1
+           then
+             format_with_style blue_style "%*d | " spaces
+               (cur_line - (eline - sline + 1))
+           else format_with_style blue_style "%*s | " spaces ""))
+
   let retrieve_loc_text (pos : Pos.t) : string =
     let filename = Pos.get_file pos in
-    let blue_style = [ ANSITerminal.Bold; ANSITerminal.blue ] in
     if filename = "" then "No position information"
     else
-      let sline = Pos.get_start_line pos in
-      let eline = Pos.get_end_line pos in
-      let oc, input_line_opt =
-        try
-          if filename == Dgfip_m.internal_m then
-            let input_line_opt : unit -> string option =
-              let curr = ref 0 in
-              let src = Dgfip_m.declarations in
-              let lng = String.length src in
-              let rec new_curr () =
-                if !curr < lng then
-                  if src.[!curr] = '\n' then (
-                    let res = !curr in
-                    incr curr;
-                    Some res)
-                  else (
-                    incr curr;
-                    new_curr ())
-                else None
-              in
-              function
-              | () -> (
-                  let p0 = !curr in
-                  match new_curr () with
-                  | None -> None
-                  | Some p1 ->
-                      Some (String.sub Dgfip_m.declarations p0 (p1 - p0)))
+      let lines =
+        match !Config.filesystem with
+        | Contents filemap -> begin
+            match StrMap.find_opt filename filemap with
+            | None -> failwith "Pos error"
+            | Some contents ->
+                let lines = String.split_on_char '\n' contents in
+                [ List.nth lines (Pos.get_start_line pos - 1) ]
+          end
+        | Local ->
+            let get_lines =
+              match File.open_file_for_text_extraction pos with
+              | exception Sys_error _ ->
+                  Format.ksprintf failwith
+                    "File not found for displaying position : %S" filename
+              | get_lines -> get_lines
             in
-            (None, input_line_opt)
-          else
-            let ocf = open_in filename in
-            let input_line_opt () : string option =
-              try Some (input_line ocf) with End_of_file -> None
-            in
-            (Some ocf, input_line_opt)
-        with Sys_error _ ->
-          error_print "File not found for displaying position : %S" filename;
-          failwith "Pos error"
+            get_lines 1
       in
-      let print_matched_line (line : string) (line_no : int) : string =
-        let line_indent = indent_number line in
-        let error_indicator_style = [ ANSITerminal.red; ANSITerminal.Bold ] in
-        let line_start_col =
-          if line_no = sline then Pos.get_start_column pos else 1
-        in
-        let line_end_col =
-          if line_no = eline then Pos.get_end_column pos
-          else String.length line + 1
-        in
-        let line_length = String.length line + 1 in
-        line
-        ^
-        if line_no >= sline && line_no <= eline then
-          "\n"
-          ^
-          if line_no = sline && line_no = eline then
-            format_with_style error_indicator_style "%*s" (line_end_col - 1)
-              (String.make (line_end_col - line_start_col) '^')
-          else if line_no = sline && line_no <> eline then
-            format_with_style error_indicator_style "%*s" (line_length - 1)
-              (String.make (line_length - line_start_col) '^')
-          else if line_no <> sline && line_no <> eline then
-            format_with_style error_indicator_style "%*s%s" line_indent ""
-              (String.make (line_length - line_indent) '^')
-          else if line_no <> sline && line_no = eline then
-            format_with_style error_indicator_style "%*s%*s" line_indent ""
-              (line_end_col - 1 - line_indent)
-              (String.make (line_end_col - line_indent) '^')
-          else assert false (* should not happen *)
-        else ""
-      in
-      let include_extra_count = 0 in
-      let rec get_lines (n : int) : string list =
-        match input_line_opt () with
-        | Some line ->
-            if n < sline - include_extra_count then get_lines (n + 1)
-            else if
-              n >= sline - include_extra_count
-              && n <= eline + include_extra_count
-            then print_matched_line line n :: get_lines (n + 1)
-            else []
-        | None -> []
-      in
-      let pos_lines = get_lines 1 in
-      let spaces = int_of_float (log10 (float_of_int eline)) + 1 in
-      (match oc with Some ocf -> close_in ocf | _ -> ());
-      format_with_style blue_style "%*s--> %s\n%s" spaces "" filename
-        (Cli.add_prefix_to_each_line
-           (Printf.sprintf "\n%s" (String.concat "\n" pos_lines))
-           (fun i ->
-             let cur_line = sline - include_extra_count + i - 1 in
-             if
-               cur_line >= sline
-               && cur_line <= sline + (2 * (eline - sline))
-               && cur_line mod 2 = sline mod 2
-             then
-               format_with_style blue_style "%*d | " spaces
-                 (sline + ((cur_line - sline) / 2))
-             else if cur_line >= sline - include_extra_count && cur_line < sline
-             then format_with_style blue_style "%*d | " spaces cur_line
-             else if
-               cur_line
-               <= sline + (2 * (eline - sline)) + 1 + include_extra_count
-               && cur_line > sline + (2 * (eline - sline)) + 1
-             then
-               format_with_style blue_style "%*d | " spaces
-                 (cur_line - (eline - sline + 1))
-             else format_with_style blue_style "%*s | " spaces ""))
+      format_lines pos lines
 
   let format fmt { msg; spans } =
     Format.fprintf fmt "%s%s%s%s" msg

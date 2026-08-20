@@ -51,13 +51,3 @@ val mlang_t :
 
 val info : Cmdliner.Cmd.info
 (** Command-line man page for --help *)
-
-val add_prefix_to_each_line : string -> (int -> string) -> string
-(** [add_prefix_to_each_line msg prefix] will print msg but each line with line
-    number [i] starts with the string [prefix i]*)
-
-val retrieve_loc_text : Pos.t -> string
-(** [retrieve_loc_text pos] reads the source file associated with [pos] and
-    returns a formatted string of the code at that location, with the exact
-    columns highlighted. This is used to display code snippets in error
-    messages. *)
