@@ -13,8 +13,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open M_ir
-
 module type S = sig
   type ctx
   (** The execution context *)

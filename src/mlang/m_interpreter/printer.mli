@@ -18,8 +18,6 @@
     This module implements the basic helpers for the print ("afficher") M
     instruction. *)
 
-open M_ir
-
 type t
 (** A printer for a given formatter. It keeps track of the indentation. *)
 

@@ -33,7 +33,7 @@ let format_variable fmt (v : Com.m_var_name) =
 
 let format_error_name fmt (e : error_name) = Format.fprintf fmt "%s" e
 
-let format_expression = Com.format_expression format_variable
+let format_expression = Com.Pretty.format_expression format_variable
 
 let format_var_category_id fmt (vd : var_category_id) =
   match Pos.unmark vd with
@@ -52,7 +52,7 @@ let format_event_decl fmt el =
   Format.fprintf fmt "evenement : %a;" (Pp.list " : " pp_field) el
 
 let format_instruction fmt i =
-  Com.format_instruction format_variable Pp.string fmt i
+  Com.Pretty.format_instruction format_variable Pp.string fmt i
 
 let format_instruction_list fmt (il : instruction Pos.marked list) =
   (Pp.list "" (Pp.unmark format_instruction)) fmt il
@@ -90,7 +90,7 @@ let format_input_variable fmt (v : input_variable) =
     (Pp.list_space format_input_attribute)
     v.input_attributes format_variable_name (Pos.unmark v.input_alias)
     (Pos.unmark v.input_description)
-    (Pp.option (Pp.unmark Com.format_value_typ))
+    (Pp.option (Pp.unmark Com.Pretty.format_value_typ))
     v.input_typ
 
 let format_computed_variable fmt (v : computed_variable) =
@@ -98,11 +98,11 @@ let format_computed_variable fmt (v : computed_variable) =
     format_table_size v.comp_table computed_category
     (Pp.list_space (Pp.unmark Pp.string))
     v.comp_category
-    (Pp.option (Pp.unmark Com.format_value_typ))
+    (Pp.option (Pp.unmark Com.Pretty.format_value_typ))
     v.comp_typ
     (Pos.unmark v.comp_description)
 
-let format_atom = Com.format_atom format_variable
+let format_atom = Com.Pretty.format_atom format_variable
 
 let format_variable_decl fmt (v : variable_decl) =
   match v with

@@ -13,8 +13,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open M_ir
-
 type ctx = { mutable indent : int; mutable is_newline : bool }
 
 type t = { std : Com.print_std; std_fmt : Format.formatter; ctx_pr : ctx }

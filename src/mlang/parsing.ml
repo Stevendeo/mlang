@@ -16,7 +16,6 @@
 open M_frontend
 open Lexing
 open Mlexer
-open M_ir
 
 (* The legacy compiler plays a nasty trick on us, that we have to reproduce:
    rule 1 is modified to add assignments to APPLI_XXX variables according to the

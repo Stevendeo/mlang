@@ -926,7 +926,7 @@ let rec fold_var_expr (get_var : 'v -> string Pos.marked)
   | FuncCall (Pos.Mark (func_name, fpos), args) -> (
       let check_func arity =
         if arity > -1 && List.length args <> arity then begin
-          let func = Format.asprintf "%a" Com.format_func func_name in
+          let func = Format.asprintf "%a" Com.Pretty.format_func func_name in
           error ~pos:expr_pos @@ ERR.wrong_arity_of_function ~func ~arity
         end;
         List.fold_left (fun acc e -> fold_aux acc e env) acc args
@@ -1282,7 +1282,7 @@ let rec check_instructions (env : var_env)
   in
   let map_expr env m_expr =
     check_expression env m_expr;
-    Com.m_expr_map_var (map_var env) m_expr
+    Com.Visit.m_expr_map_var (map_var env) m_expr
   in
   let check_it_var env var =
     let m_name = Pos.same (Com.get_normal_var (Pos.unmark var)) var in
@@ -1764,7 +1764,7 @@ let rec check_instructions (env : var_env)
               let pp_v fmt (m : Com.m_var_name) =
                 Format.fprintf fmt "%s" (Com.get_var_name @@ Pos.unmark m)
               in
-              Format.asprintf "%a" (Com.format_case pp_v) case
+              Format.asprintf "%a" (Com.Pretty.format_case pp_v) case
             in
             let _cases, env, rev_l', stop =
               List.fold_left
@@ -2817,7 +2817,7 @@ let convert_verifs (prog : program) : program =
             Pos.same id m_v
           in
           List.map
-            (Com.m_instr_map_var map_var Fun.id)
+            (Com.Visit.m_instr_map_var map_var Fun.id)
             [
               Pos.without
                 (Com.IfThenElse
@@ -3214,7 +3214,7 @@ let check_called_spaces (prog : program) : program =
           in
           let check_var usage m_sp_opt v_opt () =
             match (m_sp_opt, v_opt, usage) with
-            | None, Some m_id, Com.(Read | Write | ArgRef) ->
+            | None, Some m_id, Com.Visit.(Read | Write | ArgRef) ->
                 let v = IntMap.find (Pos.unmark m_id) prog.prog_dict in
                 if Com.Var.is_tgv v then
                   (* Pp.epr "check_var <%s> %s@." vs_name (Com.Var.name_str v); *)
@@ -3232,7 +3232,7 @@ let check_called_spaces (prog : program) : program =
                          ~sp_name:(Pos.unmark vsd_def.vs_name))
             | _ -> ()
           in
-          let iter m_i = Com.m_instr_fold_var check_var m_i () in
+          let iter m_i = Com.Visit.m_instr_fold_var check_var m_i () in
           List.iter iter target.target_prog;
           CallMap.add cc () checked
   in

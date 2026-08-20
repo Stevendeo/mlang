@@ -425,12 +425,12 @@ and 'v case =
 (** Values that can be substituted for loop parameters *)
 and 'v atom = AtomVar of 'v | AtomLiteral of literal_with_orig
 
-and 'v set_value_loop =
+and 'v loop_range =
   | Single of 'v atom Pos.marked
   | Range of 'v atom Pos.marked * 'v atom Pos.marked
   | Interval of 'v atom Pos.marked * 'v atom Pos.marked
 
-and 'v loop_variable = char Pos.marked * 'v set_value_loop list
+and 'v loop_variable = char Pos.marked * 'v loop_range list
 (** A loop variable is the character that should be substituted in variable
     names inside the loop plus the set of value to substitute. *)
 
@@ -551,15 +551,13 @@ type 'v print_arg =
     way they do looping since the definition can depend on the loop variable
     value (e.g [Xi] can depend on [i]). *)
 
-type 'v formula_loop = 'v loop_variables Pos.marked
-
 type 'v formula_decl =
   | VarDecl of 'v access Pos.marked * 'v m_expression
   | EventFieldRef of 'v m_expression * string Pos.marked * int * 'v
 
 type 'v formula =
   | SingleFormula of 'v formula_decl
-  | MultipleFormulaes of 'v formula_loop * 'v formula_decl
+  | MultipleFormulaes of 'v loop_variables Pos.marked * 'v formula_decl
 
 (** {2 Stopping} *)
 
@@ -646,39 +644,6 @@ type ('v, 'e) target = {
 
 val target_is_function : ('v, 'e) target -> bool
 
-val expr_map_var : ('v -> 'w) -> 'v expression -> 'w expression
-
-val m_expr_map_var : ('v -> 'w) -> 'v m_expression -> 'w m_expression
-
-val instr_map_var :
-  ('v -> 'w) -> ('e -> 'f) -> ('v, 'e) instruction -> ('w, 'f) instruction
-
-val m_instr_map_var :
-  ('v -> 'w) -> ('e -> 'f) -> ('v, 'e) m_instruction -> ('w, 'f) m_instruction
-
-type var_usage = Read | Write | Info | DeclRef | ArgRef | DeclLocal | Macro
-
-val expr_fold_var :
-  (var_usage -> var_space -> 'v option -> 'a -> 'a) -> 'v expression -> 'a -> 'a
-
-val m_expr_fold_var :
-  (var_usage -> var_space -> 'v option -> 'a -> 'a) ->
-  'v m_expression ->
-  'a ->
-  'a
-
-val instr_fold_var :
-  (var_usage -> var_space -> 'v option -> 'a -> 'a) ->
-  ('v, 'e) instruction ->
-  'a ->
-  'a
-
-val m_instr_fold_var :
-  (var_usage -> var_space -> 'v option -> 'a -> 'a) ->
-  ('v, 'e) m_instruction ->
-  'a ->
-  'a
-
 val get_var_name : var_name -> string
 
 val get_normal_var : var_name -> string
@@ -690,47 +655,88 @@ val compare_value_typ : value_typ -> value_typ -> int
 
 val compare_var_space : var_space -> var_space -> int
 
+(** {2 Traversal} *)
+module Visit : sig
+  val expr_map_var : ('v -> 'w) -> 'v expression -> 'w expression
+
+  val m_expr_map_var : ('v -> 'w) -> 'v m_expression -> 'w m_expression
+
+  val instr_map_var :
+    ('v -> 'w) -> ('e -> 'f) -> ('v, 'e) instruction -> ('w, 'f) instruction
+
+  val m_instr_map_var :
+    ('v -> 'w) -> ('e -> 'f) -> ('v, 'e) m_instruction -> ('w, 'f) m_instruction
+
+  type var_usage = Read | Write | Info | DeclRef | ArgRef | DeclLocal | Macro
+
+  val expr_fold_var :
+    (var_usage -> var_space -> 'v option -> 'a -> 'a) ->
+    'v expression ->
+    'a ->
+    'a
+
+  val m_expr_fold_var :
+    (var_usage -> var_space -> 'v option -> 'a -> 'a) ->
+    'v m_expression ->
+    'a ->
+    'a
+
+  val instr_fold_var :
+    (var_usage -> var_space -> 'v option -> 'a -> 'a) ->
+    ('v, 'e) instruction ->
+    'a ->
+    'a
+
+  val m_instr_fold_var :
+    (var_usage -> var_space -> 'v option -> 'a -> 'a) ->
+    ('v, 'e) m_instruction ->
+    'a ->
+    'a
+end
+
 (** {2 Pretty printing functions} *)
 
-val format_value_typ : Pp.t -> value_typ -> unit
+module Pretty : sig
+  val format_value_typ : Pp.t -> value_typ -> unit
 
-val format_literal : Pp.t -> literal -> unit
+  val format_literal : Pp.t -> literal -> unit
 
-val format_case : (Pp.t -> 'v -> unit) -> Pp.t -> 'v case -> unit
+  val format_case : (Pp.t -> 'v -> unit) -> Pp.t -> 'v case -> unit
 
-val format_atom : (Pp.t -> 'v -> unit) -> Pp.t -> 'v atom -> unit
+  val format_atom : (Pp.t -> 'v -> unit) -> Pp.t -> 'v atom -> unit
 
-val format_loop_variables :
-  (Pp.t -> 'v -> unit) -> Pp.t -> 'v loop_variables -> unit
+  val format_loop_variables :
+    (Pp.t -> 'v -> unit) -> Pp.t -> 'v loop_variables -> unit
 
-val format_unop : Pp.t -> unop -> unit
+  val format_unop : Pp.t -> unop -> unit
 
-val format_binop : Pp.t -> binop -> unit
+  val format_binop : Pp.t -> binop -> unit
 
-val format_comp_op : Pp.t -> comp_op -> unit
+  val format_comp_op : Pp.t -> comp_op -> unit
 
-val format_access : (Pp.t -> 'v -> unit) -> Pp.t -> 'v access -> unit
+  val format_access : (Pp.t -> 'v -> unit) -> Pp.t -> 'v access -> unit
 
-val format_set_value : (Pp.t -> 'v -> unit) -> Pp.t -> 'v set_value -> unit
+  val format_set_value : (Pp.t -> 'v -> unit) -> Pp.t -> 'v set_value -> unit
 
-val format_func : Pp.t -> func -> unit
+  val format_func : Pp.t -> func -> unit
 
-val format_expression : (Pp.t -> 'v -> unit) -> Pp.t -> 'v expression -> unit
+  val format_expression : (Pp.t -> 'v -> unit) -> Pp.t -> 'v expression -> unit
 
-val format_print_arg : (Pp.t -> 'v -> unit) -> Pp.t -> 'v print_arg -> unit
+  val format_print_arg : (Pp.t -> 'v -> unit) -> Pp.t -> 'v print_arg -> unit
 
-val format_formula : (Pp.t -> 'v -> unit) -> Pp.t -> 'v formula -> unit
+  val format_formula : (Pp.t -> 'v -> unit) -> Pp.t -> 'v formula -> unit
 
-val format_instruction :
-  (Pp.t -> 'v -> unit) ->
-  (Pp.t -> 'e -> unit) ->
-  Pp.t ->
-  ('v, 'e) instruction ->
-  unit
+  val format_instruction :
+    (Pp.t -> 'v -> unit) ->
+    (Pp.t -> 'e -> unit) ->
+    Pp.t ->
+    ('v, 'e) instruction ->
+    unit
 
-val format_instructions :
-  (Pp.t -> 'v -> unit) ->
-  (Pp.t -> 'e -> unit) ->
-  Pp.t ->
-  ('v, 'e) m_instruction list ->
-  unit
+  val format_instructions :
+    (Pp.t -> 'v -> unit) ->
+    (Pp.t -> 'e -> unit) ->
+    Pp.t ->
+    ('v, 'e) m_instruction list ->
+    unit
+end

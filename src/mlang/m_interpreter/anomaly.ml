@@ -43,7 +43,7 @@ let empty () =
     exported_anos = [];
   }
 
-let raise (ctx : t) (err : M_ir.Com.Error.t) (v_opt : string option) =
+let raise (ctx : t) (err : Com.Error.t) (v_opt : string option) =
   (match err.typ with
   | Com.Error.Anomaly -> ctx.nb_anos <- ctx.nb_anos + 1
   | Com.Error.Discordance -> ctx.nb_discos <- ctx.nb_discos + 1

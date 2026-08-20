@@ -21,10 +21,10 @@ module type S = sig
 
   include M_ir.Mir_roundops.RoundOpsInterface with type t := t
 
-  val to_literal : t Types.value -> M_ir.Com.literal
+  val to_literal : t Types.value -> Com.literal
   (** Translates a value into an M literal *)
 
-  val of_literal : M_ir.Com.literal -> t Types.value
+  val of_literal : Com.literal -> t Types.value
   (** Translates a M literal into a value *)
 
   val format_value : Format.formatter -> t Types.value -> unit

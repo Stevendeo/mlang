@@ -13,8 +13,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open M_ir
-
 module Origin = struct
   type code =
     | Rule of int
@@ -240,7 +238,7 @@ let to_json (fmt : Format.formatter) info : unit =
       | Some name -> asprintf {|, "name" : %S|} name
     in
     fprintf fmt {|%s@."%d": {"value": "%a", "hash": %d %s}|} !delim tick
-      Com.format_literal value hash name;
+      Com.Pretty.format_literal value hash name;
     delim := ","
   in
   Tick.Map.iter print_runtime_info info.runtimes;
@@ -248,7 +246,7 @@ let to_json (fmt : Format.formatter) info : unit =
     let origin = Origin.to_json const.origin in
     fprintf fmt
       {|%s@."%d": {"name": %S, "value": "%a", "kind": "const", "origin": %s}|}
-      !delim id const.name Com.format_literal const.value origin;
+      !delim id const.name Com.Pretty.format_literal const.value origin;
     delim := ","
   in
   IntMap.iter print_const info.consts;
@@ -260,8 +258,8 @@ let to_json (fmt : Format.formatter) info : unit =
   delim := "";
   let print_interp_errors tick (error : interp_error) =
     fprintf fmt {|%s"%d": {"name": %S, "value": %a, "expected": %a}|} !delim
-      tick error.name Com.format_literal error.value Com.format_literal
-      error.expected;
+      tick error.name Com.Pretty.format_literal error.value
+      Com.Pretty.format_literal error.expected;
     delim := ","
   in
   fprintf fmt {|},@."interp_errors": {@.|};
