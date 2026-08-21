@@ -70,8 +70,11 @@ val def_expr_to_constr : DE.t -> Constr.t
     following represents complete and optimized expressions for M computations
 *)
 
+type 'expr set_var = { kind : dflag; id : string; expr : 'expr }
+(** A C local variable to declare and assign. *)
+
 type atomic_expression_composition = {
-  set_vars : (dflag * string * Constr.t) list;
+  set_vars : Constr.t set_var list;
   def_test : DE.t;
   value_comp : Constr.t;
 }

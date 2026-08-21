@@ -83,9 +83,11 @@ and varinfo_access =
 
 and expr_var = Local of stack_slot | M of Com.var_space * Com.Var.t * dflag
 
-and t = expr * dflag * local_vars
+and t = { expr : expr; kind : dflag; spills : local_vars }
 
 and builder = local_stacks -> local_vars -> t
+
+let mk_t expr kind spills = { expr; kind; spills }
 
 type stack_position = Not_to_stack | Must_be_pushed | On_top of dflag
 
@@ -95,7 +97,7 @@ let pp_local_var fmt = function
   | Constr.Anon -> Format.fprintf fmt "--anon--"
   | Refered v -> Format.fprintf fmt "var-%i" v
 
-let is_always_true ((expr, _kind, _lv) : t) = expr = Dtrue
+let is_always_true t = t.expr = Dtrue
 
 let cast (kind : dflag) (expr : expr) =
   match (expr, kind) with
@@ -185,43 +187,46 @@ let store_local (stacks : local_stacks) (ctx : local_vars) (v : local_var)
 
 let collapse_builder (stacks : local_stacks) (ctx : local_vars)
     (builder : builder) =
-  let expr, kind, lv = builder stacks ctx in
-  (expr, kind, lv @ ctx)
+  let t = builder stacks ctx in
+  { t with spills = t.spills @ ctx }
 
 (* eval and store with enforced kind *)
 let push_with_kind (stacks : local_stacks) (ctx : local_vars) (kind : dflag)
     (builder : builder) =
-  let expr, ekind, lv = builder stacks ctx in
-  let expr = if kind = ekind then expr else cast kind expr in
-  let stacks, lv, expr = store_local stacks lv Constr.anon kind expr in
+  (* let expr, ekind, lv = builder stacks ctx in *)
+  let t = builder stacks ctx in
+  let expr = if kind = t.kind then t.expr else cast kind t.expr in
+  let stacks, lv, expr = store_local stacks t.spills Constr.anon kind expr in
   (stacks, lv, expr)
 
 (* eval and store without enforcing kind *)
 let push (stacks : local_stacks) (ctx : local_vars) (builder : builder) =
-  let expr, kind, lv = builder stacks ctx in
-  let stacks, lv, expr = store_local stacks lv Constr.anon kind expr in
-  (stacks, lv, expr, kind)
+  let t = builder stacks ctx in
+  let stacks, lv, expr =
+    store_local stacks t.spills Constr.anon t.kind t.expr
+  in
+  (stacks, lv, expr, t.kind)
 
 module DE = Def_expr.Make (Constr)
 
-let true_ _ _ = (Dtrue, Constr.Def, [])
+let true_ _ _ = mk_t Dtrue Constr.Def []
 
-let false_ _ _ = (Dfalse, Constr.Def, [])
+let false_ _ _ = mk_t Dfalse Constr.Def []
 
-let lit f _ _ = (Dlit f, Constr.Val, [])
+let lit f _ _ = mk_t (Dlit f) Constr.Val []
 
 let m_var (m_sp_opt : Com.var_space) (v : Com.Var.t) (df : dflag) _ _ =
-  (Dvar (M (m_sp_opt, v, df)), df, [])
+  mk_t (Dvar (M (m_sp_opt, v, df))) df []
 
 let local_var (lvar : local_var) (stacks : local_stacks) (ctx : local_vars) =
   match lvar with
   | Anon -> Errors.raise_error "Tried to access anonymous local variable"
   | Refered v -> (
       match List.assoc_opt v stacks.var_substs with
-      | Some (e, kind) -> (e, kind, [])
+      | Some (e, kind) -> mk_t e kind []
       | None -> (
           match List.assoc_opt lvar ctx with
-          | Some { slot; _ } -> (Dvar (Local slot), slot.kind, [])
+          | Some { slot; _ } -> mk_t (Dvar (Local slot)) slot.kind []
           | None ->
               Format.kasprintf Errors.raise_error
                 "Local variable %i not found in context. Local vars: [%a]; \
@@ -244,43 +249,43 @@ let and_ e1 e2 stacks ctx =
   let stacks', lv1, e1 = push_with_kind stacks ctx Def e1 in
   let _, lv2, e2 = push_with_kind stacks' ctx Def e2 in
   match (e1, e2) with
-  | Dtrue, _ -> (e2, Def, lv2)
-  | _, Dtrue -> (e1, Def, lv1)
-  | Dfalse, _ | _, Dfalse -> (Dfalse, Def, [])
-  | Dvar v1, Dvar v2 when v1 = v2 -> (e1, Def, lv1)
-  | Dand l1, Dand l2 -> (dand (l1 @ l2), Def, lv2 @ lv1)
-  | _, Dand l -> (dand (e1 :: l), Def, lv2 @ lv1)
-  | Dand l, _ -> (dand (l @ [ e2 ]), Def, lv2 @ lv1)
-  | _, _ -> (dand [ e1; e2 ], Def, lv2 @ lv1)
+  | Dtrue, _ -> mk_t e2 Def lv2
+  | _, Dtrue -> mk_t e1 Def lv1
+  | Dfalse, _ | _, Dfalse -> mk_t Dfalse Def []
+  | Dvar v1, Dvar v2 when v1 = v2 -> mk_t e1 Def lv1
+  | Dand l1, Dand l2 -> mk_t (dand (l1 @ l2)) Def (lv2 @ lv1)
+  | _, Dand l -> mk_t (dand (e1 :: l)) Def (lv2 @ lv1)
+  | Dand l, _ -> mk_t (dand (l @ [ e2 ])) Def (lv2 @ lv1)
+  | _, _ -> mk_t (dand [ e1; e2 ]) Def (lv2 @ lv1)
 
 let or_ (e1 : builder) (e2 : builder) (stacks : local_stacks) (ctx : local_vars)
     =
   let stacks', lv1, e1 = push_with_kind stacks ctx Def e1 in
   let _, lv2, e2 = push_with_kind stacks' ctx Def e2 in
   match (e1, e2) with
-  | Dtrue, _ | _, Dtrue -> (Dtrue, Def, [])
-  | Dfalse, _ -> (e2, Def, lv2)
-  | _, Dfalse -> (e1, Def, lv1)
-  | Dvar v1, Dvar v2 when v1 = v2 -> (e1, Def, lv1)
-  | Dor l1, Dor l2 -> (dor (l1 @ l2), Def, lv2 @ lv1)
-  | _, Dor l -> (dor (e1 :: l), Def, lv2 @ lv1)
-  | Dor l, _ -> (dor (l @ [ e2 ]), Def, lv2 @ lv1)
-  | _, _ -> (dor [ e1; e2 ], Def, lv2 @ lv1)
+  | Dtrue, _ | _, Dtrue -> mk_t Dtrue Def []
+  | Dfalse, _ -> mk_t e2 Def lv2
+  | _, Dfalse -> mk_t e1 Def lv1
+  | Dvar v1, Dvar v2 when v1 = v2 -> mk_t e1 Def lv1
+  | Dor l1, Dor l2 -> mk_t (dor (l1 @ l2)) Def (lv2 @ lv1)
+  | _, Dor l -> mk_t (dor (e1 :: l)) Def (lv2 @ lv1)
+  | Dor l, _ -> mk_t (dor (l @ [ e2 ])) Def (lv2 @ lv1)
+  | _, _ -> mk_t (dor [ e1; e2 ]) Def (lv2 @ lv1)
 
 let not_ (e : builder) (stacks : local_stacks) (ctx : local_vars) =
   let _, lv, e = push_with_kind stacks ctx Def e in
   match e with
-  | Dtrue -> (Dfalse, Def, [])
-  | Dfalse -> (Dtrue, Def, [])
-  | Dunop ("!", e) -> (e, Def, lv)
-  | _ -> (Dunop ("!", e), Def, lv)
+  | Dtrue -> mk_t Dfalse Def []
+  | Dfalse -> mk_t Dtrue Def []
+  | Dunop ("!", e) -> mk_t e Def lv
+  | _ -> mk_t (Dunop ("!", e)) Def lv
 
 let minus (e : builder) (stacks : local_stacks) (ctx : local_vars) =
   let _, lv, e = push_with_kind stacks ctx Val e in
   match e with
-  | Dlit f -> (Dlit (-.f), Val, [])
-  | Dunop ("-", e) -> (e, Val, lv)
-  | _ -> (Dunop ("-", e), Val, lv)
+  | Dlit f -> mk_t (Dlit (-.f)) Val []
+  | Dunop ("-", e) -> mk_t e Val lv
+  | _ -> mk_t (Dunop ("-", e)) Val lv
 
 let plus (e1 : builder) (e2 : builder) (stacks : local_stacks)
     (ctx : local_vars) =
@@ -290,53 +295,53 @@ let plus (e1 : builder) (e2 : builder) (stacks : local_stacks)
   let stacks', lv1, e1 = push_with_kind stacks ctx Val e1 in
   let _, lv2, e2 = push_with_kind stacks' ctx Val e2 in
   match (e1, e2) with
-  | Dlit 0., _ when reduce_zero_add -> (e2, Val, lv2)
-  | _, Dlit 0. when reduce_zero_add -> (e1, Val, lv1)
-  | Dlit f1, Dlit f2 -> (Dlit (f1 +. f2), Val, [])
-  | _ -> (Dbinop ("+", e1, e2), Val, lv2 @ lv1)
+  | Dlit 0., _ when reduce_zero_add -> mk_t e2 Val lv2
+  | _, Dlit 0. when reduce_zero_add -> mk_t e1 Val lv1
+  | Dlit f1, Dlit f2 -> mk_t (Dlit (f1 +. f2)) Val []
+  | _ -> mk_t (Dbinop ("+", e1, e2)) Val (lv2 @ lv1)
 
 let sub (e1 : builder) (e2 : builder) (stacks : local_stacks) (ctx : local_vars)
     =
   let stacks', lv1, e1 = push_with_kind stacks ctx Val e1 in
   let _, lv2, e2 = push_with_kind stacks' ctx Val e2 in
   match (e1, e2) with
-  | Dlit 0., _ -> (Dunop ("-", e2), Val, lv2)
-  | _, Dlit 0. -> (e1, Val, lv1)
-  | Dlit f1, Dlit f2 -> (Dlit (f1 -. f2), Val, [])
-  | _ -> (Dbinop ("-", e1, e2), Val, lv2 @ lv1)
+  | Dlit 0., _ -> mk_t (Dunop ("-", e2)) Val lv2
+  | _, Dlit 0. -> mk_t e1 Val lv1
+  | Dlit f1, Dlit f2 -> mk_t (Dlit (f1 -. f2)) Val []
+  | _ -> mk_t (Dbinop ("-", e1, e2)) Val (lv2 @ lv1)
 
 let mult (e1 : builder) (e2 : builder) (stacks : local_stacks)
     (ctx : local_vars) =
   let stacks', lv1, e1 = push_with_kind stacks ctx Val e1 in
   let _, lv2, e2 = push_with_kind stacks' ctx Val e2 in
   match (e1, e2) with
-  | Dlit 1., _ -> (e2, Val, lv2)
-  | _, Dlit 1. -> (e1, Val, lv1)
-  | Dlit 0., _ | _, Dlit 0. -> (Dlit 0., Val, [])
-  | Dlit f1, Dlit f2 -> (Dlit (f1 *. f2), Val, [])
-  | _ -> (Dbinop ("*", e1, e2), Val, lv2 @ lv1)
+  | Dlit 1., _ -> mk_t e2 Val lv2
+  | _, Dlit 1. -> mk_t e1 Val lv1
+  | Dlit 0., _ | _, Dlit 0. -> mk_t (Dlit 0.) Val []
+  | Dlit f1, Dlit f2 -> mk_t (Dlit (f1 *. f2)) Val []
+  | _ -> mk_t (Dbinop ("*", e1, e2)) Val (lv2 @ lv1)
 
 let div (e1 : builder) (e2 : builder) (stacks : local_stacks) (ctx : local_vars)
     =
   let stacks', lv1, e1 = push_with_kind stacks ctx Val e1 in
   let _, lv2, e2 = push_with_kind stacks' ctx Val e2 in
   match (e1, e2) with
-  | _, Dlit 1. -> (e1, Val, lv1)
+  | _, Dlit 1. -> mk_t e1 Val lv1
   | Dlit f1, Dlit f2 ->
       let f = f1 /. f2 in
-      (Dlit f, Val, [])
-  | _ -> (Dbinop ("/", e1, e2), Val, lv2 @ lv1)
+      mk_t (Dlit f) Val []
+  | _ -> mk_t (Dbinop ("/", e1, e2)) Val (lv2 @ lv1)
 
 let modulo (e1 : builder) (e2 : builder) (stacks : local_stacks)
     (ctx : local_vars) =
   let stacks', lv1, e1 = push_with_kind stacks ctx Val e1 in
   let _, lv2, e2 = push_with_kind stacks' ctx Val e2 in
   match (e1, e2) with
-  | _, Dlit 1. -> (e1, Val, lv1)
+  | _, Dlit 1. -> mk_t e1 Val lv1
   | Dlit f1, Dlit f2 ->
       let f = mod_float f1 f2 in
-      (Dlit f, Val, [])
-  | _ -> (Dfun ("fmod", [ e1; e2 ]), Val, lv2 @ lv1)
+      mk_t (Dlit f) Val []
+  | _ -> mk_t (Dfun ("fmod", [ e1; e2 ])) Val (lv2 @ lv1)
 
 let comp op (e1 : builder) (e2 : builder) (stacks : local_stacks)
     (ctx : local_vars) =
@@ -361,7 +366,7 @@ let comp op (e1 : builder) (e2 : builder) (stacks : local_stacks)
     | ">" -> comp Com.Gt
     | _ -> assert false
   in
-  (e, Def, lv2 @ lv1)
+  mk_t e Def (lv2 @ lv1)
 
 let fun_ (f : string) (args : builder list) (stacks : local_stacks)
     (ctx : local_vars) =
@@ -373,31 +378,31 @@ let fun_ (f : string) (args : builder list) (stacks : local_stacks)
       (stacks, []) args
   in
   (* TODO : distinguish kinds *)
-  (Dfun (f, args), Val, lv)
+  mk_t (Dfun (f, args)) Val lv
 
-let varinfo v _ _ = (Dvarinfo (VIvar v), VarInfo, [])
+let varinfo v _ _ = mk_t (Dvarinfo (VIvar v)) VarInfo []
 
 let varinfo_tab ~tab ~def ~value stacks ctx =
   let stacks, lv, def = push_with_kind stacks ctx Def def in
   let _stacks, lv', value = push_with_kind stacks ctx Val value in
-  (Dvarinfo (VItab (tab, def, value)), VarInfo, lv @ lv')
+  mk_t (Dvarinfo (VItab (tab, def, value))) VarInfo (lv @ lv')
 
 let varinfo_field ~def ~value ~field stacks ctx =
   let stacks, lv, def = push_with_kind stacks ctx Def def in
   let _stacks, lv', value = push_with_kind stacks ctx Val value in
-  (Dvarinfo (VIfield (def, value, field)), VarInfo, lv @ lv')
+  mk_t (Dvarinfo (VIfield (def, value, field))) VarInfo (lv @ lv')
 
-let varspace_current m _ _ = (Dvarspace (m, None), VarSpace, [])
+let varspace_current m _ _ = mk_t (Dvarspace (m, None)) VarSpace []
 
-let varspace_of m v _ _ = (Dvarspace (m, Some v), VarSpace, [])
+let varspace_of m v _ _ = mk_t (Dvarspace (m, Some v)) VarSpace []
 
-let typ t _ _ = (Dtyp t, Def, [])
+let typ t _ _ = mk_t (Dtyp t) Def []
 
-let instr i _ _ = (Dinstr i, Val, [])
+let instr i _ _ = mk_t (Dinstr i) Val []
 
 let direct c stacks ctx =
-  let e, d, ctx = c stacks ctx in
-  (Ddirect e, d, ctx)
+  let t = c stacks ctx in
+  mk_t (Ddirect t.expr) t.kind t.spills
 
 let ite (c : builder) (t : builder) (e : builder) (stacks : local_stacks)
     (ctx : local_vars) =
@@ -409,13 +414,13 @@ let ite (c : builder) (t : builder) (e : builder) (stacks : local_stacks)
     else (* this will happen. Staying on the safe side *) Val
   in
   match (c, t, e) with
-  | Dtrue, _, _ -> (t, tkind, lvt)
-  | Dfalse, _, _ -> (e, ekind, lve)
-  | _, Dtrue, Dtrue | _, Dfalse, Dfalse -> (t, tkind, lvt)
-  | _, Dlit 1., Dlit 0. -> (c, Def, lvc)
-  | _, Dlit 0., Dlit 1. -> (Dunop ("!", c), Def, lvc)
-  | _, Dlit f, Dlit f' when f = f' -> (Dlit f, ite_kind, [])
-  | _ -> (Dite (c, t, e), ite_kind, lve @ lvt @ lvc)
+  | Dtrue, _, _ -> mk_t t tkind lvt
+  | Dfalse, _, _ -> mk_t e ekind lve
+  | _, Dtrue, Dtrue | _, Dfalse, Dfalse -> mk_t t tkind lvt
+  | _, Dlit 1., Dlit 0. -> mk_t c Def lvc
+  | _, Dlit 0., Dlit 1. -> mk_t (Dunop ("!", c)) Def lvc
+  | _, Dlit f, Dlit f' when f = f' -> mk_t (Dlit f) ite_kind []
+  | _ -> mk_t (Dite (c, t, e)) ite_kind (lve @ lvt @ lvc)
 
 let it0 (c : builder) (t : builder) (stacks : local_stacks) (ctx : local_vars) =
   (* Version of [ite] where the else is zero with kind matching the then to
@@ -430,16 +435,16 @@ let it0 (c : builder) (t : builder) (stacks : local_stacks) (ctx : local_vars) =
     | VarSpace -> failwith "Cannot make an IT with a VarSpace"
   in
   match (c, t) with
-  | Dtrue, _ -> (t, tkind, lvt)
-  | Dfalse, _ -> (e, tkind, [])
-  | _, (Dlit 1. | Dtrue) -> (c, Def, lvc)
-  | _, (Dlit 0. | Dfalse) -> (t, tkind, [])
-  | _ -> (Dite (c, t, e), tkind, lvt @ lvc)
+  | Dtrue, _ -> mk_t t tkind lvt
+  | Dfalse, _ -> mk_t e tkind []
+  | _, (Dlit 1. | Dtrue) -> mk_t c Def lvc
+  | _, (Dlit 0. | Dfalse) -> mk_t t tkind []
+  | _ -> mk_t (Dite (c, t, e)) tkind (lvt @ lvc)
 
 let let_local (v : local_var) (bound : builder) (body : builder)
     (stacks : local_stacks) (ctx : local_vars) =
-  let bound, kind, lv = collapse_builder stacks ctx bound in
-  let stacks, ctx, _ = store_local stacks lv v kind bound in
+  let t = collapse_builder stacks ctx bound in
+  let stacks, ctx, _ = store_local stacks t.spills v t.kind t.expr in
   collapse_builder stacks ctx body
 
 let rec make_constr : Constr.t -> builder = function
@@ -473,8 +478,12 @@ let rec make_constr : Constr.t -> builder = function
   | It0 (c, t) -> it0 (make_constr c) (make_constr t)
   | Let_local (lv, e, i) -> let_local lv (make_constr e) (make_constr i)
 
+type 'expr set_var = { kind : dflag; id : string; expr : 'expr }
+
+let mk_set_var kind id expr = { kind; id; expr }
+
 type atomic_expression_composition = {
-  set_vars : (dflag * string * Constr.t) list;
+  set_vars : Constr.t set_var list;
   def_test : DE.t;
   value_comp : Constr.t;
 }
@@ -599,7 +608,10 @@ let dfun_with_ptr (f : string)
           ~ptrval:(Direct (Instr res_val_ptr)) )
   in
   let set_vars =
-    [ (Def, res_def, d_fun); (Val, res_val, Direct (Instr res_val)) ]
+    [
+      mk_set_var Def res_def d_fun;
+      mk_set_var Val res_val (Constr.Direct (Instr res_val));
+    ]
   in
   let def_test = DE.devar @@ Instr res_def in
   let value_comp = Constr.Instr res_val in
@@ -616,12 +628,19 @@ type local_decls = {
   var_stk_size : int;
   var_spa_size : int;
 }
-(* in practice, stacks sizes *)
+(* in practice, local_decls are encoded as stacks sizes *)
+
+type build_atomic_expr_ret = {
+  local_decls : local_decls;
+  set_vars : t set_var list;
+  def_test : t;
+  value_comp : t;
+}
 
 (* evaluate a complete (AKA, context free) expression. Not to be used for
    further construction. *)
 let build_atomic_expression (expr_comp : atomic_expression_composition) :
-    local_decls * (dflag * string * t) list * t * t =
+    build_atomic_expr_ret =
   let empty_stacks =
     { def_top = 0; val_top = 0; var_top = 0; spa_top = 0; var_substs = [] }
   in
@@ -636,20 +655,17 @@ let build_atomic_expression (expr_comp : atomic_expression_composition) :
   let empty_locals = [] in
   let set_tests =
     List.map
-      (fun (kd, vn, builder) ->
-        ( kd,
-          vn,
-          collapse_builder empty_stacks empty_locals (make_constr builder) ))
+      (fun { kind; id; expr } ->
+        mk_set_var kind id
+        @@ collapse_builder empty_stacks empty_locals (make_constr expr))
       expr_comp.set_vars
   in
-  let set_locals =
-    List.concat (List.map (fun (_, _, (_, _, locals)) -> locals) set_tests)
-  in
-  let ((_, _, def_locals) as def_test) =
+  let set_locals = List.concat (List.map (fun t -> t.expr.spills) set_tests) in
+  let def_test =
     collapse_builder empty_stacks empty_locals
       (make_constr @@ def_expr_to_constr expr_comp.def_test)
   in
-  let ((_, _, value_locals) as value_comp) =
+  let value_comp =
     collapse_builder empty_stacks empty_locals
       (make_constr expr_comp.value_comp)
   in
@@ -662,9 +678,9 @@ let build_atomic_expression (expr_comp : atomic_expression_composition) :
         | VarInfo -> { ld with var_stk_size = max slot.depth ld.var_stk_size }
         | VarSpace -> { ld with var_spa_size = max slot.depth ld.var_spa_size })
       empty_local_decls
-      (set_locals @ def_locals @ value_locals)
+      (set_locals @ def_test.spills @ value_comp.spills)
   in
-  (stacks_size, set_tests, def_test, value_comp)
+  { local_decls = stacks_size; set_vars = set_tests; def_test; value_comp }
 
 let rec build_expression = function
   | AtomicExpr e -> `Atom (build_atomic_expression e)
@@ -853,28 +869,25 @@ let format_local_vars_defs ~env fmt (lv : local_vars) =
   in
   List.iter (format_one_assign fmt) lv
 
-let format_assign ~env (var : string) fmt ((e, _kind, lv) : t) =
+let format_assign ~env (var : string) fmt t =
   Format.fprintf fmt "%a@;@[<hov 2>%a;@]"
     (format_local_vars_defs ~env)
-    lv
+    t.spills
     (format_dexpr_assign ~env var)
-    e
+    t.expr
 
-let format_set_vars ~env fmt (set_vars : (dflag * string * t) list) =
+let format_set_vars ~env fmt (set_vars : t set_var list) =
   List.iter
-    (fun ((kd, vn, _expr) : dflag * string * t) ->
+    (fun t ->
       Pp.fpr fmt "@;%s %s;"
-        (match kd with
+        (match t.kind with
         | Def -> "char"
         | Val -> "double"
         | VarInfo -> "T_varinfo*"
         | VarSpace -> "int")
-        vn)
+        t.id)
     set_vars;
-  List.iter
-    (fun ((_kd, vn, expr) : dflag * string * t) ->
-      format_assign ~env vn fmt expr)
-    set_vars
+  List.iter (fun t -> format_assign ~env t.id fmt t.expr) set_vars
 
 (* Building basic expressions *)
 
@@ -1116,22 +1129,24 @@ module Func = struct
 end
 
 let write_atomic_decoupled_expr ~(env : Env.t) oc res_def res_val
-    (locals, set, def, value) =
+    (* (locals, set, def, value) = *)
+      build_ret =
   let pr form = Format.fprintf oc form in
-  if is_always_true def then
-    pr "@;@[<v 2>{%a%a%a%a@]@;}" format_local_declarations locals
-      (format_set_vars ~env) set
+  if is_always_true build_ret.def_test then
+    pr "@;@[<v 2>{%a%a%a%a@]@;}" format_local_declarations build_ret.local_decls
+      (format_set_vars ~env) build_ret.set_vars
       (format_assign ~env res_def)
-      def
+      build_ret.def_test
       (format_assign ~env res_val)
-      value
+      build_ret.value_comp
   else
     pr "@;@[<v 2>{%a%a%a@;@[<v 2>if (%s) {%a@]@;} else %s = 0.0;@]@;}"
-      format_local_declarations locals (format_set_vars ~env) set
+      format_local_declarations build_ret.local_decls (format_set_vars ~env)
+      build_ret.set_vars
       (format_assign ~env res_def)
-      def res_def
+      build_ret.def_test res_def
       (format_assign ~env res_val)
-      value res_val
+      build_ret.value_comp res_val
 
 let fresh_cond_vars =
   let cpt = ref 0 in
