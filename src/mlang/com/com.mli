@@ -517,8 +517,6 @@ module Error : sig
 
   val pp : Pp.t -> t -> unit
 
-  val compare : t -> t -> int
-
   module Set : SetExt.T with type elt = t
 
   module Map : sig
