@@ -1152,11 +1152,14 @@ let rec write_decoupled_expr ~(env : Env.t) oc =
         pr "@;int %s;" d;
         pr "@;double %s;" v;
         write_decoupled_expr ~env oc d v c;
+        pr "@;/* definedness check */";
         pr "@;if(%s == 0) {%s = 0; %s = 0.0;}" d res_def res_val;
-        pr "@;else if (EQ_E(%s,0.0)) {@;@[<v 2>" v;
-        write_decoupled_expr ~env oc res_def res_val e;
-        pr "@;}@] else {@;@[<v 2>";
+        pr "@;/* if true */";
+        pr "@;else if (NEQ_E(%s,0.0)) {@;@[<v 2>" v;
         write_decoupled_expr ~env oc res_def res_val t;
+        pr "@;/* if false */";
+        pr "@;}@] else {@;@[<v 2>";
+        write_decoupled_expr ~env oc res_def res_val e;
         pr "@;}@]";
         pr "@;}@]"
     | `Let (vardef, varval, body, followup) ->
