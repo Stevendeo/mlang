@@ -107,7 +107,7 @@ let gen_table_varinfos (cprog : Mir.program) flags =
     let fold cv data res =
       let vars =
         let foldVars _ var vars =
-          if Com.CatVar.compare (Com.Var.cat var) cv = 0 then
+          if Com.CatVar.compare_t (Com.Var.cat var) cv = 0 then
             IntMap.add (Com.Var.loc_cat_idx var) var vars
           else vars
         in
