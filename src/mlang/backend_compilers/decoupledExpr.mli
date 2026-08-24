@@ -74,7 +74,7 @@ type 'expr set_var = { kind : dflag; id : string; expr : 'expr }
 (** A C local variable to declare and assign. *)
 
 type atomic_expression_composition = {
-  set_vars : Constr.t set_var list;
+  set_vars : Constr.t option set_var list;
   def_test : DE.t;
   value_comp : Constr.t;
 }

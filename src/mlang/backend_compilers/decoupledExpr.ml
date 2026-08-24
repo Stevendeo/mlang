@@ -484,7 +484,7 @@ type 'expr set_var = { kind : dflag; id : string; expr : 'expr }
 let mk_set_var kind id expr = { kind; id; expr }
 
 type atomic_expression_composition = {
-  set_vars : Constr.t set_var list;
+  set_vars : Constr.t option set_var list;
   def_test : DE.t;
   value_comp : Constr.t;
 }
@@ -612,10 +612,7 @@ let dfun_with_ptr (f : string)
           ~ptrval:(Direct (Instr res_val_ptr)) )
   in
   let set_vars =
-    [
-      mk_set_var Def res_def d_fun;
-      mk_set_var Val res_val (Constr.Direct (Instr res_val));
-    ]
+    [ mk_set_var Def res_def (Some d_fun); mk_set_var Val res_val None ]
   in
   let def_test = DE.devar @@ Instr res_def in
   let value_comp = Constr.Instr res_val in
@@ -636,7 +633,7 @@ type local_decls = {
 
 type build_atomic_expr_ret = {
   local_decls : local_decls;
-  set_vars : t set_var list;
+  set_vars : t option set_var list;
   def_test : t;
   value_comp : t;
 }
@@ -661,10 +658,18 @@ let build_atomic_expression (expr_comp : atomic_expression_composition) :
     List.map
       (fun { kind; id; expr } ->
         mk_set_var kind id
-        @@ collapse_builder empty_stacks empty_locals (make_constr expr))
+        @@ Option.map
+             (fun expr ->
+               collapse_builder empty_stacks empty_locals (make_constr expr))
+             expr)
       expr_comp.set_vars
   in
-  let set_locals = List.concat (List.map (fun t -> t.expr.spills) set_tests) in
+  let set_locals =
+    List.concat
+      (List.filter_map
+         (fun t -> Option.map (fun expr -> expr.spills) t.expr)
+         set_tests)
+  in
   let def_test =
     collapse_builder empty_stacks empty_locals
       (make_constr @@ def_expr_to_constr expr_comp.def_test)
@@ -881,7 +886,7 @@ let format_assign ~env (var : string) fmt t =
     (format_dexpr_assign ~env var)
     t.expr
 
-let format_set_vars ~env fmt (set_vars : t set_var list) =
+let format_set_vars ~env fmt (set_vars : t option set_var list) =
   List.iter
     (fun t ->
       Pp.fpr fmt "@;%s %s;"
@@ -892,7 +897,11 @@ let format_set_vars ~env fmt (set_vars : t set_var list) =
         | VarSpace -> "int")
         t.id)
     set_vars;
-  List.iter (fun t -> format_assign ~env t.id fmt t.expr) set_vars
+  (* We do not assign values without expr *)
+  List.iter
+    (fun t ->
+  Option.iter (format_assign ~env t.id fmt) t.expr)
+    set_vars
 
 (* Building basic expressions *)
 
