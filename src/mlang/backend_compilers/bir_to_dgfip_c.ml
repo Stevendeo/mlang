@@ -44,7 +44,7 @@ let str_escape str =
 
 let rec lis_tabaccess (p : Mir.program) m_sp_opt v m_idx =
   let e_idx = generate_c_expr p m_idx in
-  D.make_let e_idx (fun vardef varval ->
+  D.make_let C.Val e_idx (fun vardef varval ->
       D.atomic
       @@ D.dfun_with_ptr "lis_tabaccess" (fun ~ptrdef ~ptrval ->
           [
@@ -63,7 +63,7 @@ and code_access (p : Mir.program) m_acc =
       D.atomic
         { set_vars = []; def_test = D.DE.detrue; value_comp = C.Varinfo v }
   | Com.TabAccess ((_, v), m_i) ->
-      D.make_let (generate_c_expr p m_i) (fun vardef varval ->
+      D.make_let C.Val (generate_c_expr p m_i) (fun vardef varval ->
           D.atomic
             {
               set_vars = [];
@@ -71,7 +71,7 @@ and code_access (p : Mir.program) m_acc =
               value_comp = C.Varinfo_tab (v, D.def_expr_to_constr vardef, varval);
             })
   | Com.FieldAccess (_, ie, f, _) ->
-      D.make_let (generate_c_expr p ie) (fun vardef varval ->
+      D.make_let C.Val (generate_c_expr p ie) (fun vardef varval ->
           D.atomic
             {
               set_vars = [];
@@ -90,7 +90,7 @@ and access p acc =
   | TabAccess ((m_sp_opt, v), m_idx) -> lis_tabaccess p m_sp_opt v m_idx
   | FieldAccess (m_sp_opt, me, f, _) ->
       let fn = Pp.spr "event_field_%s" (Pos.unmark f) in
-      D.make_let (generate_c_expr p me) (fun vardef varval ->
+      D.make_let C.Val (generate_c_expr p me) (fun vardef varval ->
           let arg_exprs = [ D.def_expr_to_constr vardef; varval ] in
           let d_fun =
             D.dfun_with_ptr fn (fun ~ptrdef ~ptrval ->
@@ -101,7 +101,7 @@ and access p acc =
           @@ { d_fun with def_test = D.DE.deand [ vardef; d_fun.def_test ] })
 
 and generate_test_in_set p positive e0 values =
-  D.make_let (generate_c_expr p e0) (fun vardef varval ->
+  D.make_let C.Val (generate_c_expr p e0) (fun vardef varval ->
       let varval_expr =
         D.atomic { set_vars = []; def_test = vardef; value_comp = varval }
       in
@@ -158,7 +158,7 @@ and funcall p f args =
   | _ -> assert false (* should not happen *)
 
 and attribute p acc attr =
-  D.make_let (code_access p acc) (fun vardef varval ->
+  D.make_let C.VarInfo (code_access p acc) (fun vardef varval ->
       let def_test =
         D.DE.deand
           [
@@ -172,7 +172,7 @@ and attribute p acc attr =
              { set_vars = []; def_test; value_comp }))
 
 and size p acc =
-  D.make_let (code_access p acc) (fun vardef varval ->
+  D.make_let C.VarInfo (code_access p acc) (fun vardef varval ->
       let f =
         D.dfun_with_ptr "size_varinfo" (fun ~ptrdef ~ptrval ->
             [ varval; ptrdef; ptrval ])
@@ -180,7 +180,7 @@ and size p acc =
       D.atomic { f with def_test = D.DE.deand [ vardef; f.def_test ] })
 
 and is_type p acc typ =
-  D.make_let (code_access p acc) (fun vardef varval ->
+  D.make_let C.VarInfo (code_access p acc) (fun vardef varval ->
       let d_fun =
         D.dfun_with_ptr "est_type" (fun ~ptrdef ~ptrval ->
             [ varval; C.Typ typ; ptrdef; ptrval ])
@@ -188,8 +188,8 @@ and is_type p acc typ =
       D.atomic { d_fun with def_test = D.DE.deand [ vardef; d_fun.def_test ] })
 
 and same_variable p acc0 acc1 =
-  D.make_let (code_access p acc0) (fun d0 v0 ->
-      D.make_let (code_access p acc1) (fun d1 v1 ->
+  D.make_let C.VarInfo (code_access p acc0) (fun d0 v0 ->
+      D.make_let C.VarInfo (code_access p acc1) (fun d1 v1 ->
           let d_fun =
             D.dfun_with_ptr "meme_variable" (fun ~ptrdef ~ptrval ->
                 [ v0; v1; ptrdef; ptrval ])
@@ -215,8 +215,8 @@ and in_domain (p : Mir.program) acc cvm =
   match ids with
   | [] -> D.atomic @@ D.elit 0.0
   | _ :: _ ->
-      D.make_let (code_access p acc) (fun _ varval ->
-         List.fold_left
+      D.make_let C.VarInfo (code_access p acc) (fun _ varval ->
+          List.fold_left
             (fun if_chain id ->
               let cond = atom_fn id varval in
               let then_ = D.atomic @@ D.elit 1.0 in

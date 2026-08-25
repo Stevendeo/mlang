@@ -14,6 +14,7 @@
 (******************************************************************************)
 
 module VID = Dgfip_varid
+module C = Constr
 
 let fresh_c_local =
   let c = ref 0 in
@@ -398,7 +399,7 @@ let varspace_of m v _ _ = mk_t (Dvarspace (m, Some v)) VarSpace []
 
 let typ t _ _ = mk_t (Dtyp t) Def []
 
-let instr i _ _ = mk_t (Dinstr i) Val []
+let instr kind i _ _ = mk_t (Dinstr i) kind []
 
 let direct c stacks ctx =
   let t = c stacks ctx in
@@ -472,7 +473,7 @@ let rec make_constr : Constr.t -> builder = function
   | Varspace_current vs -> varspace_current vs
   | Varspace_of (m, v) -> varspace_of m v
   | Typ t -> typ t
-  | Instr i -> instr i
+  | Instr i -> instr Val i
   | Direct e -> direct (make_constr e)
   | Ite (c, t, e) -> ite (make_constr c) (make_constr t) (make_constr e)
   | It0 (c, t) -> it0 (make_constr c) (make_constr t)
@@ -493,6 +494,7 @@ type expression_composition =
   | Cond of
       expression_composition * expression_composition * expression_composition
   | Let of {
+      kind : dflag;
       vardef : string;
       varval : string;
       body : expression_composition;
@@ -514,7 +516,7 @@ let make_generic_let =
     let vardef, varval = fresh_name () in
     f vardef varval
 
-let make_let body followup =
+let make_let kind body followup =
   match body with
   | AtomicExpr e -> begin
       match followup e.def_test e.value_comp with
@@ -524,6 +526,7 @@ let make_let body followup =
           make_generic_let (fun vardef varval ->
               Let
                 {
+                  kind;
                   vardef;
                   varval;
                   body;
@@ -537,6 +540,7 @@ let make_let body followup =
       make_generic_let (fun vardef varval ->
           Let
             {
+              kind;
               vardef;
               varval;
               body;
@@ -544,11 +548,11 @@ let make_let body followup =
                 followup (DE.devar @@ Constr.Instr vardef) (Constr.Instr varval);
             })
 
-let make_lets (bodys : expression_composition list)
+let make_lets (kind : dflag) (bodys : expression_composition list)
     (followup : (DE.t * Constr.t) list -> expression_composition) =
   let rec loop acc = function
     | [] -> followup (List.rev acc)
-    | body :: tl -> make_let body (fun d v -> loop ((d, v) :: acc) tl)
+    | body :: tl -> make_let kind body (fun d v -> loop ((d, v) :: acc) tl)
   in
   loop [] bodys
 
@@ -686,8 +690,9 @@ let rec build_expression = function
   | AtomicExpr e -> `Atom (build_atomic_expression e)
   | Cond (c, t, e) ->
       `Cond (build_expression c, build_expression t, build_expression e)
-  | Let { vardef; varval; body; followup } ->
-      `Let (vardef, varval, build_expression body, build_expression followup)
+  | Let { kind; vardef; varval; body; followup } ->
+      `Let
+        (kind, vardef, varval, build_expression body, build_expression followup)
 
 let format_slot fmt ({ kind; depth } : stack_slot) =
   let kind =
@@ -893,8 +898,8 @@ let format_set_vars ~env fmt (set_vars : t set_var list) =
 
 let comparison op (se1 : expression_composition) (se2 : expression_composition)
     =
-  make_let se1 (fun d1 v1 ->
-      make_let se2 (fun d2 v2 ->
+  make_let Constr.Val se1 (fun d1 v1 ->
+      make_let Constr.Val se2 (fun d2 v2 ->
           let safe_def = false in
           let def_test = DE.deand [ d1; d2 ] in
           let value_comp =
@@ -915,8 +920,8 @@ let comparison op (se1 : expression_composition) (se2 : expression_composition)
                { set_vars = []; def_test; value_comp })))
 
 let binop op (se1 : expression_composition) (se2 : expression_composition) =
-  make_let se1 (fun d1 v1 ->
-      make_let se2 (fun d2 v2 ->
+  make_let Constr.Val se1 (fun d1 v1 ->
+      make_let Constr.Val se2 (fun d2 v2 ->
           let safe_def = true in
           let def_test =
             match Pos.unmark op with
@@ -944,7 +949,7 @@ let unop op se =
     | Com.Not -> ((fun e -> Constr.Not e), false)
     | Com.Minus -> ((fun e -> Minus e), true)
   in
-  make_let se (fun vardef varval ->
+  make_let Constr.Val se (fun vardef varval ->
       let value_comp = op varval in
       let def_test = vardef in
       AtomicExpr
@@ -955,7 +960,7 @@ let conditional cond thenval elseval = Cond (cond, thenval, elseval)
 
 module Func = struct
   let supzero se =
-    make_let se (fun vardef varval ->
+    make_let Constr.Val se (fun vardef varval ->
         let def_test : DE.t =
           DE.(deand [ vardef; devar (Comp (">", varval, Lit 0.0)) ])
         in
@@ -966,7 +971,7 @@ module Func = struct
   (* TODO: this code calculates the value of the expression before checking its
      definition. There may be a way to only calculate the definition. *)
   let present se =
-    make_let se (fun vardef _varval ->
+    make_let Constr.Val se (fun vardef _varval ->
         let def_test = DE.detrue in
         let value_comp = def_expr_to_constr vardef in
         atomic
@@ -974,7 +979,7 @@ module Func = struct
              { set_vars = []; def_test; value_comp })
 
   let null se =
-    make_let se (fun vardef varval ->
+    make_let Constr.Val se (fun vardef varval ->
         (* S: Checking if expr is defined in expression is probably useless *)
         let value_comp =
           Constr.And (def_expr_to_constr vardef, Comp ("==", varval, Lit 0.0))
@@ -984,7 +989,7 @@ module Func = struct
              { set_vars = []; def_test = vardef; value_comp })
 
   let arr se =
-    make_let se (fun vardef varval ->
+    make_let Constr.Val se (fun vardef varval ->
         let value_comp = Constr.Fun ("my_arr", [ varval ]) in
         (* Here we boldly assume that rounding value of `undef` will give zero,
            given the invariant. Pretty sure that not true, in case of doubt, turn
@@ -994,7 +999,7 @@ module Func = struct
              { set_vars = []; def_test = vardef; value_comp })
 
   let inf se =
-    make_let se (fun vardef varval ->
+    make_let Constr.Val se (fun vardef varval ->
         let value_comp = Constr.Fun ("my_floor", [ varval ]) in
         (* same as above *)
         atomic
@@ -1002,15 +1007,15 @@ module Func = struct
              { set_vars = []; def_test = vardef; value_comp })
 
   let abs se =
-    make_let se (fun vardef varval ->
+    make_let Constr.Val se (fun vardef varval ->
         let value_comp = Constr.Fun ("fabs", [ varval ]) in
         atomic
         @@ build_transitive_composition ~safe_def:true
              { set_vars = []; def_test = vardef; value_comp })
 
   let max se1 se2 =
-    make_let se1 (fun d1 v1 ->
-        make_let se2 (fun d2 v2 ->
+    make_let Constr.Val se1 (fun d1 v1 ->
+        make_let Constr.Val se2 (fun d2 v2 ->
             let def_test = DE.deor [ d1; d2 ] in
             let value_comp = Constr.Fun ("max", [ v1; v2 ]) in
             atomic
@@ -1018,8 +1023,8 @@ module Func = struct
                  { set_vars = []; def_test; value_comp }))
 
   let min se1 se2 =
-    make_let se1 (fun d1 v1 ->
-        make_let se2 (fun d2 v2 ->
+    make_let Constr.Val se1 (fun d1 v1 ->
+        make_let Constr.Val se2 (fun d2 v2 ->
             let def_test = DE.deor [ d1; d2 ] in
             let value_comp = Constr.Fun ("min", [ v1; v2 ]) in
             atomic
@@ -1027,14 +1032,14 @@ module Func = struct
                  { set_vars = []; def_test; value_comp }))
 
   let gtez se =
-    make_let se (fun d1 v1 ->
+    make_let Constr.Val se (fun d1 v1 ->
         let value_comp = Constr.Comp (">=", v1, Lit 0.0) in
         atomic
         @@ build_transitive_composition ~safe_def:false
              { set_vars = []; def_test = d1; value_comp })
 
   let gtz se =
-    make_let se (fun d1 v1 ->
+    make_let Constr.Val se (fun d1 v1 ->
         let value_comp = Constr.Comp (">", v1, Lit 0.0) in
         atomic
         @@ build_transitive_composition ~safe_def:true
@@ -1047,7 +1052,7 @@ module Func = struct
           @@ build_transitive_composition ~safe_def:true
                { set_vars = []; def_test; value_comp }
       | hd :: tl ->
-          make_let hd (fun d v ->
+          make_let Constr.Val hd (fun d v ->
               let def_test = DE.deor [ def_test; d ]
               and value_comp = Constr.Plus (value_comp, v) in
               loop def_test value_comp tl)
@@ -1065,7 +1070,7 @@ module Func = struct
 
   let multimax (e : expression_composition) (m_sp_opt, v) =
     let ptr = VID.gen_info_ptr v in
-    make_let e (fun vardef varval ->
+    make_let Constr.Val e (fun vardef varval ->
         let d_fun =
           dfun_with_ptr "multimax_varinfo" (fun ~ptrdef ~ptrval ->
               [
@@ -1121,32 +1126,28 @@ module Func = struct
       @@ dfun_with_ptr fn (fun ~ptrdef ~ptrval ->
           Constr.irdata :: ptrdef :: ptrval :: args)
     in
-    make_lets args (fun l ->
+    make_lets Constr.Val args (fun l ->
         let args =
           List.flatten @@ List.map (fun (d, v) -> [ def_expr_to_constr d; v ]) l
         in
         d_fun args)
 end
 
-let write_atomic_decoupled_expr ~(env : Env.t) oc res_def res_val
-    (* (locals, set, def, value) = *)
-      build_ret =
+let write_atomic_decoupled_expr ~(env : Env.t) oc res_def res_val build_ret =
   let pr form = Format.fprintf oc form in
-  if is_always_true build_ret.def_test then
-    pr "@;@[<v 2>{%a%a%a%a@]@;}" format_local_declarations build_ret.local_decls
-      (format_set_vars ~env) build_ret.set_vars
-      (format_assign ~env res_def)
-      build_ret.def_test
-      (format_assign ~env res_val)
-      build_ret.value_comp
-  else
-    pr "@;@[<v 2>{%a%a%a@;@[<v 2>if (%s) {%a@]@;} else %s = 0.0;@]@;}"
-      format_local_declarations build_ret.local_decls (format_set_vars ~env)
-      build_ret.set_vars
-      (format_assign ~env res_def)
-      build_ret.def_test res_def
-      (format_assign ~env res_val)
-      build_ret.value_comp res_val
+  let assign var value = format_assign ~env var oc value in
+  pr "@;@[<v 2>{";
+  format_local_declarations oc build_ret.local_decls;
+  format_set_vars ~env oc build_ret.set_vars;
+  assign res_def build_ret.def_test;
+  if is_always_true build_ret.def_test then assign res_val build_ret.value_comp
+  else begin
+    (* the value is only meaningful when the definition flag holds *)
+    pr "@;@[<v 2>if (%s) {" res_def;
+    assign res_val build_ret.value_comp;
+    pr "@]@;} else %s = 0.0;" res_val
+  end;
+  pr "@]@;}"
 
 let fresh_cond_vars =
   let cpt = ref 0 in
@@ -1158,6 +1159,13 @@ let fresh_cond_vars =
 
 let rec write_decoupled_expr ~(env : Env.t) oc =
   let pr form = Format.fprintf oc form in
+  let kind k =
+    match k with
+    | Def -> "char"
+    | Val -> "double"
+    | VarInfo -> "T_varinfo*"
+    | VarSpace -> "int"
+  in
   fun res_def res_val -> function
     | `Atom a -> write_atomic_decoupled_expr ~env oc res_def res_val a
     | `Cond (c, t, e) ->
@@ -1176,10 +1184,10 @@ let rec write_decoupled_expr ~(env : Env.t) oc =
         write_decoupled_expr ~env oc res_def res_val e;
         pr "@;}@]";
         pr "@;}@]"
-    | `Let (vardef, varval, body, followup) ->
+    | `Let (varkind, vardef, varval, body, followup) ->
         pr "@;{@[<v 2>";
         pr "@;int %s;" vardef;
-        pr "@;double %s;" varval;
+        pr "@;%s %s;" (kind varkind) varval;
         write_decoupled_expr ~env oc vardef varval body;
         write_decoupled_expr ~env oc res_def res_val followup;
         pr "@;}@]"

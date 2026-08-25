@@ -86,6 +86,7 @@ type expression_composition
 val atomic : atomic_expression_composition -> expression_composition
 
 val make_let :
+  Constr.dflag ->
   expression_composition ->
   (DE.t -> Constr.t -> expression_composition) ->
   expression_composition
