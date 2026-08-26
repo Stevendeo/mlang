@@ -1156,6 +1156,14 @@ end
 let write_atomic_decoupled_expr ~(env : Env.t) oc res_def res_val build_ret =
   let pr form = Format.fprintf oc form in
   let assign var value = format_assign ~env var oc value in
+  let undefined_value =
+    match build_ret.value_comp.kind with
+    | Val -> "0.0"
+    | VarInfo -> "NULL"
+    | Def -> "0"
+    | VarSpace -> "0"
+  in
+
   pr "@;@[<v 2>{";
   format_local_declarations oc build_ret.local_decls;
   format_set_vars ~env oc build_ret.set_vars;
@@ -1165,7 +1173,7 @@ let write_atomic_decoupled_expr ~(env : Env.t) oc res_def res_val build_ret =
     (* the value is only meaningful when the definition flag holds *)
     pr "@;@[<v 2>if (%s) {" res_def;
     assign res_val build_ret.value_comp;
-    pr "@]@;} else %s = 0.0;" res_val
+    pr "@]@;} else %s = %s;" res_val undefined_value
   end;
   pr "@]@;}"
 
