@@ -47,6 +47,7 @@ type t =
   | Varspace_of of Com.var_space * Dgfip_varid.varinfo
   | Typ of Com.value_typ
   | Instr of string
+  | Named of string * dflag
   | Direct of t
   | Ite of t * t * t
   | It0 of t * t

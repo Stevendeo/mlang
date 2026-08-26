@@ -82,7 +82,10 @@ and varinfo_access =
   | VItab of Com.Var.t * expr * expr (* variable, var_def, var_val *)
   | VIfield of expr * expr * string (* var_def, var_val, field *)
 
-and expr_var = Local of stack_slot | M of Com.var_space * Com.Var.t * dflag
+and expr_var =
+  | Local of stack_slot
+  | M of Com.var_space * Com.Var.t * dflag
+  | Named of string * dflag
 
 and t = { expr : expr; kind : dflag; spills : local_vars }
 
@@ -150,6 +153,7 @@ let rec expr_position (expr : expr) (st : local_stacks) =
       if is_in_stack_scope slot st then Not_to_stack
       else if is_on_top slot st then On_top slot.kind
       else Must_be_pushed
+  | Dvar (Named _) -> Not_to_stack
   | Dbinop ("/", e1, e2) -> begin
       (* avoid storage of division by zero. It assumes all division are
          guarded *)
@@ -401,6 +405,8 @@ let typ t _ _ = mk_t (Dtyp t) Def []
 
 let instr kind i _ _ = mk_t (Dinstr i) kind []
 
+let named s kind _ _ = mk_t (Dvar (Named (s, kind))) kind []
+
 let direct c stacks ctx =
   let t = c stacks ctx in
   mk_t (Ddirect t.expr) t.kind t.spills
@@ -453,6 +459,7 @@ let rec make_constr : Constr.t -> builder = function
   | False -> false_
   | Lit f -> lit f
   | M (vs, v, d) -> m_var vs v d
+  | Named (id, kind) -> named id kind
   | Local lv -> local_var lv
   | And (e1, e2) -> and_ (make_constr e1) (make_constr e2)
   | Or (e1, e2) -> or_ (make_constr e1) (make_constr e2)
@@ -712,6 +719,7 @@ let format_slot fmt ({ kind; depth } : stack_slot) =
 let format_expr_var ~(env : Types.env) fmt (ev : expr_var) =
   match ev with
   | Local slot -> format_slot fmt slot
+  | Named (s, _) -> Format.fprintf fmt "%s" s
   | M (m_sp_opt, var, df) ->
       let def_flag = df = Def in
       Format.fprintf fmt "%s"
@@ -720,6 +728,7 @@ let format_expr_var ~(env : Types.env) fmt (ev : expr_var) =
 
 let has_name ~name = function
   | Local slot -> name = Format.asprintf "%a" format_slot slot
+  | Named (s, _) -> name = s
   | M (m_sp_opt, var, df) ->
       let v', _ =
         match df with

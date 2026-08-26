@@ -48,6 +48,7 @@ type t =
   | Varspace_of of Com.var_space * Dgfip_varid.varinfo
   | Typ of Com.value_typ
   | Instr of string
+  | Named of string * dflag
   | Direct of t
   | Ite of t * t * t
   | It0 of t * t
@@ -102,6 +103,7 @@ module Print = struct
         Pp.fpr ppf "@[<hv 2>Varspace_of(%a,@ %a)@]" var_space space varinfo var
     | Typ typ -> Pp.fpr ppf "Typ(%a)" Com.Pretty.format_value_typ typ
     | Instr text -> Pp.fpr ppf "Instr(%S)" text
+    | Named (name, kind) -> Pp.fpr ppf "Named(%s : %a)" name dflag kind
     | Direct expr -> node1 ppf "Direct" expr
     | Ite (cond, then_, else_) ->
         Pp.fpr ppf "@[<hv 2>Ite(%a,@ %a,@ %a)@]" t cond t then_ t else_
@@ -183,6 +185,7 @@ let rec compare (c1 : t) (c2 : t) : int =
   | It0 (c, t), It0 (c', t') -> compare c c' >< compare t t'
   | Let_local (lv, e1, e2), Let_local (lv', e1', e2') ->
       compare_local_var lv lv' >< compare e1 e1' >< compare e2 e2'
+  | Named (s, d), Named (s', d') -> String.compare s s' >< compare_dflag d d'
   | True, _ -> 1
   | _, True -> -1
   | False, _ -> 1
@@ -235,6 +238,8 @@ let rec compare (c1 : t) (c2 : t) : int =
   | _, Ite _ -> -1
   | It0 _, _ -> 1
   | _, It0 _ -> -1
+  | Named _, _ -> 1
+  | _, Named _ -> -1
 (* | Let_local _, _ -> 1 | _, Let_local _ -> -1  *)
 
 (** smart constructors *)
