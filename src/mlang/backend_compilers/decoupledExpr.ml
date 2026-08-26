@@ -539,8 +539,8 @@ let make_let kind body followup =
                   body;
                   followup =
                     followup
-                      (DE.devar @@ Constr.Instr vardef)
-                      (Constr.Instr varval);
+                      (DE.devar @@ Constr.Named (vardef, Def))
+                      (Constr.Named (varval, kind));
                 })
     end
   | _ ->
@@ -552,7 +552,9 @@ let make_let kind body followup =
               varval;
               body;
               followup =
-                followup (DE.devar @@ Constr.Instr vardef) (Constr.Instr varval);
+                followup
+                  (DE.devar @@ Constr.Named (vardef, Def))
+                  (Constr.Named (varval, kind));
             })
 
 let make_lets (kind : dflag) (bodys : expression_composition list)
