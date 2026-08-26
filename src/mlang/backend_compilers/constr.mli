@@ -58,6 +58,19 @@ val irdata : t
 
 val compare : t -> t -> int
 
+(** {2 Debugging} *)
+
+(** Printers *)
+module Print : sig
+  val dflag : Pp.t -> dflag -> unit
+
+  val local_var : Pp.t -> local_var -> unit
+
+  val t : Pp.t -> t -> unit
+
+  val to_string : t -> string
+end
+
 (** {2 Local variables} *)
 
 val anon : local_var
