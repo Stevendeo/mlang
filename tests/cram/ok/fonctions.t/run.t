@@ -914,20 +914,15 @@
       int print91;
       print_string(stdout, &(irdata->ctx_pr_out), "champ_evenement(0, numero) = ");
       {
-        int int0;
-        double real0;
         int space0;
         char res92_def;
         double res92_val;
         space0 = (irdata->var_space);
         res92_def =
           event_field_numero(irdata, space0, &res92_def, &res92_val, 1, 0.0);
-        res92_val = res92_val;
         print91_def = res92_def;
         if (print91_def) {
-          int0 = (NEQ_E(res92_def,0.0));
-          real0 = res92_val;
-          print91_val = (int0 ? real0 : 0.0);
+          print91_val = res92_val;
         } else print91_val = 0.0;
       }
       if (print91_def) {
@@ -943,20 +938,15 @@
       int print93;
       print_string(stdout, &(irdata->ctx_pr_out), "champ_evenement(0, code) = ");
       {
-        int int0;
-        double real0;
         int space0;
         char res94_def;
         double res94_val;
         space0 = (irdata->var_space);
         res94_def =
           event_field_code(irdata, space0, &res94_def, &res94_val, 1, 0.0);
-        res94_val = res94_val;
         print93_def = res94_def;
         if (print93_def) {
-          int0 = (NEQ_E(res94_def,0.0));
-          real0 = res94_val;
-          print93_val = (int0 ? real0 : 0.0);
+          print93_val = res94_val;
         } else print93_val = 0.0;
       }
       if (print93_def) {
@@ -1201,8 +1191,6 @@
       int print111;
       print_string(stdout, &(irdata->ctx_pr_out), "meme_variable(X,X) = ");
       {
-        int int0;
-        double real0;
         T_varinfo* varinfo0;
         T_varinfo* varinfo1;
         char res112_def;
@@ -1211,12 +1199,9 @@
         varinfo1 = I_(calculee,11/*X*/);
         res112_def =
           meme_variable(varinfo0, varinfo1, &res112_def, &res112_val);
-        res112_val = res112_val;
         print111_def = res112_def;
         if (print111_def) {
-          int0 = (NEQ_E(res112_def,0.0));
-          real0 = res112_val;
-          print111_val = (int0 ? real0 : 0.0);
+          print111_val = res112_val;
         } else print111_val = 0.0;
       }
       if (print111_def) {
@@ -1232,8 +1217,6 @@
       int print113;
       print_string(stdout, &(irdata->ctx_pr_out), "meme_variable(X,TAB) = ");
       {
-        int int0;
-        double real0;
         T_varinfo* varinfo0;
         T_varinfo* varinfo1;
         char res114_def;
@@ -1242,12 +1225,9 @@
         varinfo1 = I_(calculee,0/*TAB*/);
         res114_def =
           meme_variable(varinfo0, varinfo1, &res114_def, &res114_val);
-        res114_val = res114_val;
         print113_def = res114_def;
         if (print113_def) {
-          int0 = (NEQ_E(res114_def,0.0));
-          real0 = res114_val;
-          print113_val = (int0 ? real0 : 0.0);
+          print113_val = res114_val;
         } else print113_val = 0.0;
       }
       if (print113_def) {
@@ -1263,8 +1243,6 @@
       int print115;
       print_string(stdout, &(irdata->ctx_pr_out), "meme_variable(TAB[0],TAB) = ");
       {
-        int int0;
-        double real0;
         T_varinfo* varinfo0;
         T_varinfo* varinfo1;
         char res116_def;
@@ -1273,12 +1251,9 @@
         varinfo1 = I_(calculee,0/*TAB*/);
         res116_def =
           meme_variable(varinfo0, varinfo1, &res116_def, &res116_val);
-        res116_val = res116_val;
         print115_def = res116_def;
         if (print115_def) {
-          int0 = (NEQ_E(res116_def,0.0));
-          real0 = res116_val;
-          print115_val = (int0 ? real0 : 0.0);
+          print115_val = res116_val;
         } else print115_val = 0.0;
       }
       if (print115_def) {
@@ -1501,19 +1476,14 @@
       int print132;
       print_string(stdout, &(irdata->ctx_pr_out), "multimax(indefini, TAB) = ");
       {
-        int int0;
-        double real0;
         char res133_def;
         double res133_val;
         res133_def =
           multimax_varinfo(irdata, (irdata->var_space), I_(calculee,0/*TAB*/),
             0, 0.0, &res133_def, &res133_val);
-        res133_val = res133_val;
         print132_def = res133_def;
         if (print132_def) {
-          int0 = (NEQ_E(res133_def,0.0));
-          real0 = res133_val;
-          print132_val = (int0 ? real0 : 0.0);
+          print132_val = res133_val;
         } else print132_val = 0.0;
       }
       if (print132_def) {
@@ -1529,19 +1499,14 @@
       int print134;
       print_string(stdout, &(irdata->ctx_pr_out), "multimax(7, TAB) = ");
       {
-        int int0;
-        double real0;
         char res135_def;
         double res135_val;
         res135_def =
           multimax_varinfo(irdata, (irdata->var_space), I_(calculee,0/*TAB*/),
             1, 7.0, &res135_def, &res135_val);
-        res135_val = res135_val;
         print134_def = res135_def;
         if (print134_def) {
-          int0 = (NEQ_E(res135_def,0.0));
-          real0 = res135_val;
-          print134_val = (int0 ? real0 : 0.0);
+          print134_val = res135_val;
         } else print134_val = 0.0;
       }
       if (print134_def) {
@@ -1557,19 +1522,14 @@
       int print136;
       print_string(stdout, &(irdata->ctx_pr_out), "multimax(taille(TAB) + 1, TAB) = ");
       {
-        int int0;
-        double real0;
         char res137_def;
         double res137_val;
         res137_def =
           multimax_varinfo(irdata, (irdata->var_space), I_(calculee,0/*TAB*/),
             1, 11.0, &res137_def, &res137_val);
-        res137_val = res137_val;
         print136_def = res137_def;
         if (print136_def) {
-          int0 = (NEQ_E(res137_def,0.0));
-          real0 = res137_val;
-          print136_val = (int0 ? real0 : 0.0);
+          print136_val = res137_val;
         } else print136_val = 0.0;
       }
       if (print136_def) {
@@ -1585,19 +1545,14 @@
       int print138;
       print_string(stdout, &(irdata->ctx_pr_out), "multimax(0, TAB) = ");
       {
-        int int0;
-        double real0;
         char res139_def;
         double res139_val;
         res139_def =
           multimax_varinfo(irdata, (irdata->var_space), I_(calculee,0/*TAB*/),
             1, 0.0, &res139_def, &res139_val);
-        res139_val = res139_val;
         print138_def = res139_def;
         if (print138_def) {
-          int0 = (NEQ_E(res139_def,0.0));
-          real0 = res139_val;
-          print138_val = (int0 ? real0 : 0.0);
+          print138_val = res139_val;
         } else print138_val = 0.0;
       }
       if (print138_def) {
@@ -1613,19 +1568,14 @@
       int print140;
       print_string(stdout, &(irdata->ctx_pr_out), "multimax(-1, TAB) = ");
       {
-        int int0;
-        double real0;
         char res141_def;
         double res141_val;
         res141_def =
           multimax_varinfo(irdata, (irdata->var_space), I_(calculee,0/*TAB*/),
             1, -1.0, &res141_def, &res141_val);
-        res141_val = res141_val;
         print140_def = res141_def;
         if (print140_def) {
-          int0 = (NEQ_E(res141_def,0.0));
-          real0 = res141_val;
-          print140_val = (int0 ? real0 : 0.0);
+          print140_val = res141_val;
         } else print140_val = 0.0;
       }
       if (print140_def) {
@@ -1863,7 +1813,7 @@
         print164_def = 0;
         if (print164_def) {
           print164_val = 0;
-        } else print164_val = 0.0;
+        } else print164_val = 0;
       }
       if (print164_def) {
         print_double(stdout, &(irdata->ctx_pr_out), print164_val, 0, 20);
@@ -1951,7 +1901,7 @@
         print170_def = 0;
         if (print170_def) {
           print170_val = 0;
-        } else print170_val = 0.0;
+        } else print170_val = 0;
       }
       if (print170_def) {
         print_double(stdout, &(irdata->ctx_pr_out), print170_val, 0, 20);
@@ -2060,7 +2010,7 @@
         print178_def = 0;
         if (print178_def) {
           print178_val = 0;
-        } else print178_val = 0.0;
+        } else print178_val = 0;
       }
       if (print178_def) {
         print_double(stdout, &(irdata->ctx_pr_out), print178_val, 0, 20);
@@ -2529,19 +2479,14 @@
       int print210;
       print_string(stdout, &(irdata->ctx_pr_out), "type(X, REEL) = ");
       {
-        int int0;
-        double real0;
         T_varinfo* varinfo0;
         char res211_def;
         double res211_val;
         varinfo0 = I_(calculee,11/*X*/);
         res211_def = est_type(varinfo0, TYPE_REEL, &res211_def, &res211_val);
-        res211_val = res211_val;
         print210_def = res211_def;
         if (print210_def) {
-          int0 = (NEQ_E(res211_def,0.0));
-          real0 = res211_val;
-          print210_val = (int0 ? real0 : 0.0);
+          print210_val = res211_val;
         } else print210_val = 0.0;
       }
       if (print210_def) {
@@ -2557,19 +2502,14 @@
       int print212;
       print_string(stdout, &(irdata->ctx_pr_out), "type(X, ENTIER) = ");
       {
-        int int0;
-        double real0;
         T_varinfo* varinfo0;
         char res213_def;
         double res213_val;
         varinfo0 = I_(calculee,11/*X*/);
         res213_def = est_type(varinfo0, TYPE_ENTIER, &res213_def, &res213_val);
-        res213_val = res213_val;
         print212_def = res213_def;
         if (print212_def) {
-          int0 = (NEQ_E(res213_def,0.0));
-          real0 = res213_val;
-          print212_val = (int0 ? real0 : 0.0);
+          print212_val = res213_val;
         } else print212_val = 0.0;
       }
       if (print212_def) {
@@ -2585,19 +2525,14 @@
       int print214;
       print_string(stdout, &(irdata->ctx_pr_out), "type(TAB, ENTIER) = ");
       {
-        int int0;
-        double real0;
         T_varinfo* varinfo0;
         char res215_def;
         double res215_val;
         varinfo0 = I_(calculee,0/*TAB*/);
         res215_def = est_type(varinfo0, TYPE_ENTIER, &res215_def, &res215_val);
-        res215_val = res215_val;
         print214_def = res215_def;
         if (print214_def) {
-          int0 = (NEQ_E(res215_def,0.0));
-          real0 = res215_val;
-          print214_val = (int0 ? real0 : 0.0);
+          print214_val = res215_val;
         } else print214_val = 0.0;
       }
       if (print214_def) {
@@ -2613,19 +2548,14 @@
       int print216;
       print_string(stdout, &(irdata->ctx_pr_out), "type(Y, ENTIER) = ");
       {
-        int int0;
-        double real0;
         T_varinfo* varinfo0;
         char res217_def;
         double res217_val;
         varinfo0 = I_(calculee,12/*Y*/);
         res217_def = est_type(varinfo0, TYPE_ENTIER, &res217_def, &res217_val);
-        res217_val = res217_val;
         print216_def = res217_def;
         if (print216_def) {
-          int0 = (NEQ_E(res217_def,0.0));
-          real0 = res217_val;
-          print216_val = (int0 ? real0 : 0.0);
+          print216_val = res217_val;
         } else print216_val = 0.0;
       }
       if (print216_def) {
@@ -2641,19 +2571,14 @@
       int print218;
       print_string(stdout, &(irdata->ctx_pr_out), "type(Y, REEL) = ");
       {
-        int int0;
-        double real0;
         T_varinfo* varinfo0;
         char res219_def;
         double res219_val;
         varinfo0 = I_(calculee,12/*Y*/);
         res219_def = est_type(varinfo0, TYPE_REEL, &res219_def, &res219_val);
-        res219_val = res219_val;
         print218_def = res219_def;
         if (print218_def) {
-          int0 = (NEQ_E(res219_def,0.0));
-          real0 = res219_val;
-          print218_val = (int0 ? real0 : 0.0);
+          print218_val = res219_val;
         } else print218_val = 0.0;
       }
       if (print218_def) {
@@ -2669,20 +2594,15 @@
       int print220;
       print_string(stdout, &(irdata->ctx_pr_out), "type(Y, BOOLEEN) = ");
       {
-        int int0;
-        double real0;
         T_varinfo* varinfo0;
         char res221_def;
         double res221_val;
         varinfo0 = I_(calculee,12/*Y*/);
         res221_def =
           est_type(varinfo0, TYPE_BOOLEEN, &res221_def, &res221_val);
-        res221_val = res221_val;
         print220_def = res221_def;
         if (print220_def) {
-          int0 = (NEQ_E(res221_def,0.0));
-          real0 = res221_val;
-          print220_val = (int0 ? real0 : 0.0);
+          print220_val = res221_val;
         } else print220_val = 0.0;
       }
       if (print220_def) {
@@ -2698,20 +2618,15 @@
       int print222;
       print_string(stdout, &(irdata->ctx_pr_out), "type(Y, DATE_AAAA) = ");
       {
-        int int0;
-        double real0;
         T_varinfo* varinfo0;
         char res223_def;
         double res223_val;
         varinfo0 = I_(calculee,12/*Y*/);
         res223_def =
           est_type(varinfo0, TYPE_DATE_AAAA, &res223_def, &res223_val);
-        res223_val = res223_val;
         print222_def = res223_def;
         if (print222_def) {
-          int0 = (NEQ_E(res223_def,0.0));
-          real0 = res223_val;
-          print222_val = (int0 ? real0 : 0.0);
+          print222_val = res223_val;
         } else print222_val = 0.0;
       }
       if (print222_def) {
@@ -2727,20 +2642,15 @@
       int print224;
       print_string(stdout, &(irdata->ctx_pr_out), "type(Y, DATE_JJMMAAAA) = ");
       {
-        int int0;
-        double real0;
         T_varinfo* varinfo0;
         char res225_def;
         double res225_val;
         varinfo0 = I_(calculee,12/*Y*/);
         res225_def =
           est_type(varinfo0, TYPE_DATE_JJMMAAAA, &res225_def, &res225_val);
-        res225_val = res225_val;
         print224_def = res225_def;
         if (print224_def) {
-          int0 = (NEQ_E(res225_def,0.0));
-          real0 = res225_val;
-          print224_val = (int0 ? real0 : 0.0);
+          print224_val = res225_val;
         } else print224_val = 0.0;
       }
       if (print224_def) {
@@ -2756,20 +2666,15 @@
       int print226;
       print_string(stdout, &(irdata->ctx_pr_out), "type(Y, DATE_MM) = ");
       {
-        int int0;
-        double real0;
         T_varinfo* varinfo0;
         char res227_def;
         double res227_val;
         varinfo0 = I_(calculee,12/*Y*/);
         res227_def =
           est_type(varinfo0, TYPE_DATE_MM, &res227_def, &res227_val);
-        res227_val = res227_val;
         print226_def = res227_def;
         if (print226_def) {
-          int0 = (NEQ_E(res227_def,0.0));
-          real0 = res227_val;
-          print226_val = (int0 ? real0 : 0.0);
+          print226_val = res227_val;
         } else print226_val = 0.0;
       }
       if (print226_def) {
