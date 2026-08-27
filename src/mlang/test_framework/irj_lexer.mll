@@ -94,6 +94,10 @@ rule token = parse
   { NAME s }
   (* Compared to the old lexer, adds _ and . removes space *)
 
+| '[' -> LEFT_BRACKET
+| ']' -> RIGHT_BRACKET
+| ';' -> SEMI_COLON
+
 | "/"
   { SLASH }
 

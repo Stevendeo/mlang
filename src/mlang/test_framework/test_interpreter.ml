@@ -21,21 +21,30 @@ let find_var_of_name_opt (p : Mir.program) (name : string) : Com.Var.t option =
   with Not_found -> (
     try Some (StrMap.find name p.program_alias) with Not_found -> None)
 
-type instance = {
+type 'value instance = {
   label : string;
-  vars : Com.literal Com.Var.Map.t;
+  vars : 'value Com.Var.Map.t;
   events : (Com.literal, Com.Var.t) Com.event_value StrMap.t list;
-  expectedVars : Com.literal StrMap.t;
+  expectedVars : 'value StrMap.t;
   expectedAnos : StrSet.t;
 }
+
+let pp_irj_lit fmt = function
+  | Irj_ast.I i -> Format.fprintf fmt "%i" i
+  | F f -> Format.fprintf fmt "%f" f
+  | U -> Format.fprintf fmt "indefini"
+  | Interv (f1, f2) -> Format.fprintf fmt "[%f;%f]" f1 f2
 
 let irj_lit_to_com_lit = function
   | Irj_ast.I i -> Com.Float (float i)
   | F f -> Com.Float f
   | U -> Com.Undefined
+  | Interv (f1, f2) ->
+      Format.ksprintf failwith "Cannot represent interval [%f; %f] as a value"
+        f1 f2
 
 let to_MIR_function_and_inputs (program : Mir.program) (t : Irj_ast.irj_file) :
-    instance list =
+    Irj_ast.literal instance list =
   let add_var name value map =
     match find_var_of_name_opt program name with
     | Some var -> Com.Var.Map.add var value map
@@ -44,19 +53,19 @@ let to_MIR_function_and_inputs (program : Mir.program) (t : Irj_ast.irj_file) :
   let vars =
     List.fold_left
       (fun in_f (Pos.Mark (var, _var_pos), Pos.Mark (value, _value_pos)) ->
-        add_var var (irj_lit_to_com_lit value) in_f)
+        add_var var value in_f)
       Com.Var.Map.empty t.prim.entrees
   in
   let vars =
     match find_var_of_name_opt program "V_ANCSDED" with
     | Some var when not (Com.Var.Map.mem var vars) ->
-        Com.Var.Map.add var (Com.Float (float (!Config.income_year + 1))) vars
+        Com.Var.Map.add var (Irj_ast.F (float (!Config.income_year + 1))) vars
     | _ -> vars
   in
   let vars =
     match find_var_of_name_opt program "V_MILLESIME" with
     | Some var when not (Com.Var.Map.mem var vars) ->
-        Com.Var.Map.add var (Com.Float (float !Config.income_year)) vars
+        Com.Var.Map.add var (Irj_ast.F (float !Config.income_year)) vars
     | _ -> vars
   in
   let vars =
@@ -66,8 +75,8 @@ let to_MIR_function_and_inputs (program : Mir.program) (t : Irj_ast.irj_file) :
         | Some var -> (
             match foo with
             | None -> vars
-            | Some None -> Com.Var.Map.add var Com.Undefined vars
-            | Some (Some f) -> Com.Var.Map.add var (Com.Float f) vars)
+            | Some None -> Com.Var.Map.add var Irj_ast.U vars
+            | Some (Some f) -> Com.Var.Map.add var (Irj_ast.F f) vars)
         | None -> vars)
       !Config.test_var_defs vars
   in
@@ -115,8 +124,7 @@ let to_MIR_function_and_inputs (program : Mir.program) (t : Irj_ast.irj_file) :
   in
   let expVars vars_init =
     let fold res (Pos.Mark (var, _), Pos.Mark (value, _)) =
-      let fVal = irj_lit_to_com_lit value in
-      StrMap.add var fVal res
+      StrMap.add var value res
     in
     List.fold_left fold StrMap.empty vars_init
   in
@@ -130,7 +138,7 @@ let to_MIR_function_and_inputs (program : Mir.program) (t : Irj_ast.irj_file) :
       let expectedAnos = expAnos t.prim.controles_attendus in
       [ { label = "primitif"; vars; events = []; expectedVars; expectedAnos } ]
   | Some rapp ->
-      let vars = add_var "MODE_CORR" (Com.Float 1.0) vars in
+      let vars = add_var "MODE_CORR" (Irj_ast.F 1.0) vars in
       let events = eventsList rapp.entrees_rappels in
       let expectedVars = expVars rapp.resultats_attendus in
       let expectedAnos = expAnos rapp.controles_attendus in
@@ -198,10 +206,10 @@ let check_vars (program : Mir.program) exp vars ign_vars : interp_error list =
   in
   StrMap.fold fold exp []
 
-let make_dbg_info inst aliases =
+let make_dbg_info (inst : Irj_ast.literal instance) aliases =
   let aliases = StrMap.map (fun v -> Com.Var.name_str v) aliases in
   let dbg_info = Dbg_info.make_empty ~aliases in
-  let add_input_var_to_info var lit dbg_info =
+  let add_input_var_to_info var (lit : Irj_ast.literal) dbg_info =
     let open Dbg_info in
     let name = Com.Var.name_str var in
     let pos = Com.Var.name var |> Pos.get in
@@ -215,7 +223,8 @@ let make_dbg_info inst aliases =
       | exception _ -> None
       | descr -> Some descr
     in
-    let runtime = Info.Runtime.make origin lit (Some name) in
+    let strlit = Format.asprintf "%a" pp_irj_lit lit in
+    let runtime = Info.Runtime.make origin strlit (Some name) in
     let runtimes = Tick.Map.add tick runtime dbg_info.runtimes in
     let static = Info.Static.make name ~origin true descr ~decl_origin:origin in
     let statics = IntMap.add runtime.hash static dbg_info.statics in
@@ -252,7 +261,7 @@ let check_test (program : Mir.program) (test_input : Irj_file.input)
   let t = Irj_file.parse_input test_input in
   Ppf.debug_print "Running test %s..." t.nom;
   let insts = to_MIR_function_and_inputs program t in
-  let rec check = function
+  let rec check : Irj_ast.literal instance list -> 'a list = function
     | [] -> []
     | inst :: insts ->
         Ppf.debug_print "Executing program %s" inst.label;
@@ -264,11 +273,14 @@ let check_test (program : Mir.program) (test_input : Irj_file.input)
           | true -> Some (make_dbg_info inst program.program_alias)
         in
         let varMap, anoSet, dbg_info =
-          M_interpreter.Eval.evaluate_program ?dbg_info program inst.vars
+          M_interpreter.Eval.evaluate_program ?dbg_info program
+            (Com.Var.Map.map irj_lit_to_com_lit inst.vars)
             inst.events value_sort round_ops
         in
         let interp_errors =
-          check_vars program inst.expectedVars varMap ign_vars
+          check_vars program
+            (StrMap.map irj_lit_to_com_lit inst.expectedVars)
+            varMap ign_vars
         in
         let target_dbg_info =
           match dbg_info with

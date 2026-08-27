@@ -21,7 +21,7 @@ module type S = sig
   (** [empty_ctx infos] inits a tracing context. infos might contain the input
       variables. *)
 
-  val register_temp : ctx -> Com.literal -> Com.Var.t -> unit
+  val register_temp : ctx -> string -> Com.Var.t -> unit
   (** [register_temp ctx lit var] registers a temporary variable [var] of value
       [lit] *)
 
@@ -93,7 +93,7 @@ module Tracer : S = struct
           | None ->
               let tick = Tick.tick () in
               let rule = Origin.Declared in
-              let value = Com.Undefined in
+              let value = "indefini" in
               let info = Info.make_from_var tick var rule value None false in
               let dbg_info = Dbg_info.register dbg_info info in
               (tick :: ticks, dbg_info)

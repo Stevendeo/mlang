@@ -42,6 +42,9 @@
 %token ENDSHARP
 /* Mark the end of a record */
 
+%token LEFT_BRACKET SEMI_COLON RIGHT_BRACKET
+/* Marks the begin, the separation and the end of an interval */
+
 %token NL
 /* New line */
 %token EOF
@@ -155,4 +158,5 @@ integer:
 value:
 | i = INTEGER { I (i) }
 | f = FLOAT   { F (f) }
+| LEFT_BRACKET f1 = FLOAT SEMI_COLON f2 = FLOAT RIGHT_BRACKET { Interv (f1, f2) }
 | UNDEFINED { U }

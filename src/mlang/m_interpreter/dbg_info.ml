@@ -68,7 +68,7 @@ module Info = struct
     name : string;
     pos : Pos.t;
     rule : Origin.code;
-    value : Com.literal;
+    value : string;
     descr : string option;
     is_input : bool;
     decl_origin : Origin.t;
@@ -87,7 +87,7 @@ module Info = struct
   (* We've removed idx_opt, it may be needed for tables. *)
 
   module Runtime = struct
-    type t = { hash : int; value : Com.literal; name : string option }
+    type t = { hash : int; value : string; name : string option }
 
     type hash_entry = { origin : Origin.t; name : string option }
 
@@ -237,8 +237,8 @@ let to_json (fmt : Format.formatter) info : unit =
       | None -> ""
       | Some name -> asprintf {|, "name" : %S|} name
     in
-    fprintf fmt {|%s@."%d": {"value": "%a", "hash": %d %s}|} !delim tick
-      Com.Pretty.format_literal value hash name;
+    fprintf fmt {|%s@."%d": {"value": %S, "hash": %d %s}|} !delim tick value
+      hash name;
     delim := ","
   in
   Tick.Map.iter print_runtime_info info.runtimes;

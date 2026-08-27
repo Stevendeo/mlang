@@ -88,7 +88,7 @@ module Info : sig
     name : string;
     pos : Utils.Pos.t;
     rule : Origin.code;
-    value : Com.literal;
+    value : string;
     descr : string option;
     is_input : bool;
     decl_origin : Origin.t;
@@ -101,7 +101,7 @@ module Info : sig
     string ->
     Utils.Pos.t ->
     Origin.code ->
-    Com.literal ->
+    string ->
     string option ->
     bool ->
     Pos.t ->
@@ -110,21 +110,15 @@ module Info : sig
       based on argument info. *)
 
   val make_from_var :
-    Tick.t ->
-    Com.Var.t ->
-    Origin.code ->
-    Com.literal ->
-    string option ->
-    bool ->
-    t
+    Tick.t -> Com.Var.t -> Origin.code -> string -> string option -> bool -> t
   (** [make_from_var tick var rule description is_input] *)
 
   module Runtime : sig
-    type t = { hash : int; value : Com.literal; name : string option }
+    type t = { hash : int; value : string; name : string option }
     (** Runtime info about variables, eg their value, and where to find their
         static info. *)
 
-    val make : Origin.t -> Com.literal -> string option -> t
+    val make : Origin.t -> string -> string option -> t
     (** [make origin value description] *)
   end
 

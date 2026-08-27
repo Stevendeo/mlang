@@ -12,37 +12,57 @@
  (libraries m_frontend m_ir m_interpreter utils menhirLib parmap str
    mlang.messages))
 
-;; This section deals with the .messages file.
-
-;; The following rule generates "parserMessages.ml" based on the source file
-;; "parserMessages.messages". It requires the completeness check to have been
-;; performed first. (If desired, this check could be disabled.)
+; Generates the Parser_messages module
 
 (rule
- (deps parserMessages.check)
+ (target parserMessages.ml)
+ (deps
+  (:parser irj_parser.mly)
+  (:msg parserMessages.messages))
  (action
   (with-stdout-to
-   parserMessages.ml
-   (run menhir %{dep:irj_parser.mly} --compile-errors
-     %{dep:parserMessages.messages}))))
+   %{target}
+   (run menhir %{parser} --base %{parser} --compile-errors %{msg}))))
 
-;; This rule generates a file "parserMessages.auto.messages" that contains a
-
-;; list of all error states. It is used by the completeness check.
+; Rules to check parser updates and properly merging the changes
 
 (rule
- (with-stdout-to
-  parserMessages.auto.messages
-  (run menhir %{dep:irj_parser.mly} --list-errors)))
-
-;; This rule implements the completeness check. It checks that every error
-;; state listed in the auto-generated file "parserMessages.auto.messages"
-;; is also listed in the file "parserMessages.messages" that is maintained
-;; by the programmer.
+ (target new.messages)
+ (deps
+  (:parser irj_parser.mly))
+ (action
+  (with-stdout-to
+   %{target}
+   (run menhir %{parser} --base %{parser} --list-errors))))
 
 (rule
- (with-stdout-to
-  parserMessages.check
-  (run menhir %{dep:irj_parser.mly} --compare-errors
-    %{dep:parserMessages.auto.messages} --compare-errors
-    %{dep:parserMessages.messages})))
+ (target updated.messages)
+ (deps
+  (:parser irj_parser.mly)
+  (:msg parserMessages.messages))
+ (action
+  (with-stdout-to
+   %{target}
+   (run menhir %{parser} --base %{parser} --update-errors %{msg}))))
+
+(rule
+ (target parserMessages.messages.updated)
+ (deps
+  (:parser irj_parser.mly)
+  (:new new.messages)
+  (:updated updated.messages))
+ (action
+  (with-stdout-to
+   %{target}
+   (run menhir %{parser} --base %{parser} --merge-errors %{new}
+     --merge-errors %{updated}))))
+
+; Tests the parserMessages.messages file when the parser changes.
+; To update the file, use dune runtest --auto-update
+
+(rule
+ (alias runtest)
+ (package mlang)
+ (deps parserMessages.messages parserMessages.messages.updated)
+ (action
+  (diff parserMessages.messages parserMessages.messages.updated)))

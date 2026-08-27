@@ -30,6 +30,7 @@ let format_value fmt (value : literal) =
   | I i -> Format.fprintf fmt "%d" i
   | F f -> Format.fprintf fmt "%f" f
   | U -> Format.fprintf fmt "indefini"
+  | Interv (f1, f2) -> Format.fprintf fmt "[%f;%f]" f1 f2
 
 let format_code_revenu fmt
     ((Pos.Mark (var, _), Pos.Mark (value, _)) : var_value) =

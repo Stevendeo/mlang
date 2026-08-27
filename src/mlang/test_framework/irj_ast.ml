@@ -15,7 +15,7 @@
 
 let mk_position sloc : Pos.t = Pos.make (fst sloc).Lexing.pos_fname sloc
 
-type literal = I of int | F of float | U
+type literal = I of int | F of float | U | Interv of float * float
 
 type var_value = string Pos.marked * literal Pos.marked
 
