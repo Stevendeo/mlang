@@ -21,6 +21,8 @@ type dflag =
   | Val  (** For arithmetical expressions, used for actual calculations *)
   | VarInfo  (** For variable data *)
   | VarSpace  (** For var spaces *)
+  | Irdata
+  | Ptr of dflag
 
 (** Constuctors used for building C instructions. *)
 type t =

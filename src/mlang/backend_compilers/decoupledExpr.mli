@@ -26,7 +26,7 @@ val generate_variable :
   Com.Var.t ->
   string
 
-type dflag = Def | Val | VarInfo | VarSpace
+type dflag = Def | Val | VarInfo | VarSpace | Irdata | Ptr of dflag
 
 (** {1 Low-level M computation} *)
 

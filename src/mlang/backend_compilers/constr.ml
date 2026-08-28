@@ -15,7 +15,7 @@
 
 module VID = Dgfip_varid
 
-type dflag = Def | Val | VarInfo | VarSpace
+type dflag = Def | Val | VarInfo | VarSpace | Irdata | Ptr of dflag
 
 type local_var =
   | Anon (* inlined sub-expression, not intended for reuse *)
@@ -55,11 +55,13 @@ type t =
   | Let_local of local_var * t * t
 
 module Print = struct
-  let dflag ppf = function
+  let rec dflag ppf = function
     | Def -> Pp.string ppf "def"
     | Val -> Pp.string ppf "val"
     | VarInfo -> Pp.string ppf "varinfo"
     | VarSpace -> Pp.string ppf "varspace"
+    | Irdata -> Pp.string ppf "irdata"
+    | Ptr flag -> Pp.fpr ppf "*%a" dflag flag
 
   let local_var ppf = function
     | Anon -> Pp.string ppf "_anon_"
@@ -120,9 +122,15 @@ module Print = struct
   let to_string expr = Pp.spr "%a" t expr
 end
 
-let irdata = Direct (Instr "irdata")
+let irdata = Named ("irdata", Irdata)
 
-let dflag_id = function Def -> 0 | Val -> 1 | VarInfo -> 2 | VarSpace -> 3
+let rec dflag_id = function
+  | Def -> 0
+  | Val -> 1
+  | VarInfo -> 2
+  | VarSpace -> 3
+  | Irdata -> 4
+  | Ptr flag -> 5 + dflag_id flag
 
 let typ_id = function
   | Com.Boolean -> 0

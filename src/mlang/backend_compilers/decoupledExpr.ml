@@ -41,7 +41,13 @@ let generate_variable ?(def_flag = false) ?(trace_flag = false) ~env
       (Format.asprintf "Variable %s not found in TGV"
          (Pos.unmark var.Com.Var.name))
 
-type dflag = Constr.dflag = Def | Val | VarInfo | VarSpace
+type dflag = Constr.dflag =
+  | Def
+  | Val
+  | VarInfo
+  | VarSpace
+  | Irdata
+  | Ptr of dflag
 
 type local_var = Constr.local_var
 
@@ -103,6 +109,7 @@ let pp_local_var fmt = function
 
 let is_always_true t = t.expr = Dtrue
 
+(** local stacks operations *)
 let cast (kind : dflag) (expr : expr) =
   match (expr, kind) with
   | Dtrue, Val -> Dlit 1.
@@ -116,9 +123,9 @@ let cast (kind : dflag) (expr : expr) =
   | _, VarInfo -> failwith "Invalid cast to varinfo"
   | Dvarspace _, _ -> failwith "Invalid cast of varspace"
   | _, VarSpace -> failwith "Invalid cast to varspace"
+  | _, Irdata -> failwith "Invalid cast to irdata"
+  | _, Ptr _ -> failwith "Invalid cast to ptr"
   | _, Val -> expr
-
-(** local stacks operations *)
 
 let bump_stack (kind : dflag) (st : local_stacks) =
   match kind with
@@ -126,6 +133,7 @@ let bump_stack (kind : dflag) (st : local_stacks) =
   | Val -> { st with val_top = st.val_top + 1 }
   | VarInfo -> { st with var_top = st.var_top + 1 }
   | VarSpace -> { st with spa_top = st.spa_top + 1 }
+  | _ -> st
 
 let add_substitution (st : local_stacks) (v : local_var) (kind : dflag)
     (expr : expr) =
@@ -139,6 +147,8 @@ let stack_top (kind : dflag) (st : local_stacks) =
   | Val -> st.val_top
   | VarInfo -> st.var_top
   | VarSpace -> st.spa_top
+  | Irdata | Ptr _ ->
+      Errors.raise_error "Shouldn't count pointers for the stack."
 
 let is_in_stack_scope ({ kind; depth } : stack_slot) (st : local_stacks) =
   depth < stack_top kind st
@@ -438,8 +448,10 @@ let it0 (c : builder) (t : builder) (stacks : local_stacks) (ctx : local_vars) =
     match tkind with
     | Def -> Dfalse
     | Val -> Dlit 0.
-    | VarInfo -> failwith "Cannot make an IT with a VarInfo"
-    | VarSpace -> failwith "Cannot make an IT with a VarSpace"
+    | VarInfo -> failwith "Cannot make an if-then with a VarInfo"
+    | VarSpace -> failwith "Cannot make an if-then with a VarSpace"
+    | Irdata -> failwith "Cannot make an if-then with Irdata"
+    | Ptr _ -> failwith "Cannot make an if-then with a pointer"
   in
   match (c, t) with
   | Dtrue, _ -> mk_t t tkind lvt
@@ -614,17 +626,14 @@ let dfun_with_ptr (f : string)
   let res_val = Pp.spr "%s_val" res in
   let res_def_ptr = Pp.spr "&%s" res_def in
   let res_val_ptr = Pp.spr "&%s" res_val in
-  let d_fun =
-    Constr.Fun
-      ( f,
-        args ~ptrdef:(Direct (Instr res_def_ptr))
-          ~ptrval:(Direct (Instr res_val_ptr)) )
-  in
+  let ptrdef = Constr.Named (res_def_ptr, Ptr Def) in
+  let ptrval = Constr.Named (res_val_ptr, Ptr Val) in
+  let d_fun = Constr.Fun (f, args ~ptrdef ~ptrval) in
   let set_vars =
     [ mk_set_var Def res_def (Some d_fun); mk_set_var Val res_val None ]
   in
-  let def_test = DE.devar @@ Instr res_def in
-  let value_comp = Constr.Instr res_val in
+  let def_test = DE.devar @@ Named (res_def, Def) in
+  let value_comp = Constr.Named (res_val, Val) in
   build_transitive_composition ~safe_def:true { set_vars; def_test; value_comp }
 
 let eundefined () =
@@ -694,7 +703,8 @@ let build_atomic_expression (expr_comp : atomic_expression_composition) :
         | Def -> { ld with def_stk_size = max slot.depth ld.def_stk_size }
         | Val -> { ld with val_stk_size = max slot.depth ld.val_stk_size }
         | VarInfo -> { ld with var_stk_size = max slot.depth ld.var_stk_size }
-        | VarSpace -> { ld with var_spa_size = max slot.depth ld.var_spa_size })
+        | VarSpace -> { ld with var_spa_size = max slot.depth ld.var_spa_size }
+        | _ -> ld)
       empty_local_decls
       (set_locals @ def_test.spills @ value_comp.spills)
   in
@@ -715,6 +725,7 @@ let format_slot fmt ({ kind; depth } : stack_slot) =
     | Val -> "real"
     | VarInfo -> "varinfo"
     | VarSpace -> "space"
+    | _ -> Errors.raise_error "Can't format a slot for Irdata or pointer"
   in
   Format.fprintf fmt "%s%d" kind depth
 
@@ -897,22 +908,19 @@ let format_assign ~env (var : string) fmt t =
     (format_dexpr_assign ~env var)
     t.expr
 
+let rec format_kind kind =
+  match kind with
+  | Def -> "char"
+  | Val -> "double"
+  | VarInfo -> "T_varinfo*"
+  | Irdata -> "T_irdata*"
+  | Ptr k -> Format.asprintf "%s*" (format_kind k)
+  | VarSpace -> "int"
+
 let format_set_vars ~env fmt (set_vars : t option set_var list) =
-  List.iter
-    (fun t ->
-      Pp.fpr fmt "@;%s %s;"
-        (match t.kind with
-        | Def -> "char"
-        | Val -> "double"
-        | VarInfo -> "T_varinfo*"
-        | VarSpace -> "int")
-        t.id)
-    set_vars;
+  List.iter (fun t -> Pp.fpr fmt "@;%s %s;" (format_kind t.kind) t.id) set_vars;
   (* We do not assign values without expr *)
-  List.iter
-    (fun t ->
-  Option.iter (format_assign ~env t.id fmt) t.expr)
-    set_vars
+  List.iter (fun t -> Option.iter (format_assign ~env t.id fmt) t.expr) set_vars
 
 (* Building basic expressions *)
 
@@ -1162,8 +1170,10 @@ let write_atomic_decoupled_expr ~(env : Env.t) oc res_def res_val build_ret =
     | VarInfo -> "NULL"
     | Def -> "0"
     | VarSpace -> "0"
+    | Ptr _ -> "NULL"
+    | Irdata ->
+        Errors.raise_error "Trying to set irdata to null as default value."
   in
-
   pr "@;@[<v 2>{";
   format_local_declarations oc build_ret.local_decls;
   format_set_vars ~env oc build_ret.set_vars;
@@ -1187,13 +1197,6 @@ let fresh_cond_vars =
 
 let rec write_decoupled_expr ~(env : Env.t) oc =
   let pr form = Format.fprintf oc form in
-  let kind k =
-    match k with
-    | Def -> "char"
-    | Val -> "double"
-    | VarInfo -> "T_varinfo*"
-    | VarSpace -> "int"
-  in
   fun res_def res_val -> function
     | `Atom a -> write_atomic_decoupled_expr ~env oc res_def res_val a
     | `Cond (c, t, e) ->
@@ -1215,7 +1218,7 @@ let rec write_decoupled_expr ~(env : Env.t) oc =
     | `Let (varkind, vardef, varval, body, followup) ->
         pr "@;{@[<v 2>";
         pr "@;int %s;" vardef;
-        pr "@;%s %s;" (kind varkind) varval;
+        pr "@;%s %s;" (format_kind varkind) varval;
         write_decoupled_expr ~env oc vardef varval body;
         write_decoupled_expr ~env oc res_def res_val followup;
         pr "@;}@]"
