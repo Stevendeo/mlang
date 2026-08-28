@@ -15,7 +15,6 @@
 
 open Backend_compilers
 open Irj_utils
-open M_ir
 open M_frontend
 
 exception Exit
