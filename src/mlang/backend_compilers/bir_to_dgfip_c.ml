@@ -225,6 +225,7 @@ and in_domain (p : Mir.program) acc cvm =
             (D.atomic @@ D.elit 0.0)
             ids)
 
+(* TODO: find a way to return expression type to be use in make_let *)
 and generate_c_expr (p : Mir.program) (e : Mir.expression Pos.marked) :
     D.expression_composition =
   match Pos.unmark e with
