@@ -304,3 +304,44 @@
   IACT009 | 1/1 fichier correct
   IACT010 | 0/1 fichiers incorrects
   IACT011 | 0/1 fichiers invalides
+  $ rm output/m_domain_evt.c m_domain_evt.o
+
+
+  $ mlang multimax.m --mpp_function test --income-year=2020 --dgfip_options="-m2020,-X" --backend dgfip_c --output output/enchain.c -A app > /dev/null
+  $ cat output/m_multimax.c
+  #include "mlang.h" 
+  struct S_discord * test(T_irdata* irdata) {
+    int sav35_nb_tmps_target = irdata->nb_tmps_target;
+    int sav35_nb_refs_target = irdata->nb_refs_target;
+    char *def_calculee = irdata->def_calculee;
+    double *calculee = irdata->calculee;
+  
+    irdata->nb_tmps_target = 0;
+    irdata->nb_refs_target = 0;
+    {
+      char res36_def;
+      double res36_val;
+      res36_def =
+        multimax_varinfo(irdata, (irdata->var_space), I_(calculee,0/*TAB*/), 1,
+          2.0, &res36_def, &res36_val);
+      def_calculee[4/*Z*/] = res36_def;
+      if (def_calculee[4/*Z*/]) {
+        calculee[4/*Z*/] = res36_val;
+      } else calculee[4/*Z*/] = 0.0;
+    }
+  
+    irdata->nb_refs_target = sav35_nb_refs_target;
+    irdata->nb_tmps_target = sav35_nb_tmps_target;
+    return irdata->discords;
+  }
+  
+  $ gcc -c output/*.c -Ioutput -lm -DTARGET=test
+  $ gcc *.o -Ioutput -o ./cal -lm
+  $ ./cal -mode primitif test.irj
+  IACT003 | tests IRJ
+  DLDC002 | année par défaut (année revenu + 1: 2021)
+  IACT005 | traitement du fichier "test.irj"
+  IACT006 | "test.irj" OK
+  IACT009 | 1/1 fichier correct
+  IACT010 | 0/1 fichiers incorrects
+  IACT011 | 0/1 fichiers invalides

@@ -47,7 +47,6 @@ type t =
   | Varspace_current of Com.var_space
   | Varspace_of of Com.var_space * Dgfip_varid.varinfo
   | Typ of Com.value_typ
-  | Instr of string
   | Named of string * dflag
   | Direct of t
   | Ite of t * t * t
@@ -104,7 +103,6 @@ module Print = struct
     | Varspace_of (space, var) ->
         Pp.fpr ppf "@[<hv 2>Varspace_of(%a,@ %a)@]" var_space space varinfo var
     | Typ typ -> Pp.fpr ppf "Typ(%a)" Com.Pretty.format_value_typ typ
-    | Instr text -> Pp.fpr ppf "Instr(%S)" text
     | Named (name, kind) -> Pp.fpr ppf "Named(%s : %a)" name dflag kind
     | Direct expr -> node1 ppf "Direct" expr
     | Ite (cond, then_, else_) ->
@@ -186,7 +184,6 @@ let rec compare (c1 : t) (c2 : t) : int =
   | Varspace_of (vs, vi), Varspace_of (vs', vi') ->
       compare_varspace vs vs' >< Int.compare vi.id vi'.id
   | Typ t, Typ t' -> compare_typ t t'
-  | Instr s, Instr s' -> String.compare s s'
   | Direct t, Direct t' -> compare t t'
   | Ite (c, t, e), Ite (c', t', e') ->
       compare c c' >< compare t t' >< compare e e'
@@ -238,8 +235,6 @@ let rec compare (c1 : t) (c2 : t) : int =
   | _, Varspace_of _ -> -1
   | Typ _, _ -> 1
   | _, Typ _ -> -1
-  | Instr _, _ -> 1
-  | _, Instr _ -> -1
   | Direct _, _ -> 1
   | _, Direct _ -> -1
   | Ite _, _ -> 1

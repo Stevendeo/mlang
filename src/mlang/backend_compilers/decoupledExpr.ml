@@ -80,7 +80,6 @@ and expr =
   | Dfun of string * expr list
   | Dite of expr * expr * expr
   | Dtyp of Com.value_typ
-  | Dinstr of string
   | Ddirect of expr
 
 and varinfo_access =
@@ -174,8 +173,8 @@ let rec expr_position (expr : expr) (st : local_stacks) =
       | _, _ -> Not_to_stack (* Either already stored, or duplicatable *)
     end
   | Ddirect _ -> Not_to_stack
-  | Dbinop _ | Dand _ | Dor _ | Dunop _ | Dfun _ | Dite _ | Dinstr _
-  | Dvarinfo _ | Dvarspace _ ->
+  | Dbinop _ | Dand _ | Dor _ | Dunop _ | Dfun _ | Dite _ | Dvarinfo _
+  | Dvarspace _ ->
       Must_be_pushed
 
 (* allocate to local variable if necessary *)
@@ -413,8 +412,6 @@ let varspace_of m v _ _ = mk_t (Dvarspace (m, Some v)) VarSpace []
 
 let typ t _ _ = mk_t (Dtyp t) Def []
 
-let instr kind i _ _ = mk_t (Dinstr i) kind []
-
 let named s kind _ _ = mk_t (Dvar (Named (s, kind))) kind []
 
 let direct c stacks ctx =
@@ -492,7 +489,6 @@ let rec make_constr : Constr.t -> builder = function
   | Varspace_current vs -> varspace_current vs
   | Varspace_of (m, v) -> varspace_of m v
   | Typ t -> typ t
-  | Instr i -> instr Val i
   | Direct e -> direct (make_constr e)
   | Ite (c, t, e) -> ite (make_constr c) (make_constr t) (make_constr e)
   | It0 (c, t) -> it0 (make_constr c) (make_constr t)
@@ -794,7 +790,7 @@ let rec format_dexpr_assign ~(env : Env.t) v fmt (de : expr) =
           Format.fprintf fmt "%s@ %s=@ %a" v op format_dexpr e2
         else default_print ()
     | Dtrue | Dfalse | Dlit _ | Dvarinfo _ | Dvarspace _ | Dunop _ | Dbinop _
-    | Dfun _ | Dite _ | Dtyp _ | Dinstr _ | Ddirect _ ->
+    | Dfun _ | Dite _ | Dtyp _ | Ddirect _ ->
         default_print ()
 
 and format_dexpr ~env fmt (de : expr) =
@@ -863,7 +859,6 @@ and format_dexpr ~env fmt (de : expr) =
         | Some v -> VID.gen_var_space_id m_sp_opt v
         | None -> VID.gen_var_space_id_opt m_sp_opt)
   | Dtyp t -> Format.fprintf fmt "@[%s@]" @@ VID.gen_typ t
-  | Dinstr instr -> Format.fprintf fmt "%s" instr
   | Ddirect expr -> format_dexpr fmt expr
   | Dite (dec, det, dee) ->
       Format.fprintf fmt "@[<hov 2>(%a ?@ %a@ : %a@])" format_dexpr dec
@@ -1103,8 +1098,8 @@ module Func = struct
           dfun_with_ptr "multimax_varinfo" (fun ~ptrdef ~ptrval ->
               [
                 Constr.irdata;
-                Direct (Instr (VID.gen_var_space_id m_sp_opt v));
-                Direct (Instr ptr);
+                Named (VID.gen_var_space_id m_sp_opt v, VarSpace);
+                Named (ptr, Ptr Val);
                 def_expr_to_constr vardef;
                 varval;
                 ptrdef;
