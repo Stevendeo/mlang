@@ -13,8 +13,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open M_ir
-
 type t = {
   mutable anos : (Com.Error.t * string option) list;
       (** Errors raised during the interpretation. *)
