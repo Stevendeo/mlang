@@ -99,7 +99,7 @@ endif
 # Mlang configuration
 ##################################################
 
-MLANG_BIN=dune exec mlang --
+MLANG_BIN=dune exec -- mlang
 
 PRECISION?=double
 MLANG_DEFAULT_OPTS=\
@@ -172,7 +172,4 @@ MAKE_DGFIP=$(MAKE) --no-print-directory -f $(ROOT_DIR)/Makefile -C $(ROOT_DIR)/$
 MAKE_DGFIP_CALC=$(MAKE) --no-print-directory -f $(ROOT_DIR)/Makefile -C $(ROOT_DIR)/$(DGFIP_DIR)/calc ROOT_DIR="$(ROOT_DIR)"
 
 IRJ_BIN=irj_checker
-IRJ_TESTS_DIRS?=tests/2019 tests/2020 tests/2022 tests/2023
-
-INTERP_PROGRESS=examples/dgfip_c/ml_primitif/.interpreter_progress
-MLANG_HASH=examples/dgfip_c/ml_primitif/.mlang.hash
+IRJ_TESTS_DIRS?=tests/2019 tests/2020 tests/2022 tests/2023 tests/2024 tests/2025
