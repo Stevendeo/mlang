@@ -15,7 +15,7 @@
 
 module VID = Dgfip_varid
 
-type dflag = Def | Val | VarInfo | VarSpace
+type dflag = Def | Val | VarInfo | VarSpace | Irdata | Ptr of dflag
 
 type local_var =
   | Anon (* inlined sub-expression, not intended for reuse *)
@@ -47,15 +47,88 @@ type t =
   | Varspace_current of Com.var_space
   | Varspace_of of Com.var_space * Dgfip_varid.varinfo
   | Typ of Com.value_typ
-  | Instr of string
+  | Named of string * dflag
   | Direct of t
   | Ite of t * t * t
   | It0 of t * t
   | Let_local of local_var * t * t
 
-let irdata = Direct (Instr "irdata")
+module Print = struct
+  let rec dflag ppf = function
+    | Def -> Pp.string ppf "def"
+    | Val -> Pp.string ppf "val"
+    | VarInfo -> Pp.string ppf "varinfo"
+    | VarSpace -> Pp.string ppf "varspace"
+    | Irdata -> Pp.string ppf "irdata"
+    | Ptr flag -> Pp.fpr ppf "*%a" dflag flag
 
-let dflag_id = function Def -> 0 | Val -> 1 | VarInfo -> 2 | VarSpace -> 3
+  let local_var ppf = function
+    | Anon -> Pp.string ppf "_anon_"
+    | Refered index -> Pp.fpr ppf "l%d" index
+
+  let varinfo ppf (var : VID.varinfo) = Pp.string ppf (Com.Var.name_str var)
+
+  let var_space ppf = function
+    | None -> Pp.string ppf "@default"
+    | Some (name, _) -> Pp.fpr ppf "@%s" (Com.get_var_name (Pos.unmark name))
+
+  let rec t ppf = function
+    | True -> Pp.string ppf "True"
+    | False -> Pp.string ppf "False"
+    | Lit value -> Pp.fpr ppf "Lit %g" value
+    | M (space, var, kind) ->
+        Pp.fpr ppf "M(%a%a, %a)" varinfo var var_space space dflag kind
+    | Local local -> Pp.fpr ppf "Local(%a)" local_var local
+    | And (left, right) -> node2 ppf "And" left right
+    | Or (left, right) -> node2 ppf "Or" left right
+    | Not expr -> node1 ppf "Not" expr
+    | Minus expr -> node1 ppf "Minus" expr
+    | Plus (left, right) -> node2 ppf "Plus" left right
+    | Sub (left, right) -> node2 ppf "Sub" left right
+    | Mult (left, right) -> node2 ppf "Mult" left right
+    | Div (left, right) -> node2 ppf "Div" left right
+    | Modulo (left, right) -> node2 ppf "Modulo" left right
+    | Comp (op, left, right) ->
+        Pp.fpr ppf "@[<hv 2>Comp(%s,@ %a,@ %a)@]" op t left t right
+    | Fun (name, args) ->
+        Pp.fpr ppf "@[<hv 2>Fun(%s,@ [%a])@]" name (Pp.list ",@ " t) args
+    | Varinfo var -> Pp.fpr ppf "Varinfo(%a)" varinfo var
+    | Varinfo_tab (var, def, value) ->
+        Pp.fpr ppf "@[<hv 2>Varinfo_tab(%a,@ %a,@ %a)@]" varinfo var t def t
+          value
+    | Varinfo_field (def, value, field) ->
+        Pp.fpr ppf "@[<hv 2>Varinfo_field(%a,@ %a,@ %s)@]" t def t value field
+    | Varspace_current space ->
+        Pp.fpr ppf "Varspace_current(%a)" var_space space
+    | Varspace_of (space, var) ->
+        Pp.fpr ppf "@[<hv 2>Varspace_of(%a,@ %a)@]" var_space space varinfo var
+    | Typ typ -> Pp.fpr ppf "Typ(%a)" Com.Pretty.format_value_typ typ
+    | Named (name, kind) -> Pp.fpr ppf "Named(%s : %a)" name dflag kind
+    | Direct expr -> node1 ppf "Direct" expr
+    | Ite (cond, then_, else_) ->
+        Pp.fpr ppf "@[<hv 2>Ite(%a,@ %a,@ %a)@]" t cond t then_ t else_
+    | It0 (cond, then_) -> node2 ppf "It0" cond then_
+    | Let_local (local, bound, body) ->
+        Pp.fpr ppf "@[<hv 2>Let_local(%a =@ %a,@ %a)@]" local_var local t bound
+          t body
+
+  and node1 ppf name expr = Pp.fpr ppf "@[<hv 2>%s(%a)@]" name t expr
+
+  and node2 ppf name left right =
+    Pp.fpr ppf "@[<hv 2>%s(%a,@ %a)@]" name t left t right
+
+  let to_string expr = Pp.spr "%a" t expr
+end
+
+let irdata = Named ("irdata", Irdata)
+
+let rec dflag_id = function
+  | Def -> 0
+  | Val -> 1
+  | VarInfo -> 2
+  | VarSpace -> 3
+  | Irdata -> 4
+  | Ptr flag -> 5 + dflag_id flag
 
 let typ_id = function
   | Com.Boolean -> 0
@@ -111,13 +184,13 @@ let rec compare (c1 : t) (c2 : t) : int =
   | Varspace_of (vs, vi), Varspace_of (vs', vi') ->
       compare_varspace vs vs' >< Int.compare vi.id vi'.id
   | Typ t, Typ t' -> compare_typ t t'
-  | Instr s, Instr s' -> String.compare s s'
   | Direct t, Direct t' -> compare t t'
   | Ite (c, t, e), Ite (c', t', e') ->
       compare c c' >< compare t t' >< compare e e'
   | It0 (c, t), It0 (c', t') -> compare c c' >< compare t t'
   | Let_local (lv, e1, e2), Let_local (lv', e1', e2') ->
       compare_local_var lv lv' >< compare e1 e1' >< compare e2 e2'
+  | Named (s, d), Named (s', d') -> String.compare s s' >< compare_dflag d d'
   | True, _ -> 1
   | _, True -> -1
   | False, _ -> 1
@@ -162,14 +235,14 @@ let rec compare (c1 : t) (c2 : t) : int =
   | _, Varspace_of _ -> -1
   | Typ _, _ -> 1
   | _, Typ _ -> -1
-  | Instr _, _ -> 1
-  | _, Instr _ -> -1
   | Direct _, _ -> 1
   | _, Direct _ -> -1
   | Ite _, _ -> 1
   | _, Ite _ -> -1
   | It0 _, _ -> 1
   | _, It0 _ -> -1
+  | Named _, _ -> 1
+  | _, Named _ -> -1
 (* | Let_local _, _ -> 1 | _, Let_local _ -> -1  *)
 
 (** smart constructors *)

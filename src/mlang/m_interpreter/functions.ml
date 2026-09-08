@@ -70,4 +70,16 @@ module Make (N : Number.S) = struct
   let nb_events (ctx : (N.t, _) Context.t) =
     let card = Array.length (List.hd ctx.ctx_events) in
     Number (N.of_int @@ Int64.of_int @@ card)
+
+  let add l r =
+    match (l, r) with
+    | Number i1, Number i2 -> Number N.(i1 +. i2)
+    | Number i1, Undefined -> Number N.(i1 +. zero ())
+    | Undefined, Number i2 -> Number N.(zero () +. i2)
+    | Undefined, Undefined -> Undefined
+
+  let sum l =
+    match l with
+    | [] -> Number (N.zero ())
+    | hd :: tl -> List.fold_left (fun acc n -> add acc n) hd tl
 end

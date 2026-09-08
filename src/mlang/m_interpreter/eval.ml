@@ -115,10 +115,7 @@ module Make (N : Number.S) (Tracer : Tracers.S) :
   let binop op new_e1 new_e2 =
     let open Com in
     match (op, new_e1, new_e2) with
-    | Add, Number i1, Number i2 -> Number N.(i1 +. i2)
-    | Add, Number i1, Undefined -> Number N.(i1 +. zero ())
-    | Add, Undefined, Number i2 -> Number N.(zero () +. i2)
-    | Add, Undefined, Undefined -> Undefined
+    | Add, _, _ -> Fun.add new_e1 new_e2
     | Sub, Number i1, Number i2 -> Number N.(i1 -. i2)
     | Sub, Number i1, Undefined -> Number N.(i1 -. zero ())
     | Sub, Undefined, Number i2 -> Number N.(zero () -. i2)
@@ -239,16 +236,25 @@ module Make (N : Number.S) (Tracer : Tracers.S) :
         in
         Fun.multimax (evaluate_expr ctx a1) a2
     | NbEvents, [] -> Fun.nb_events ctx
+    | SumFunc, args -> Fun.sum @@ List.map (evaluate_expr ctx) args
+    | GtzFunc, [ arg ] ->
+        let n = evaluate_expr ctx arg in
+        comparison Com.Gt n @@ Number (N.zero ())
+    | GtezFunc, [ arg ] ->
+        let n = evaluate_expr ctx arg in
+        comparison Com.Gte n @@ Number (N.zero ())
+    | NullFunc, [ arg ] ->
+        let n = evaluate_expr ctx arg in
+        comparison Com.Eq n @@ Number (N.zero ())
     | Func fn, args ->
         let fd = StrMap.find fn ctx.ctx_prog.program_functions in
         evaluate_function ctx fd args
     | ( (( ArrFunc | InfFunc | PresentFunc | Supzero | AbsFunc | MinFunc
-         | MaxFunc | Multimax | NbEvents ) as func),
+         | GtzFunc | GtezFunc | NullFunc | MaxFunc | Multimax | NbEvents ) as
+         func),
         _ ) ->
         Err.wrong_arity ~func ~args:(List.length args) ~pos:(Pos.get f)
-    | ( ((SumFunc | GtzFunc | GtezFunc | NullFunc | VerifNumber | ComplNumber)
-         as func),
-        _ ) ->
+    | ((VerifNumber | ComplNumber) as func), _ ->
         Err.unimplemented ~func ~pos:(Pos.get f)
 
   and evaluate_test_in_set ctx positive e0 values =

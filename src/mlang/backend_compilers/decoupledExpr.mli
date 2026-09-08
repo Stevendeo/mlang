@@ -26,7 +26,7 @@ val generate_variable :
   Com.Var.t ->
   string
 
-type dflag = Def | Val | VarInfo | VarSpace
+type dflag = Def | Val | VarInfo | VarSpace | Irdata | Ptr of dflag
 
 (** {1 Low-level M computation} *)
 
@@ -70,8 +70,11 @@ val def_expr_to_constr : DE.t -> Constr.t
     following represents complete and optimized expressions for M computations
 *)
 
+type 'expr set_var = { kind : dflag; id : string; expr : 'expr }
+(** A C local variable to declare and assign. *)
+
 type atomic_expression_composition = {
-  set_vars : (dflag * string * Constr.t) list;
+  set_vars : Constr.t option set_var list;
   def_test : DE.t;
   value_comp : Constr.t;
 }
@@ -83,6 +86,7 @@ type expression_composition
 val atomic : atomic_expression_composition -> expression_composition
 
 val make_let :
+  Constr.dflag ->
   expression_composition ->
   (DE.t -> Constr.t -> expression_composition) ->
   expression_composition
@@ -167,6 +171,12 @@ module Func : sig
 
   val min :
     expression_composition -> expression_composition -> expression_composition
+
+  val sum : expression_composition list -> expression_composition
+
+  val gtez : expression_composition -> expression_composition
+
+  val gtz : expression_composition -> expression_composition
 
   val multimax :
     expression_composition -> Com.Var.t Com.var_id -> expression_composition

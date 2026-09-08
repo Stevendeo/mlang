@@ -15,7 +15,6 @@
 
 open Backend_compilers
 open Irj_utils
-open M_ir
 open M_frontend
 
 exception Exit
@@ -128,7 +127,6 @@ let unsafe_driver () =
   let m_program = Expander.proceed m_program in
   let m_program = Validator.proceed !Config.mpp_function m_program in
   let m_program = Mast_to_mir.translate m_program in
-  let m_program = Mir.expand_functions m_program in
   Ppf.debug_print "Creating combined program suitable for execution...";
   match !Config.execution_mode with
   | SingleTest test -> run_single_test m_program test

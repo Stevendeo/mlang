@@ -52,4 +52,10 @@ module Make (N : Number.S) : sig
   val nb_events : (N.t, _) Context.t -> N.t Types.value
   (** Implements the 'nb_events' call, returning the number of currently defined
       events. *)
+
+  val add : N.t Types.value -> N.t Types.value -> N.t Types.value
+  (** Implements an addition. Helper for `sum`. *)
+
+  val sum : N.t Types.value list -> N.t Types.value
+  (** Implements the `sum` function call, returning the sum of their args. *)
 end

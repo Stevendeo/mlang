@@ -314,8 +314,6 @@
       char is_same_var11_def;
       double is_same_var11_val;
       {
-        int int0;
-        double real0;
         T_varinfo* varinfo0;
         T_varinfo* varinfo1;
         char res12_def;
@@ -323,12 +321,9 @@
         varinfo0 = I_(calculee,0/*X*/);
         varinfo1 = IR_((-1)/*V*/);
         res12_def = meme_variable(varinfo0, varinfo1, &res12_def, &res12_val);
-        res12_val = res12_val;
         is_same_var11_def = res12_def;
         if (is_same_var11_def) {
-          int0 = (NEQ_E(res12_def,0.0));
-          real0 = res12_val;
-          is_same_var11_val = (int0 ? real0 : 0.0);
+          is_same_var11_val = res12_val;
         } else is_same_var11_val = 0.0;
       }if (is_same_var11_val) {
       
@@ -341,8 +336,6 @@
         char is_same_var13_def;
         double is_same_var13_val;
         {
-          int int0;
-          double real0;
           T_varinfo* varinfo0;
           T_varinfo* varinfo1;
           char res14_def;
@@ -351,12 +344,9 @@
           varinfo1 = IR_((-1)/*V*/);
           res14_def =
             meme_variable(varinfo0, varinfo1, &res14_def, &res14_val);
-          res14_val = res14_val;
           is_same_var13_def = res14_def;
           if (is_same_var13_def) {
-            int0 = (NEQ_E(res14_def,0.0));
-            real0 = res14_val;
-            is_same_var13_val = (int0 ? real0 : 0.0);
+            is_same_var13_val = res14_val;
           } else is_same_var13_val = 0.0;
         }if (is_same_var13_val) {
         
@@ -369,8 +359,6 @@
           char is_same_var15_def;
           double is_same_var15_val;
           {
-            int int0;
-            double real0;
             T_varinfo* varinfo0;
             T_varinfo* varinfo1;
             char res16_def;
@@ -379,12 +367,9 @@
             varinfo1 = IR_((-1)/*V*/);
             res16_def =
               meme_variable(varinfo0, varinfo1, &res16_def, &res16_val);
-            res16_val = res16_val;
             is_same_var15_def = res16_def;
             if (is_same_var15_def) {
-              int0 = (NEQ_E(res16_def,0.0));
-              real0 = res16_val;
-              is_same_var15_val = (int0 ? real0 : 0.0);
+              is_same_var15_val = res16_val;
             } else is_same_var15_val = 0.0;
           }if (is_same_var15_val) {
           
@@ -454,12 +439,10 @@
       char cond36_def;
       double cond36_val;
       {
-        int int0;
         cond36_def = def_saisie[0/*X*/];
         if (cond36_def) {
-          int0 = (GT_E(saisie[0/*X*/],0.0));
-          cond36_val = (def_saisie[0/*X*/] ? int0 : 0);
-        } else cond36_val = 0.0;
+          cond36_val = (GT_E(saisie[0/*X*/],0.0));
+        } else cond36_val = 0;
       }
       if (cond36_def && cond36_val != 0.0) {
         {

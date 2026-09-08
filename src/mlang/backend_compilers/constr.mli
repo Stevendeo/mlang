@@ -21,6 +21,8 @@ type dflag =
   | Val  (** For arithmetical expressions, used for actual calculations *)
   | VarInfo  (** For variable data *)
   | VarSpace  (** For var spaces *)
+  | Irdata
+  | Ptr of dflag
 
 (** Constuctors used for building C instructions. *)
 type t =
@@ -46,17 +48,29 @@ type t =
   | Varspace_current of Com.var_space
   | Varspace_of of Com.var_space * Dgfip_varid.varinfo
   | Typ of Com.value_typ
-  | Instr of string
+  | Named of string * dflag
   | Direct of t
   | Ite of t * t * t
   | It0 of t * t
   | Let_local of local_var * t * t
 
 val irdata : t
-(** A shortcut for representing the irdata construction
-    ([Direct Instr "irdata"]) *)
+(** A shortcut for representing the irdata construction *)
 
 val compare : t -> t -> int
+
+(** {2 Debugging} *)
+
+(** Printers *)
+module Print : sig
+  val dflag : Pp.t -> dflag -> unit
+
+  val local_var : Pp.t -> local_var -> unit
+
+  val t : Pp.t -> t -> unit
+
+  val to_string : t -> string
+end
 
 (** {2 Local variables} *)
 
