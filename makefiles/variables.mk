@@ -17,13 +17,45 @@ OPTIM_FLAG?=
 MPP_FUNCTION_BACKEND?=enchainement_primitif
 MPP_FUNCTION?=enchainement_primitif_interpreteur
 SOURCE_EXT_DIR=$(ROOT_DIR)/m_ext/$(YEAR)
-REPO?=ir
+REPO?=
 
 # Paramètres pour les millésimes
-ifeq ($(REPO),svn)
+ifeq ($(REPO),)
+  ifeq ($(filter $(YEAR), 2022 2023 2024), $(YEAR))
+    SOURCE_FILES?=$(call source_dir_sans_cibles_m,$(ROOT_DIR)/ir-calcul/sources$(YEAR)*/)
+    ifeq ($(filter x$(MODE), xc xcorr xcorrectif), x$(MODE))
+      SOURCE_EXT_FILES?=\
+        $(SOURCE_EXT_DIR)/cibles.m \
+        $(SOURCE_EXT_DIR)/primitif.m \
+        $(SOURCE_EXT_DIR)/cibles_corr.m \
+        $(SOURCE_EXT_DIR)/codes_1731.m \
+        $(SOURCE_EXT_DIR)/commence_par_5.m \
+        $(SOURCE_EXT_DIR)/commence_par_7.m \
+        $(SOURCE_EXT_DIR)/commence_par_H.m \
+        $(SOURCE_EXT_DIR)/correctif.m \
+        $(SOURCE_EXT_DIR)/main_corr.m
+    else
+      SOURCE_EXT_FILES?=\
+        $(SOURCE_EXT_DIR)/cibles.m \
+        $(SOURCE_EXT_DIR)/primitif.m \
+        $(SOURCE_EXT_DIR)/main.m
+    endif
+  else ifeq ($(filter $(YEAR), 2019 2020 2021), $(YEAR))
+    SOURCE_FILES?=$(call source_dir,$(ROOT_DIR)/ir-calcul/sources$(YEAR)*/)
+    SOURCE_EXT_FILES?=$(call source_dir_ext,$(SOURCE_EXT_DIR))
+  else ifeq ($(filter $(YEAR), 2018), $(YEAR))
+    SOURCE_FILES?=$(call source_dir,$(ROOT_DIR)/ir-calcul/sources2018m_6_7*/)
+    SOURCE_EXT_FILES?=$(call source_dir_ext,$(SOURCE_EXT_DIR))
+  else ifeq ($(filter $(YEAR), 0), $(YEAR))
+    SOURCE_FILES?=
+    SOURCE_EXT_FILES?=$(call source_dir_ext,$(SOURCE_EXT_DIR))
+  else
+    $(warning ATTENTION: auncune configuration trouvée pour l'année $(YEAR))
+  endif
+else
+  SOURCE_FILES?=$(call source_dir_sans_cibles_m,$(ROOT_DIR)/ir-calcul/M_SVN_$(REPO)/$(YEAR)/code_m/)
   ifeq ($(filter x$(MODE), xc xcorr xcorrectif), x$(MODE))
-    # 2025 37674
-    SOURCE_FILES?=$(call source_dir_sans_cibles_m,$(ROOT_DIR)/ir-calcul/M_SVN/$(YEAR).corr/code_m/)
+    # 2025 36674
     SOURCE_EXT_FILES?=\
       $(SOURCE_EXT_DIR)/cibles.m \
       $(SOURCE_EXT_DIR)/primitif.m \
@@ -36,42 +68,11 @@ ifeq ($(REPO),svn)
       $(SOURCE_EXT_DIR)/main_corr.m
   else
     # 2025 3.11 37626
-    SOURCE_FILES?=$(call source_dir_sans_cibles_m,$(ROOT_DIR)/ir-calcul/M_SVN/$(YEAR)/code_m/)
     SOURCE_EXT_FILES?=\
       $(SOURCE_EXT_DIR)/cibles.m \
       $(SOURCE_EXT_DIR)/primitif.m \
       $(SOURCE_EXT_DIR)/main.m
   endif
-else ifeq ($(filter $(YEAR), 2022 2023 2024), $(YEAR))
-  SOURCE_FILES?=$(call source_dir_sans_cibles_m,$(ROOT_DIR)/ir-calcul/sources$(YEAR)*/)
-  ifeq ($(filter x$(MODE), xc xcorr xcorrectif), x$(MODE))
-    SOURCE_EXT_FILES?=\
-      $(SOURCE_EXT_DIR)/cibles.m \
-      $(SOURCE_EXT_DIR)/primitif.m \
-      $(SOURCE_EXT_DIR)/cibles_corr.m \
-      $(SOURCE_EXT_DIR)/codes_1731.m \
-      $(SOURCE_EXT_DIR)/commence_par_5.m \
-      $(SOURCE_EXT_DIR)/commence_par_7.m \
-      $(SOURCE_EXT_DIR)/commence_par_H.m \
-      $(SOURCE_EXT_DIR)/correctif.m \
-      $(SOURCE_EXT_DIR)/main_corr.m
-  else
-    SOURCE_EXT_FILES?=\
-      $(SOURCE_EXT_DIR)/cibles.m \
-      $(SOURCE_EXT_DIR)/primitif.m \
-      $(SOURCE_EXT_DIR)/main.m
-  endif
-else ifeq ($(filter $(YEAR), 2019 2020 2021), $(YEAR))
-  SOURCE_FILES?=$(call source_dir,$(ROOT_DIR)/ir-calcul/sources$(YEAR)*/)
-  SOURCE_EXT_FILES?=$(call source_dir_ext,$(SOURCE_EXT_DIR))
-else ifeq ($(filter $(YEAR), 2018), $(YEAR))
-  SOURCE_FILES?=$(call source_dir,$(ROOT_DIR)/ir-calcul/sources2018m_6_7*/)
-  SOURCE_EXT_FILES?=$(call source_dir_ext,$(SOURCE_EXT_DIR))
-else ifeq ($(filter $(YEAR), 0), $(YEAR))
-  SOURCE_FILES?=
-  SOURCE_EXT_FILES?=$(call source_dir_ext,$(SOURCE_EXT_DIR))
-else
-  $(warning ATTENTION: auncune configuration trouvée pour l'année $(YEAR))
 endif
 
 # Paramètres pour les tests millésimés
