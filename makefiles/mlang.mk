@@ -62,18 +62,7 @@ ifeq ($(call is_in,),)
 	$(call make_in,,$@)
 else
 	echo $$(pwd)
-	OLDHASH=$$(cat $(MLANG_HASH))
 	LINKING_MODE='$(LINKING_MODE)' opam exec -- dune build $(DUNE_OPTIONS)
-	sha1sum _build/default/src/main.exe | awk '{print $$1}' > $(MLANG_HASH)
-	HASH=$$(cat $(MLANG_HASH))
-	echo "OLDHASH: '$$OLDHASH'"
-	echo "HASH: '$$HASH'"
-	if [ "$$HASH" = "$$OLDHASH" ]; then \
-		echo "binary is the same"; \
-	else \
-		echo "binary is new"; \
-		rm -f $(INTERP_PROGRESS)
-	fi
 	$(call make_in_raw,,remise_a_zero_versionnage)
 endif
 

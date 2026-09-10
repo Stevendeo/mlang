@@ -97,6 +97,8 @@ build:
     # unzipping implementation, which partially breaks caching for the dune _build cache.
     # See https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27496 for more details.
 
+    EXTRA_YEARS: 2020 2022 2023
+
   rules:
     - exists:
         - dune-project
@@ -118,4 +120,15 @@ build:
     - opam exec -- dune build @fmt
     # Compilation
     - make build
+    # Tests CI
     - make ci_tests
+    # Sur la branche dev, on teste toutes les années disponibles
+    - |
+      if [ $CI_COMMIT_BRANCH == "dev" ]; then
+        for year in $EXTRA_YEARS; do
+          echo "Test de l'année $year"
+          make clean build
+          make YEAR=${year} tests
+          make YEAR=${year} test_dgfip_c_backend
+        done
+      fi
