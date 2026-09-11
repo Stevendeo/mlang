@@ -1,4 +1,51 @@
-open M_ir
+(******************************************************************************)
+(*                                                                            *)
+(* Droit d'auteur (c) 2026 DGFiP - INRIA                                      *)
+(*                                                                            *)
+(* Ce programme est distribué sous la licence CeCILL-C: vous pouvez le        *)
+(* redistribuer et/ou le modifier sous les contraintes de celle-ci.           *)
+(*                                                                            *)
+(* L'accessibilité au code source et les droits de copie, de modification et  *)
+(* de redistribution qui découlent de ce contrat ont pour contrepartie de     *)
+(* n'offrir aux utilisateurs qu'une garantie limitée et de ne faire peser sur *)
+(* l'auteur du logiciel, le titulaire des droits patrimoniaux et les          *)
+(* concédants successifs qu'une responsabilité restreinte.                    *)
+(*                                                                            *)
+(******************************************************************************)
+module Helpers = struct
+  open Com
+
+  (** A type describing the different types of dependencies. Tab for arrays, V
+      for variables, LiteralDep for literals and Const for constants. *)
+  type 'v dep =
+    | Tab of 'v * 'v m_expression
+    | V of 'v
+    | LiteralDep of literal
+    | Const of const
+
+  (** [get_used_variables expr] returs the list of dependencies contained in the
+      expression. *)
+  let get_used_variables (e : 'v m_expression) : 'v dep list =
+    let open Com.Visit.Fold in
+    let deps_of_expr self expr deps =
+      match Pos.unmark expr with
+      | Literal { lit; origin = Some (Mark (id, pos)) } ->
+          Const { id; value = lit; pos } :: deps
+      | Literal { lit; origin = None } -> LiteralDep lit :: deps
+      | _ -> default.expr self expr deps
+    in
+
+    let deps_of_access self access deps =
+      match Pos.unmark access with
+      | TabAccess ((_, v), m_i) -> Tab (v, m_i) :: deps
+      | VarAccess (_, v) -> V v :: deps
+      | _ -> default.access self access deps
+    in
+    let visitor =
+      { default with access = deps_of_access; expr = deps_of_expr }
+    in
+    visitor.expr visitor e []
+end
 
 module type S = sig
   type ctx
@@ -73,7 +120,7 @@ module Tracer : S = struct
     let open Dbg_info in
     let trace_dep (ticks, dbg_info) dep =
       match dep with
-      | Com.V var ->
+      | Helpers.V var ->
           let name = Com.Var.name_str var in
           (* For now, we add uninstantiated depedencies as undefined *)
           begin match TickMap.find_opt name dbg_info.ledger with
@@ -125,7 +172,7 @@ module Tracer : S = struct
 
   let register_access ctx vexpr access v program_dict value eval_m_index =
     let open Dbg_info in
-    let deps = Com.get_used_variables @@ Pos.unmark vexpr in
+    let deps = Helpers.get_used_variables vexpr in
     let ticks, dbg_info = trace_deps deps ctx.dbg_info eval_m_index in
     (* Create the tick for this  variable after the deps so that they are
        in the right order on marple side. *)

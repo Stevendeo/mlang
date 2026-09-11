@@ -1,18 +1,17 @@
-(* Copyright (C) 2019-2021 Inria, contributor: Denis Merigoux
-   <denis.merigoux@inria.fr>
-
-   This program is free software: you can redistribute it and/or modify it under
-   the terms of the GNU General Public License as published by the Free Software
-   Foundation, either version 3 of the License, or (at your option) any later
-   version.
-
-   This program is distributed in the hope that it will be useful, but WITHOUT
-   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-   FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
-   details.
-
-   You should have received a copy of the GNU General Public License along with
-   this program. If not, see <https://www.gnu.org/licenses/>. *)
+(******************************************************************************)
+(*                                                                            *)
+(* Droit d'auteur (c) 2019 - 2026 DGFiP - INRIA                               *)
+(*                                                                            *)
+(* Ce programme est distribué sous la licence CeCILL-C: vous pouvez le        *)
+(* redistribuer et/ou le modifier sous les contraintes de celle-ci.           *)
+(*                                                                            *)
+(* L'accessibilité au code source et les droits de copie, de modification et  *)
+(* de redistribution qui découlent de ce contrat ont pour contrepartie de     *)
+(* n'offrir aux utilisateurs qu'une garantie limitée et de ne faire peser sur *)
+(* l'auteur du logiciel, le titulaire des droits patrimoniaux et les          *)
+(* concédants successifs qu'une responsabilité restreinte.                    *)
+(*                                                                            *)
+(******************************************************************************)
 
 (** Command-line interface helpers *)
 
@@ -223,6 +222,8 @@ let optim_flags =
     ("lvfa", Config.Local_vars_for_arrays);
     ("ncur", No_check_unstoppable_rules);
     ("nrbf", No_redundant_boolean_formulae);
+    ("sbo", Simple_binary_op);
+    ("sd", Shorten_def);
     ("*", All_optims);
   ]
 
@@ -233,14 +234,45 @@ let optims =
     & info [ "optim"; "O" ] ~docv:"OPTIM"
         ~doc:
           "Several optimizations modify the generated C program to make it \
-           more than a simple translation. Here are the different available\n\
-          \         optimsizations: - 'lvfa': each rule defines local \
-           variables for the irdata accesses of the TGV; - 'ncur': when a rule \
-           is not stopped (because it does not have a stop instruction), does \
-           not add the subsequent check;\n\
-          \         - 'nrbf': removes redundant boolean formulae from OR and \
-           AND operators (when checking for variable definitions);\n\
-          \         - '*': all of the above (default).")
+           more than a simple translation. Here are the different available \
+           optimsizations: \n\
+           - 'lvfa': each rule defines local variables for the irdata accesses \
+           of the TGV;\n\
+           - 'ncur': when a rule is not stopped (because it does not have a \
+           stop instruction), does not add the subsequent check;\n\
+           - 'nrbf': removes redundant boolean formulae from OR and AND \
+           operators (when checking for variable definitions);\n\
+           - 'sbo': replaces binary operators '&&' and '||' by '&' and '|'\n\
+           - 'sd': shortens definition with basic boolean algebra\n\
+           - '*': all of the above (default).")
+
+let test_var_defs =
+  let open Arg in
+  let litteral =
+    let parser s =
+      let litteral_of_string = function
+        | "defaut" -> None
+        | "indefini" -> Some None
+        | sf -> Some (Some (float_of_string sf))
+      in
+      let err s =
+        Pp.spr
+          "@[invalid litteral \'%s\', expected \'defaut\', \'indefini\' or a \
+           float@]"
+          s
+      in
+      try Ok (litteral_of_string s) with Failure _ -> Error (err s)
+    in
+    let pp fmt = function
+      | None -> Format.pp_print_string fmt "default"
+      | Some None -> Format.pp_print_string fmt "indefini"
+      | Some (Some f) -> Format.pp_print_float fmt f
+    in
+    conv' ~docv:"LITTERAL" (parser, pp)
+  in
+  value
+  & opt_all (pair ~sep:'=' string litteral) []
+  & info [ "def"; "D" ] ~doc:"Initialise variables with values"
 
 let mlang_t f =
   Term.(
@@ -249,7 +281,7 @@ let mlang_t f =
     $ dgfip_test_filter $ run_test $ mpp_function $ optimize_unsafe_float
     $ precision $ roundops $ comparison_error_margin_cli $ income_year_cli
     $ m_clean_calls $ dgfip_options $ no_nondet_display $ plain_output $ trace
-    $ trace_output_file $ message_format $ optims)
+    $ trace_output_file $ message_format $ optims $ test_var_defs)
 
 let info =
   let doc =
@@ -292,128 +324,3 @@ let info =
       | None -> "n/a"
       | Some v -> Build_info.V1.Version.to_string v)
     ~doc ~exits ~man
-
-(**{1 Terminal formatting}*)
-
-let concat_with_line_depending_prefix_and_suffix (prefix : int -> string)
-    (suffix : int -> string) (ss : string list) =
-  match ss with
-  | hd :: rest ->
-      let out, _ =
-        List.fold_left
-          (fun (acc, i) s ->
-            ( (acc ^ prefix i ^ s
-              ^ if i = List.length ss - 1 then "" else suffix i),
-              i + 1 ))
-          ((prefix 0 ^ hd ^ if 0 = List.length ss - 1 then "" else suffix 0), 1)
-          rest
-      in
-      out
-  | [] -> prefix 0
-
-let add_prefix_to_each_line (s : string) (prefix : int -> string) =
-  concat_with_line_depending_prefix_and_suffix
-    (fun i -> prefix i)
-    (fun _ -> "\n")
-    (String.split_on_char '\n' s)
-
-let indent_number (s : string) : int =
-  try
-    let rec aux (i : int) = if s.[i] = ' ' then aux (i + 1) else i in
-    aux 0
-  with Invalid_argument _ -> String.length s
-
-let format_with_style (styles : ANSITerminal.style list)
-    (str : ('a, unit, string) format) =
-  if !Config.plain_output (* can depend on a stylr flag *) then
-    Printf.sprintf str
-  else ANSITerminal.sprintf styles str
-
-let format_matched_line pos (line : string) (line_no : int) : string =
-  let line_indent = indent_number line in
-  let error_indicator_style = [ ANSITerminal.red; ANSITerminal.Bold ] in
-  let sline = Pos.get_start_line pos in
-  let eline = Pos.get_end_line pos in
-  let line_start_col =
-    if line_no = sline then Pos.get_start_column pos else 1
-  in
-  let line_end_col =
-    if line_no = eline then Pos.get_end_column pos else String.length line + 1
-  in
-  let line_length = String.length line + 1 in
-  line
-  ^
-  if line_no >= sline && line_no <= eline then
-    "\n"
-    ^
-    if line_no = sline && line_no = eline then
-      format_with_style error_indicator_style "%*s" (line_end_col - 1)
-        (String.make (line_end_col - line_start_col) '^')
-    else if line_no = sline && line_no <> eline then
-      format_with_style error_indicator_style "%*s" (line_length - 1)
-        (String.make (line_length - line_start_col) '^')
-    else if line_no <> sline && line_no <> eline then
-      format_with_style error_indicator_style "%*s%s" line_indent ""
-        (String.make (line_length - line_indent) '^')
-    else if line_no <> sline && line_no = eline then
-      format_with_style error_indicator_style "%*s%*s" line_indent ""
-        (line_end_col - 1 - line_indent)
-        (String.make (line_end_col - line_indent) '^')
-    else assert false (* should not happen *)
-  else ""
-
-let format_lines pos lines =
-  let filename = Pos.get_file pos in
-  let sline = Pos.get_start_line pos in
-  let eline = Pos.get_end_line pos in
-  let blue_style = [ ANSITerminal.Bold; ANSITerminal.blue ] in
-  let spaces = int_of_float (log10 (float_of_int eline)) + 1 in
-  let lines =
-    List.mapi (fun i line -> format_matched_line pos line (i + sline)) lines
-  in
-  format_with_style blue_style "%*s--> %s\n%s" spaces "" filename
-    (add_prefix_to_each_line
-       (Printf.sprintf "\n%s" (String.concat "\n" lines))
-       (fun i ->
-         let cur_line = sline + i - 1 in
-         if
-           cur_line >= sline
-           && cur_line <= sline + (2 * (eline - sline))
-           && cur_line mod 2 = sline mod 2
-         then
-           format_with_style blue_style "%*d | " spaces
-             (sline + ((cur_line - sline) / 2))
-         else if cur_line >= sline && cur_line < sline then
-           format_with_style blue_style "%*d | " spaces cur_line
-         else if
-           cur_line <= sline + (2 * (eline - sline)) + 1
-           && cur_line > sline + (2 * (eline - sline)) + 1
-         then
-           format_with_style blue_style "%*d | " spaces
-             (cur_line - (eline - sline + 1))
-         else format_with_style blue_style "%*s | " spaces ""))
-
-let retrieve_loc_text (pos : Pos.t) : string =
-  let filename = Pos.get_file pos in
-  if filename = "" then "No position information"
-  else
-    let lines =
-      match !Config.filesystem with
-      | Contents filemap -> begin
-          match StrMap.find_opt filename filemap with
-          | None -> failwith "Pos error"
-          | Some contents ->
-              let lines = String.split_on_char '\n' contents in
-              [ List.nth lines (Pos.get_start_line pos - 1) ]
-        end
-      | Local ->
-          let get_lines =
-            match File.open_file_for_text_extraction pos with
-            | exception Sys_error _ ->
-                Format.ksprintf failwith
-                  "File not found for displaying position : %S" filename
-            | get_lines -> get_lines
-          in
-          get_lines 1
-    in
-    format_lines pos lines

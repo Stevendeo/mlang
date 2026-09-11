@@ -1,14 +1,17 @@
-(*This program is free software: you can redistribute it and/or modify it under
-  the terms of the GNU General Public License as published by the Free Software
-  Foundation, either version 3 of the License, or (at your option) any later
-  version.
-
-  This program is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  this program. If not, see <https://www.gnu.org/licenses/>. *)
+(******************************************************************************)
+(*                                                                            *)
+(* Droit d'auteur (c) 2023 - 2026 DGFiP - INRIA                               *)
+(*                                                                            *)
+(* Ce programme est distribué sous la licence CeCILL-C: vous pouvez le        *)
+(* redistribuer et/ou le modifier sous les contraintes de celle-ci.           *)
+(*                                                                            *)
+(* L'accessibilité au code source et les droits de copie, de modification et  *)
+(* de redistribution qui découlent de ce contrat ont pour contrepartie de     *)
+(* n'offrir aux utilisateurs qu'une garantie limitée et de ne faire peser sur *)
+(* l'auteur du logiciel, le titulaire des droits patrimoniaux et les          *)
+(* concédants successifs qu'une responsabilité restreinte.                    *)
+(*                                                                            *)
+(******************************************************************************)
 
 type rule_or_verif = Rule | Verif
 
@@ -923,7 +926,7 @@ let rec fold_var_expr (get_var : 'v -> string Pos.marked)
   | FuncCall (Pos.Mark (func_name, fpos), args) -> (
       let check_func arity =
         if arity > -1 && List.length args <> arity then begin
-          let func = Format.asprintf "%a" Com.format_func func_name in
+          let func = Format.asprintf "%a" Com.Pretty.format_func func_name in
           error ~pos:expr_pos @@ ERR.wrong_arity_of_function ~func ~arity
         end;
         List.fold_left (fun acc e -> fold_aux acc e env) acc args
@@ -1279,7 +1282,7 @@ let rec check_instructions (env : var_env)
   in
   let map_expr env m_expr =
     check_expression env m_expr;
-    Com.m_expr_map_var (map_var env) m_expr
+    Com.Visit.m_expr_map_var (map_var env) m_expr
   in
   let check_it_var env var =
     let m_name = Pos.same (Com.get_normal_var (Pos.unmark var)) var in
@@ -1761,7 +1764,7 @@ let rec check_instructions (env : var_env)
               let pp_v fmt (m : Com.m_var_name) =
                 Format.fprintf fmt "%s" (Com.get_var_name @@ Pos.unmark m)
               in
-              Format.asprintf "%a" (Com.format_case pp_v) case
+              Format.asprintf "%a" (Com.Pretty.format_case pp_v) case
             in
             let _cases, env, rev_l', stop =
               List.fold_left
@@ -2304,6 +2307,38 @@ let check_rule (r : Mast.rule) (prog : program) : program =
     let in_vars, out_vars, _ = inout_instrs env tmps rule_instrs in
     (StrMap.keySet in_vars, out_vars)
   in
+  let rule_instrs =
+    (* on affecte à undef les variables VARTMP en entrée de la règle *)
+    let open Com in
+    let litt l = Pos.without (Literal { lit = l; origin = None }) in
+    let accVar vid = Pos.without (VarAccess (None, Pos.without vid)) in
+    let accTab vid idx =
+      Pos.without
+        (TabAccess ((None, Pos.without vid), litt (Float (float idx))))
+    in
+    let affUndefAcc acc =
+      Pos.without
+        (Affectation
+           (Pos.without (SingleFormula (VarDecl (acc, litt Undefined)))))
+    in
+    let affUndefAppend name rule_instrs =
+      let vid = StrMap.find name prog.prog_vars in
+      let var = IntMap.find vid prog.prog_dict in
+      if Var.is_table var then
+        let rec append rule_instrs idx =
+          if idx >= Var.size var then rule_instrs
+          else
+            let rule_instrs = affUndefAcc (accTab vid idx) :: rule_instrs in
+            append rule_instrs (idx + 1)
+        in
+        append rule_instrs 0
+      else affUndefAcc (accVar vid) :: rule_instrs
+    in
+    StrSet.fold
+      (fun name rule_instrs ->
+        if is_vartmp name then affUndefAppend name rule_instrs else rule_instrs)
+      rule_in_vars rule_instrs
+  in
   let rule_seq, prog = get_seq prog in
   let rule =
     {
@@ -2782,7 +2817,7 @@ let convert_verifs (prog : program) : program =
             Pos.same id m_v
           in
           List.map
-            (Com.m_instr_map_var map_var Fun.id)
+            (Com.Visit.m_instr_map_var map_var Fun.id)
             [
               Pos.without
                 (Com.IfThenElse
@@ -3179,7 +3214,7 @@ let check_called_spaces (prog : program) : program =
           in
           let check_var usage m_sp_opt v_opt () =
             match (m_sp_opt, v_opt, usage) with
-            | None, Some m_id, Com.(Read | Write | ArgRef) ->
+            | None, Some m_id, Com.Visit.(Read | Write | ArgRef) ->
                 let v = IntMap.find (Pos.unmark m_id) prog.prog_dict in
                 if Com.Var.is_tgv v then
                   (* Pp.epr "check_var <%s> %s@." vs_name (Com.Var.name_str v); *)
@@ -3197,7 +3232,7 @@ let check_called_spaces (prog : program) : program =
                          ~sp_name:(Pos.unmark vsd_def.vs_name))
             | _ -> ()
           in
-          let iter m_i = Com.m_instr_fold_var check_var m_i () in
+          let iter m_i = Com.Visit.m_instr_fold_var check_var m_i () in
           List.iter iter target.target_prog;
           CallMap.add cc () checked
   in

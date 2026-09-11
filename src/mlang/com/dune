@@ -1,0 +1,6 @@
+(library
+ (public_name mlang.com)
+ (name com)
+ (flags
+  (:standard -open Utils))
+ (libraries utils))

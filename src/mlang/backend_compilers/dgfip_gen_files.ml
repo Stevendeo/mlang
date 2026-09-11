@@ -1,18 +1,17 @@
-(* Copyright (C) 2019 Inria, contributor: David Declerck
-   <david.declerck@ocamlpro.com>
-
-   This program is free software: you can redistribute it and/or modify it under
-   the terms of the GNU General Public License as published by the Free Software
-   Foundation, either version 3 of the License, or (at your option) any later
-   version.
-
-   This program is distributed in the hope that it will be useful, but WITHOUT
-   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-   FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
-   details.
-
-   You should have received a copy of the GNU General Public License along with
-   this program. If not, see <https://www.gnu.org/licenses/>. *)
+(******************************************************************************)
+(*                                                                            *)
+(* Droit d'auteur (c) 2021 - 2026 DGFiP - INRIA                               *)
+(*                                                                            *)
+(* Ce programme est distribué sous la licence CeCILL-C: vous pouvez le        *)
+(* redistribuer et/ou le modifier sous les contraintes de celle-ci.           *)
+(*                                                                            *)
+(* L'accessibilité au code source et les droits de copie, de modification et  *)
+(* de redistribution qui découlent de ce contrat ont pour contrepartie de     *)
+(* n'offrir aux utilisateurs qu'une garantie limitée et de ne faire peser sur *)
+(* l'auteur du logiciel, le titulaire des droits patrimoniaux et les          *)
+(* concédants successifs qu'une responsabilité restreinte.                    *)
+(*                                                                            *)
+(******************************************************************************)
 
 let open_file filename =
   let folder = Filename.dirname !Config.output_file in
@@ -108,7 +107,7 @@ let gen_table_varinfos (cprog : Mir.program) flags =
     let fold cv data res =
       let vars =
         let foldVars _ var vars =
-          if Com.CatVar.compare (Com.Var.cat var) cv = 0 then
+          if Com.CatVar.compare_t (Com.Var.cat var) cv = 0 then
             IntMap.add (Com.Var.loc_cat_idx var) var vars
           else vars
         in
@@ -669,6 +668,16 @@ let gen_lib fmt (cprog : Mir.program) flags =
 |}
     taille_saisie taille_calculee taille_base taille_totale nb_ench;
 
+  Pp.fpr fmt
+    {|/* pour rétrocompatibilité avec le code C historique */
+#define NB_SAISIE %d
+#define NB_CALCULEE %d
+#define NB_BASE %d
+#define NB_TOTALE %d
+
+|}
+    taille_saisie taille_calculee taille_base taille_totale;
+
   Pp.fpr fmt "#define TAILLE_TMP_VARS %d\n" cprog.program_stats.sz_all_tmps;
   Pp.fpr fmt "#define TAILLE_REFS %d\n" cprog.program_stats.nb_all_refs;
   Pp.fpr fmt "#define TAILLE_TAB_VARINFO %d\n"
@@ -890,36 +899,35 @@ let gen_decl_targets fmt (cprog : Mir.program) =
 
 let gen_mlang_h fmt cprog flags stats_varinfos =
   let pr form = Pp.fpr fmt form in
-  pr "/****** LICENCE CECIL *****/\n\n";
-  pr "#ifndef _MLANG_H_\n";
-  pr "#define _MLANG_H_\n";
-  pr "\n";
-  pr "#include <stdlib.h>\n";
-  pr "#include <stdio.h>\n";
-  pr "#include <math.h>\n";
-  pr "#include <string.h>\n";
-  pr "#include <limits.h>\n";
-  pr "#include <setjmp.h>\n";
-  pr "\n";
-  pr "#include \"conf.h\"\n";
-  pr "\n";
-  pr "#define _PROTS(X) X\n";
-  pr "\n";
-  pr "#define ANNEE_REVENU %04d\n" flags.Dgfip_options.annee_revenu;
-  pr "\n";
+  pr "/****** LICENCE CECIL *****/\n@.";
+  pr "#ifndef _MLANG_H_@.";
+  pr "#define _MLANG_H_@.@.";
+  pr "#include <stdlib.h>@.";
+  pr "#include <stdio.h>@.";
+  pr "#include <math.h>@.";
+  pr "#include <string.h>@.";
+  pr "#include <limits.h>@.";
+  pr "#include <setjmp.h>@.";
+  pr "@.";
+  pr "#include \"conf.h\"@.";
+  pr "@.";
+  pr "#define _PROTS(X) X@.";
+  pr "@.";
+  pr "#define ANNEE_REVENU %04d@." flags.Dgfip_options.annee_revenu;
+  pr "@.";
   gen_decl_varinfos fmt cprog stats_varinfos;
-  pr "\n";
+  pr "@.";
   gen_const fmt cprog;
-  pr "\n";
+  pr "@.";
   (* The debug functions need T_irdata to be defined so we put them after *)
   gen_dbg fmt;
-  pr "\n";
+  pr "@.";
   gen_lib fmt cprog flags;
-  pr "\n";
+  pr "@.";
   gen_decl_functions fmt cprog;
-  pr "\n";
+  pr "@.";
   gen_decl_targets fmt cprog;
-  pr "#endif /* _MLANG_H_ */\n\n"
+  pr "@.#endif /* _MLANG_H_ */@."
 
 let gen_mlang_c fmt (cprog : Mir.program) flags =
   Pp.fpr fmt "%s"
@@ -1953,7 +1961,7 @@ char lis_varinfo_tab(
   char *res_def, double *res_val
 ) {
   int idx = (int)idx_val;
-  T_varinfo *info = NULL;
+  T_varinfo *info;
   T_var_space *vsp;
   *res_def = 0;
   *res_val = 0.0;
@@ -2211,7 +2219,6 @@ char lis_tabaccess(
 #ifdef FLG_TRACE
   trace_tabaccess(":", 3, irdata, var_space, idx_tab, idx_def, idx_val);
 #endif /* FLG_TRACE */
-  int idx = 0;
   if (info == NULL) {
     *res_val = 0.0;
     if (
@@ -2255,8 +2262,7 @@ void ecris_tabaccess(
 
 /* !!! */
 void pr_var(T_print_context *pr_ctx, T_irdata *irdata, int var_space, char *nom) {
-  T_varinfo *info = NULL;
-  T_var_space *vsp;
+  T_varinfo *info;
   char res_def = 0;
   double res_val = 0.0;
 
@@ -2265,7 +2271,6 @@ void pr_var(T_print_context *pr_ctx, T_irdata *irdata, int var_space, char *nom)
   if (info == NULL) {
     fprintf(pr_ctx->std, "inconnu");
   } else {
-    vsp = get_var_space(irdata, var_space);
     lis_varinfo(irdata, var_space, info, &res_def, &res_val);
     if (res_def == 0) {
       fprintf(pr_ctx->std, "indefini");
@@ -2499,7 +2504,6 @@ void aff_val(
           "T_varinfo *event_field_%s_var(T_irdata *irdata, char idx_def, \
            double idx_val) {\n"
           f;
-        pr "  T_varinfo *info = NULL;\n";
         pr "  int idx = (int)floor(idx_val);\n";
         pr "  if (idx_def != 1 || idx < 0 || irdata->nb_events <= idx) {\n";
         pr "    return NULL;\n";

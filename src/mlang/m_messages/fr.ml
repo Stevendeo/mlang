@@ -1,3 +1,18 @@
+(******************************************************************************)
+(*                                                                            *)
+(* Droit d'auteur (c) 2026 DGFiP - INRIA                                      *)
+(*                                                                            *)
+(* Ce programme est distribué sous la licence CeCILL-C: vous pouvez le        *)
+(* redistribuer et/ou le modifier sous les contraintes de celle-ci.           *)
+(*                                                                            *)
+(* L'accessibilité au code source et les droits de copie, de modification et  *)
+(* de redistribution qui découlent de ce contrat ont pour contrepartie de     *)
+(* n'offrir aux utilisateurs qu'une garantie limitée et de ne faire peser sur *)
+(* l'auteur du logiciel, le titulaire des droits patrimoniaux et les          *)
+(* concédants successifs qu'une responsabilité restreinte.                    *)
+(*                                                                            *)
+(******************************************************************************)
+
 open Utils
 open Types
 
@@ -98,6 +113,10 @@ module Fr : LANG = struct
       "Liste d'attributs incomplète. Avez-vous oublié de terminer la liste \
        avec ':' ?"
 
+    let missing_colon = "Symbole ':' manquant."
+
+    let missing_endif = "Si-alors-sinon incomplet. Avez-vous oublié un 'finsi'?"
+
     let missing_value_after_equal = "Valeur manquante après le symbole '='."
 
     let syntax_error ~code = Format.sprintf "Erreur de syntaxe (code %i)." code
@@ -112,12 +131,11 @@ module Fr : LANG = struct
 
     let all_not_good =
       let pp_file_errs fmt name nbErr =
-        Format.fprintf fmt "\t%d erreur%s dans le fichier %s" nbErr
+        Format.fprintf fmt "@\n%s: %d erreur%s" name nbErr
           (if nbErr > 1 then "s" else "")
-          name
       in
       let pp_file_errs_map fmt m = StrMap.iter (pp_file_errs fmt) m in
-      fun map : string -> Format.asprintf "Erreurs: %a" pp_file_errs_map map
+      fun map : string -> Format.asprintf "Erreurs:%a" pp_file_errs_map map
 
     let error_in_test ~test = Format.sprintf "Erreur dans le test %s" test
 
@@ -140,7 +158,8 @@ module Fr : LANG = struct
     let ok_non_returned ~name =
       Format.sprintf "OK | %s ignorée car non-restituée" name
 
-    let test_results ~num = Format.sprintf "Résultats des tests: %d succès" num
+    let test_results ~num ~tot =
+      Format.sprintf "Résultats des tests: %d succès sur %d" num tot
 
     let unknown_variable ~name = Format.sprintf "Variable %S inconnue" name
 

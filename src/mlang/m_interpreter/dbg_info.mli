@@ -1,3 +1,18 @@
+(******************************************************************************)
+(*                                                                            *)
+(* Droit d'auteur (c) 2026 DGFiP - INRIA                                      *)
+(*                                                                            *)
+(* Ce programme est distribué sous la licence CeCILL-C: vous pouvez le        *)
+(* redistribuer et/ou le modifier sous les contraintes de celle-ci.           *)
+(*                                                                            *)
+(* L'accessibilité au code source et les droits de copie, de modification et  *)
+(* de redistribution qui découlent de ce contrat ont pour contrepartie de     *)
+(* n'offrir aux utilisateurs qu'une garantie limitée et de ne faire peser sur *)
+(* l'auteur du logiciel, le titulaire des droits patrimoniaux et les          *)
+(* concédants successifs qu'une responsabilité restreinte.                    *)
+(*                                                                            *)
+(******************************************************************************)
+
 (** This module stores the debug info derived from tracing an execution of some
     M code. In order to save some space, we split tracing information into two
     categories, static information and runtime information. Runtime information
@@ -11,8 +26,6 @@
 
     Location information and type of information are informed via the [Origin.t]
     type. It's used to track effects and declarations. *)
-
-open M_ir
 
 module Origin : sig
   type code =

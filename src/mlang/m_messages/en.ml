@@ -1,3 +1,18 @@
+(******************************************************************************)
+(*                                                                            *)
+(* Droit d'auteur (c) 2026 DGFiP - INRIA                                      *)
+(*                                                                            *)
+(* Ce programme est distribué sous la licence CeCILL-C: vous pouvez le        *)
+(* redistribuer et/ou le modifier sous les contraintes de celle-ci.           *)
+(*                                                                            *)
+(* L'accessibilité au code source et les droits de copie, de modification et  *)
+(* de redistribution qui découlent de ce contrat ont pour contrepartie de     *)
+(* n'offrir aux utilisateurs qu'une garantie limitée et de ne faire peser sur *)
+(* l'auteur du logiciel, le titulaire des droits patrimoniaux et les          *)
+(* concédants successifs qu'une responsabilité restreinte.                    *)
+(*                                                                            *)
+(******************************************************************************)
+
 open Utils
 open Types
 
@@ -60,6 +75,10 @@ module En : LANG = struct
     let incomplete_attr_list =
       "Incomplete attribute list. Did you forget to end the list with ':'?"
 
+    let missing_colon = "Missing ':'."
+
+    let missing_endif = "Unclosed if-then-else. Did you forget 'finsi'?"
+
     let missing_value_after_equal = "Missing value after symbol '='."
 
     let syntax_error ~code = Format.sprintf "Syntax error (code %i)." code
@@ -101,12 +120,11 @@ module En : LANG = struct
 
     let all_not_good =
       let pp_file_errs fmt name nbErr =
-        Format.fprintf fmt "\t%d error%s in file %s" nbErr
+        Format.fprintf fmt "@\n%s: %d error%s" name nbErr
           (if nbErr > 1 then "s" else "")
-          name
       in
       let pp_file_errs_map fmt m = StrMap.iter (pp_file_errs fmt) m in
-      fun map : string -> Format.asprintf "Failures: %a" pp_file_errs_map map
+      fun map : string -> Format.asprintf "Failures:%a" pp_file_errs_map map
 
     let error_in_test ~test = Format.sprintf "Error in test %s" test
 
@@ -130,9 +148,10 @@ module En : LANG = struct
     let ok_non_returned ~name =
       Format.sprintf "OK | %s ignored because non-returned" name
 
-    let test_results ~num =
-      Format.sprintf "Test results: %d success%s" num
+    let test_results ~num ~tot =
+      Format.sprintf "Test results: %d success%s out of %d" num
         (if num > 1 then "es" else "")
+        tot
 
     let unexpected_failure = "Unexpected failure"
 

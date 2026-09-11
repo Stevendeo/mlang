@@ -1,7 +1,21 @@
+(******************************************************************************)
+(*                                                                            *)
+(* Droit d'auteur (c) 2026 DGFiP - INRIA                                      *)
+(*                                                                            *)
+(* Ce programme est distribué sous la licence CeCILL-C: vous pouvez le        *)
+(* redistribuer et/ou le modifier sous les contraintes de celle-ci.           *)
+(*                                                                            *)
+(* L'accessibilité au code source et les droits de copie, de modification et  *)
+(* de redistribution qui découlent de ce contrat ont pour contrepartie de     *)
+(* n'offrir aux utilisateurs qu'une garantie limitée et de ne faire peser sur *)
+(* l'auteur du logiciel, le titulaire des droits patrimoniaux et les          *)
+(* concédants successifs qu'une responsabilité restreinte.                    *)
+(*                                                                            *)
+(******************************************************************************)
+
 open M_frontend
 open Lexing
 open Mlexer
-open M_ir
 
 (* The legacy compiler plays a nasty trick on us, that we have to reproduce:
    rule 1 is modified to add assignments to APPLI_XXX variables according to the
@@ -67,7 +81,7 @@ let parse_lexbuf filebuf source_file =
       let err msg = Errors.raise_spanned_error msg pos in
       match
         String.trim (Syntax_messages.message s)
-        |> M_messages.select_parse_error_message
+        |> M_messages.select_parse_error_message ~code:s
       with
       | exception Not_found -> err M_messages.Parser.unexpected_syntax_error
       | "<YOUR SYNTAX ERROR MESSAGE HERE>" ->

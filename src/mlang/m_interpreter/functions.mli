@@ -1,3 +1,18 @@
+(******************************************************************************)
+(*                                                                            *)
+(* Droit d'auteur (c) 2026 DGFiP - INRIA                                      *)
+(*                                                                            *)
+(* Ce programme est distribué sous la licence CeCILL-C: vous pouvez le        *)
+(* redistribuer et/ou le modifier sous les contraintes de celle-ci.           *)
+(*                                                                            *)
+(* L'accessibilité au code source et les droits de copie, de modification et  *)
+(* de redistribution qui découlent de ce contrat ont pour contrepartie de     *)
+(* n'offrir aux utilisateurs qu'une garantie limitée et de ne faire peser sur *)
+(* l'auteur du logiciel, le titulaire des droits patrimoniaux et les          *)
+(* concédants successifs qu'une responsabilité restreinte.                    *)
+(*                                                                            *)
+(******************************************************************************)
+
 (** Implementation of several function calls as described in
     {{:../../../../../fonctions.html}the functions documentation}.
 
@@ -37,4 +52,10 @@ module Make (N : Number.S) : sig
   val nb_events : (N.t, _) Context.t -> N.t Types.value
   (** Implements the 'nb_events' call, returning the number of currently defined
       events. *)
+
+  val add : N.t Types.value -> N.t Types.value -> N.t Types.value
+  (** Implements an addition. Helper for `sum`. *)
+
+  val sum : N.t Types.value list -> N.t Types.value
+  (** Implements the `sum` function call, returning the sum of their args. *)
 end

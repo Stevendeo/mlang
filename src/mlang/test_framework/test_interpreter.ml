@@ -1,24 +1,25 @@
-(* Copyright Inria, contributors: Raphaël Monat <raphael.monat@lip6.fr> (2019)
-
-   This program is free software: you can redistribute it and/or modify it under
-   the terms of the GNU General Public License as published by the Free Software
-   Foundation, either version 3 of the License, or (at your option) any later
-   version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-   You should have received a copy of the GNU General Public License along with
-   this program. If not, see <https://www.gnu.org/licenses/>. *)
+(******************************************************************************)
+(*                                                                            *)
+(* Droit d'auteur (c) 2019 - 2026 DGFiP - INRIA                               *)
+(*                                                                            *)
+(* Ce programme est distribué sous la licence CeCILL-C: vous pouvez le        *)
+(* redistribuer et/ou le modifier sous les contraintes de celle-ci.           *)
+(*                                                                            *)
+(* L'accessibilité au code source et les droits de copie, de modification et  *)
+(* de redistribution qui découlent de ce contrat ont pour contrepartie de     *)
+(* n'offrir aux utilisateurs qu'une garantie limitée et de ne faire peser sur *)
+(* l'auteur du logiciel, le titulaire des droits patrimoniaux et les          *)
+(* concédants successifs qu'une responsabilité restreinte.                    *)
+(*                                                                            *)
+(******************************************************************************)
 
 open M_interpreter
 module Msg = M_messages.Test_interpreter
 
-let find_var_of_name (p : Mir.program) (name : string Pos.marked) : Com.Var.t =
-  try StrMap.find (Pos.unmark name) p.program_vars
+let find_var_of_name_opt (p : Mir.program) (name : string) : Com.Var.t option =
+  try Some (StrMap.find name p.program_vars)
   with Not_found -> (
-    let name = Mir.find_var_name_by_alias p name in
-    try StrMap.find name p.program_vars
-    with Not_found ->
-      Ppf.error_str @@ Msg.unknown_variable ~name;
-      Errors.raise_error Msg.invalid_test_file)
+    try Some (StrMap.find name p.program_alias) with Not_found -> None)
 
 type instance = {
   label : string;
@@ -36,21 +37,39 @@ let irj_lit_to_com_lit = function
 let to_MIR_function_and_inputs (program : Mir.program) (t : Irj_ast.irj_file) :
     instance list =
   let add_var name value map =
-    try
-      let var = find_var_of_name program (Pos.without name) in
-      Com.Var.Map.add var value map
-    with _ -> map
+    match find_var_of_name_opt program name with
+    | Some var -> Com.Var.Map.add var value map
+    | None -> map
   in
   let vars =
-    let map_init =
-      Com.Var.Map.empty
-      |> add_var "V_ANCSDED" (Com.Float (float (!Config.income_year + 1)))
-      |> add_var "V_MILLESIME" (Com.Float (float !Config.income_year))
-    in
     List.fold_left
       (fun in_f (Pos.Mark (var, _var_pos), Pos.Mark (value, _value_pos)) ->
         add_var var (irj_lit_to_com_lit value) in_f)
-      map_init t.prim.entrees
+      Com.Var.Map.empty t.prim.entrees
+  in
+  let vars =
+    match find_var_of_name_opt program "V_ANCSDED" with
+    | Some var when not (Com.Var.Map.mem var vars) ->
+        Com.Var.Map.add var (Com.Float (float (!Config.income_year + 1))) vars
+    | _ -> vars
+  in
+  let vars =
+    match find_var_of_name_opt program "V_MILLESIME" with
+    | Some var when not (Com.Var.Map.mem var vars) ->
+        Com.Var.Map.add var (Com.Float (float !Config.income_year)) vars
+    | _ -> vars
+  in
+  let vars =
+    StrMap.fold
+      (fun name foo vars ->
+        match find_var_of_name_opt program name with
+        | Some var -> (
+            match foo with
+            | None -> vars
+            | Some None -> Com.Var.Map.add var Com.Undefined vars
+            | Some (Some f) -> Com.Var.Map.add var (Com.Float f) vars)
+        | None -> vars)
+      !Config.test_var_defs vars
   in
   let eventsList rappels =
     let from_var vn =
@@ -160,9 +179,9 @@ let check_vars (program : Mir.program) exp vars ign_vars : interp_error list =
               | None -> acc
               | Some err ->
                   let expected =
-                    Format.asprintf "%a" Com.format_literal err.expected
+                    Format.asprintf "%a" Com.Pretty.format_literal err.expected
                   and evaluated =
-                    Format.asprintf "%a" Com.format_literal err.value
+                    Format.asprintf "%a" Com.Pretty.format_literal err.value
                   in
                   Ppf.error_str
                   @@ Msg.ko_difference ~name:vname ~expected ~evaluated;
@@ -321,9 +340,18 @@ let progress_filename =
   Sys.getenv_opt "INTERP_PROGRESS"
   |> Option.fold ~none:".interpreter_progress" ~some:Fun.id
 
+let check_test_var_defs p =
+  let iter name _ =
+    match find_var_of_name_opt p name with
+    | Some _ -> ()
+    | None -> Errors.raise_error @@ Msg.unknown_variable ~name
+  in
+  StrMap.iter iter !Config.test_var_defs
+
 let check_all_tests (p : Mir.program) (test_dir : string)
     (value_sort : Config.value_sort) (round_ops : Config.round_ops)
     (filter_function : string -> bool) =
+  check_test_var_defs p;
   let read_lines inc = In_channel.input_all inc |> String.split_on_char '\n' in
   let finished_files =
     match In_channel.with_open_text progress_filename read_lines with
@@ -395,12 +423,14 @@ let check_all_tests (p : Mir.program) (test_dir : string)
   Sys.remove progress_filename;
   Config.warning_flag := dbg_warning;
   Config.display_time := dbg_time;
-  Ppf.result_str @@ Msg.test_results ~num:(List.length s);
+  Ppf.result_str
+  @@ Msg.test_results ~num:(List.length s) ~tot:(Array.length arr);
   if StrMap.cardinal f = 0 then Ppf.result_str Msg.all_good
   else Ppf.result_str @@ Msg.all_not_good f
 
 let check_one_test (p : Mir.program) (name : string)
     (value_sort : Config.value_sort) (round_ops : Config.round_ops) =
+  check_test_var_defs p;
   let ign_vars = ignored_vars_set p ignored_vars_list in
   (* sort by increasing size, hoping that small files = simple tests *)
   let dbg_warning = !Config.warning_flag in

@@ -1,18 +1,17 @@
-(* Copyright (C) 2019 Inria, contributor: David Declerck
-   <david.declerck@ocamlpro.com>
-
-   This program is free software: you can redistribute it and/or modify it under
-   the terms of the GNU General Public License as published by the Free Software
-   Foundation, either version 3 of the License, or (at your option) any later
-   version.
-
-   This program is distributed in the hope that it will be useful, but WITHOUT
-   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-   FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
-   details.
-
-   You should have received a copy of the GNU General Public License along with
-   this program. If not, see <https://www.gnu.org/licenses/>. *)
+(******************************************************************************)
+(*                                                                            *)
+(* Droit d'auteur (c) 2024 - 2026 DGFiP - INRIA                               *)
+(*                                                                            *)
+(* Ce programme est distribué sous la licence CeCILL-C: vous pouvez le        *)
+(* redistribuer et/ou le modifier sous les contraintes de celle-ci.           *)
+(*                                                                            *)
+(* L'accessibilité au code source et les droits de copie, de modification et  *)
+(* de redistribution qui découlent de ce contrat ont pour contrepartie de     *)
+(* n'offrir aux utilisateurs qu'une garantie limitée et de ne faire peser sur *)
+(* l'auteur du logiciel, le titulaire des droits patrimoniaux et les          *)
+(* concédants successifs qu'une responsabilité restreinte.                    *)
+(*                                                                            *)
+(******************************************************************************)
 
 let open_file filename =
   let folder = Filename.dirname !Config.output_file in
@@ -361,7 +360,7 @@ let gen_var fmt req_type opt ~idx ~name ~tvar ~is_output ~typ_opt ~attributes
 
   Format.fprintf fmt "    { \"%s\", %s | %d" var_name kind idx;
   if opt.with_type_donnee then
-    Format.fprintf fmt ", %a" Com.format_value_typ typ;
+    Format.fprintf fmt ", %a" Com.Pretty.format_value_typ typ;
   if opt.with_verif then
     if is_input && false then Format.fprintf fmt ", err_%s" name
       (* Note: no alias *)

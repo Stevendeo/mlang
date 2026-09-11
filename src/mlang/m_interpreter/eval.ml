@@ -1,18 +1,17 @@
-(* Copyright (C) 2019-2021 Inria, contributor: Denis Merigoux
-   <denis.merigoux@inria.fr>
-
-   This program is free software: you can redistribute it and/or modify it under
-   the terms of the GNU General Public License as published by the Free Software
-   Foundation, either version 3 of the License, or (at your option) any later
-   version.
-
-   This program is distributed in the hope that it will be useful, but WITHOUT
-   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-   FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
-   details.
-
-   You should have received a copy of the GNU General Public License along with
-   this program. If not, see <https://www.gnu.org/licenses/>. *)
+(******************************************************************************)
+(*                                                                            *)
+(* Droit d'auteur (c) 2019 - 2026 DGFiP - INRIA                               *)
+(*                                                                            *)
+(* Ce programme est distribué sous la licence CeCILL-C: vous pouvez le        *)
+(* redistribuer et/ou le modifier sous les contraintes de celle-ci.           *)
+(*                                                                            *)
+(* L'accessibilité au code source et les droits de copie, de modification et  *)
+(* de redistribution qui découlent de ce contrat ont pour contrepartie de     *)
+(* n'offrir aux utilisateurs qu'une garantie limitée et de ne faire peser sur *)
+(* l'auteur du logiciel, le titulaire des droits patrimoniaux et les          *)
+(* concédants successifs qu'une responsabilité restreinte.                    *)
+(*                                                                            *)
+(******************************************************************************)
 
 open M_ir
 open Types
@@ -116,10 +115,7 @@ module Make (N : Number.S) (Tracer : Tracers.S) :
   let binop op new_e1 new_e2 =
     let open Com in
     match (op, new_e1, new_e2) with
-    | Add, Number i1, Number i2 -> Number N.(i1 +. i2)
-    | Add, Number i1, Undefined -> Number N.(i1 +. zero ())
-    | Add, Undefined, Number i2 -> Number N.(zero () +. i2)
-    | Add, Undefined, Undefined -> Undefined
+    | Add, _, _ -> Fun.add new_e1 new_e2
     | Sub, Number i1, Number i2 -> Number N.(i1 -. i2)
     | Sub, Number i1, Undefined -> Number N.(i1 -. zero ())
     | Sub, Undefined, Number i2 -> Number N.(zero () -. i2)
@@ -240,16 +236,25 @@ module Make (N : Number.S) (Tracer : Tracers.S) :
         in
         Fun.multimax (evaluate_expr ctx a1) a2
     | NbEvents, [] -> Fun.nb_events ctx
+    | SumFunc, args -> Fun.sum @@ List.map (evaluate_expr ctx) args
+    | GtzFunc, [ arg ] ->
+        let n = evaluate_expr ctx arg in
+        comparison Com.Gt n @@ Number (N.zero ())
+    | GtezFunc, [ arg ] ->
+        let n = evaluate_expr ctx arg in
+        comparison Com.Gte n @@ Number (N.zero ())
+    | NullFunc, [ arg ] ->
+        let n = evaluate_expr ctx arg in
+        comparison Com.Eq n @@ Number (N.zero ())
     | Func fn, args ->
         let fd = StrMap.find fn ctx.ctx_prog.program_functions in
         evaluate_function ctx fd args
     | ( (( ArrFunc | InfFunc | PresentFunc | Supzero | AbsFunc | MinFunc
-         | MaxFunc | Multimax | NbEvents ) as func),
+         | GtzFunc | GtezFunc | NullFunc | MaxFunc | Multimax | NbEvents ) as
+         func),
         _ ) ->
         Err.wrong_arity ~func ~args:(List.length args) ~pos:(Pos.get f)
-    | ( ((SumFunc | GtzFunc | GtezFunc | NullFunc | VerifNumber | ComplNumber)
-         as func),
-        _ ) ->
+    | ((VerifNumber | ComplNumber) as func), _ ->
         Err.unimplemented ~func ~pos:(Pos.get f)
 
   and evaluate_test_in_set ctx positive e0 values =
@@ -357,13 +362,16 @@ module Make (N : Number.S) (Tracer : Tracers.S) :
           evaluate_same_variable ctx m_acc0 m_acc1
       | InDomain (m_acc, cvm) -> evaluate_in_domain ctx m_acc cvm
       | NbAnomalies ->
-          Number (N.of_float @@ float_of_int @@ Anomaly.nb_anomalies ctx)
+          Number (N.of_float @@ float_of_int @@ Anomaly.nb_anomalies ctx.ctx_ano)
       | NbDiscordances ->
-          Number (N.of_float @@ float_of_int @@ Anomaly.nb_discordances ctx)
+          Number
+            (N.of_float @@ float_of_int @@ Anomaly.nb_discordances ctx.ctx_ano)
       | NbInformatives ->
-          Number (N.of_float @@ float_of_int @@ Anomaly.nb_informatives ctx)
+          Number
+            (N.of_float @@ float_of_int @@ Anomaly.nb_informatives ctx.ctx_ano)
       | NbBloquantes ->
-          Number (N.of_float @@ float_of_int @@ Anomaly.nb_bloquantes ctx)
+          Number
+            (N.of_float @@ float_of_int @@ Anomaly.nb_bloquantes ctx.ctx_ano)
       | NbCategory _ | FuncCallLoop _ | Loop _ -> assert false
     in
     fail_if_nan_or_inf e out;
@@ -471,7 +479,7 @@ module Make (N : Number.S) (Tracer : Tracers.S) :
             StrMap.iter
               (fun _ v ->
                 if
-                  Com.CatVar.compare (Com.Var.cat v) vc = 0
+                  Com.CatVar.compare_t (Com.Var.cat v) vc = 0
                   && not (Com.Var.is_table v)
                 then (
                   let vsd, v, org = C.get_var ctx m_sp_opt v in
@@ -545,7 +553,7 @@ module Make (N : Number.S) (Tracer : Tracers.S) :
             (fun vc _ backup_vars ->
               StrMap.fold
                 (fun _ v backup_vars ->
-                  if Com.CatVar.compare (Com.Var.cat v) vc = 0 then (
+                  if Com.CatVar.compare_t (Com.Var.cat v) vc = 0 then (
                     let vsd, v', vorg = C.get_var ctx m_sp_opt v in
                     C.set_var_ref ctx var vsd v' vorg;
                     match evaluate_expr ctx expr with
@@ -678,12 +686,13 @@ module Make (N : Number.S) (Tracer : Tracers.S) :
     let then_ () = ctx.ctx_events <- List.tl ctx.ctx_events in
     evaluate_stmts ~then_ canBlock ctx stmts
 
-  and evaluate_raise_error canBlock ctx m_err var_opt =
+  and evaluate_raise_error canBlock (ctx : ctx) m_err var_opt =
     let is_blocking =
-      Anomaly.raise ctx (Pos.unmark m_err) (Option.map Pos.unmark var_opt)
+      Anomaly.raise ctx.ctx_ano (Pos.unmark m_err)
+        (Option.map Pos.unmark var_opt)
     in
     Tracer.register_ano ctx.tracer_ctx m_err;
-    if is_blocking && ctx.ctx_nb_bloquantes >= 4 && canBlock then
+    if is_blocking && Anomaly.nb_bloquantes ctx.ctx_ano >= 4 && canBlock then
       raise BlockingError
 
   and evaluate_stmt (canBlock : bool) (ctx : ctx) (stmt : Mir.m_instruction) :
@@ -710,10 +719,11 @@ module Make (N : Number.S) (Tracer : Tracers.S) :
         evaluate_arrange_events canBlock ctx sort filter add stmts
     | Com.RaiseError (m_err, var_opt) ->
         evaluate_raise_error canBlock ctx m_err var_opt
-    | Com.CleanErrors -> Anomaly.clean ctx
-    | Com.CleanFinalizedErrors -> Anomaly.clean_finalized ctx
-    | Com.FinalizeErrors -> Anomaly.finalize ~mode_corr:(mode_corr ctx) ctx
-    | Com.ExportErrors -> Anomaly.export ~mode_corr:(mode_corr ctx) ctx
+    | Com.CleanErrors -> Anomaly.clean ctx.ctx_ano
+    | Com.CleanFinalizedErrors -> Anomaly.clean_finalized ctx.ctx_ano
+    | Com.FinalizeErrors ->
+        Anomaly.finalize ~mode_corr:(mode_corr ctx) ctx.ctx_ano
+    | Com.ExportErrors -> Anomaly.export ~mode_corr:(mode_corr ctx) ctx.ctx_ano
     | Com.ComputeDomain _ | Com.ComputeChaining _ | Com.ComputeVerifs _ ->
         assert false
 
@@ -949,7 +959,7 @@ let evaluate_program ?(dbg_info : Dbg_info.t option) (p : Mir.program)
   in
   let anoSet =
     let fold res (e, _) = Com.Error.Set.add e res in
-    List.fold_left fold Com.Error.Set.empty ctx.ctx_exported_anos
+    List.fold_left fold Com.Error.Set.empty (Anomaly.exported ctx.ctx_ano)
   in
   let dbg_info = Interp.get_dbg_info ctx in
   (varMap, anoSet, dbg_info)

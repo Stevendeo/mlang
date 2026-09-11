@@ -1,4 +1,18 @@
-open M_ir
+(******************************************************************************)
+(*                                                                            *)
+(* Droit d'auteur (c) 2026 DGFiP - INRIA                                      *)
+(*                                                                            *)
+(* Ce programme est distribué sous la licence CeCILL-C: vous pouvez le        *)
+(* redistribuer et/ou le modifier sous les contraintes de celle-ci.           *)
+(*                                                                            *)
+(* L'accessibilité au code source et les droits de copie, de modification et  *)
+(* de redistribution qui découlent de ce contrat ont pour contrepartie de     *)
+(* n'offrir aux utilisateurs qu'une garantie limitée et de ne faire peser sur *)
+(* l'auteur du logiciel, le titulaire des droits patrimoniaux et les          *)
+(* concédants successifs qu'une responsabilité restreinte.                    *)
+(*                                                                            *)
+(******************************************************************************)
+
 open Types
 
 module Make (N : Number.S) = struct
@@ -56,4 +70,16 @@ module Make (N : Number.S) = struct
   let nb_events (ctx : (N.t, _) Context.t) =
     let card = Array.length (List.hd ctx.ctx_events) in
     Number (N.of_int @@ Int64.of_int @@ card)
+
+  let add l r =
+    match (l, r) with
+    | Number i1, Number i2 -> Number N.(i1 +. i2)
+    | Number i1, Undefined -> Number N.(i1 +. zero ())
+    | Undefined, Number i2 -> Number N.(zero () +. i2)
+    | Undefined, Undefined -> Undefined
+
+  let sum l =
+    match l with
+    | [] -> Number (N.zero ())
+    | hd :: tl -> List.fold_left (fun acc n -> add acc n) hd tl
 end

@@ -1,4 +1,17 @@
-(** Abstraction of value manipulation during the interpretation. *)
+(******************************************************************************)
+(*                                                                            *)
+(* Droit d'auteur (c) 2026 DGFiP - INRIA                                      *)
+(*                                                                            *)
+(* Ce programme est distribué sous la licence CeCILL-C: vous pouvez le        *)
+(* redistribuer et/ou le modifier sous les contraintes de celle-ci.           *)
+(*                                                                            *)
+(* L'accessibilité au code source et les droits de copie, de modification et  *)
+(* de redistribution qui découlent de ce contrat ont pour contrepartie de     *)
+(* n'offrir aux utilisateurs qu'une garantie limitée et de ne faire peser sur *)
+(* l'auteur du logiciel, le titulaire des droits patrimoniaux et les          *)
+(* concédants successifs qu'une responsabilité restreinte.                    *)
+(*                                                                            *)
+(******************************************************************************)
 
 (** This module type merges the {!module M_ir.Mir_number} and
     {!module M_ir.Mir_roundops} interface to provide a unique module for
@@ -8,10 +21,10 @@ module type S = sig
 
   include M_ir.Mir_roundops.RoundOpsInterface with type t := t
 
-  val to_literal : t Types.value -> M_ir.Com.literal
+  val to_literal : t Types.value -> Com.literal
   (** Translates a value into an M literal *)
 
-  val of_literal : M_ir.Com.literal -> t Types.value
+  val of_literal : Com.literal -> t Types.value
   (** Translates a M literal into a value *)
 
   val format_value : Format.formatter -> t Types.value -> unit

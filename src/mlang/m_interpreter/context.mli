@@ -1,3 +1,18 @@
+(******************************************************************************)
+(*                                                                            *)
+(* Droit d'auteur (c) 2026 DGFiP - INRIA                                      *)
+(*                                                                            *)
+(* Ce programme est distribué sous la licence CeCILL-C: vous pouvez le        *)
+(* redistribuer et/ou le modifier sous les contraintes de celle-ci.           *)
+(*                                                                            *)
+(* L'accessibilité au code source et les droits de copie, de modification et  *)
+(* de redistribution qui découlent de ce contrat ont pour contrepartie de     *)
+(* n'offrir aux utilisateurs qu'une garantie limitée et de ne faire peser sur *)
+(* l'auteur du logiciel, le titulaire des droits patrimoniaux et les          *)
+(* concédants successifs qu'une responsabilité restreinte.                    *)
+(*                                                                            *)
+(******************************************************************************)
+
 open M_ir
 open Types
 
@@ -49,20 +64,7 @@ type ('a, 'tc) t = {
           [Context.get_var_tab]. *)
   ctx_pr_out : Printer.t;  (** A printer for the standard output stream. *)
   ctx_pr_err : Printer.t;  (** A printer for the error output stream. *)
-  mutable ctx_anos : (Com.Error.t * string option) list;
-      (** Errors raised during the interpretation. *)
-  mutable ctx_nb_anos : int;
-      (** Number of anomalies in the previous error list.*)
-  mutable ctx_nb_discos : int;
-      (** Number of discordances in the previous error list. *)
-  mutable ctx_nb_infos : int;
-      (** Number of informations in the previous error list. *)
-  mutable ctx_nb_bloquantes : int;  (** Number of blocking anomalies. *)
-  mutable ctx_archived_anos : StrSet.t;  (** Archived anomalies *)
-  mutable ctx_finalized_anos : (Com.Error.t * string option) list;
-      (** Finalized errors. *)
-  mutable ctx_exported_anos : (Com.Error.t * string option) list;
-      (** Exported errors. *)
+  ctx_ano : Anomaly.t;
   mutable ctx_events :
     ('a value, Com.Var.t) Com.event_value Array.t Array.t list;
       (** Current list of events. *)

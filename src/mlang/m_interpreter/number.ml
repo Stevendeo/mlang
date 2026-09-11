@@ -1,3 +1,18 @@
+(******************************************************************************)
+(*                                                                            *)
+(* Droit d'auteur (c) 2026 DGFiP - INRIA                                      *)
+(*                                                                            *)
+(* Ce programme est distribué sous la licence CeCILL-C: vous pouvez le        *)
+(* redistribuer et/ou le modifier sous les contraintes de celle-ci.           *)
+(*                                                                            *)
+(* L'accessibilité au code source et les droits de copie, de modification et  *)
+(* de redistribution qui découlent de ce contrat ont pour contrepartie de     *)
+(* n'offrir aux utilisateurs qu'une garantie limitée et de ne faire peser sur *)
+(* l'auteur du logiciel, le titulaire des droits patrimoniaux et les          *)
+(* concédants successifs qu'une responsabilité restreinte.                    *)
+(*                                                                            *)
+(******************************************************************************)
+
 open M_ir
 
 module BigIntPrecision = struct
@@ -42,13 +57,13 @@ struct
 
   let format_value (fmt : Format.formatter) (x : N.t Types.value) =
     match x with
-    | Undefined -> Com.format_literal fmt Com.Undefined
+    | Undefined -> Com.Pretty.format_literal fmt Com.Undefined
     | Number x -> N.format_t fmt x
 
   let format_value_prec (mi : int) (ma : int) (fmt : Format.formatter)
       (x : N.t Types.value) =
     match x with
-    | Undefined -> Com.format_literal fmt Com.Undefined
+    | Undefined -> Com.Pretty.format_literal fmt Com.Undefined
     | Number x -> N.format_prec_t mi ma fmt x
 end
 

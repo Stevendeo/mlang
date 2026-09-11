@@ -81,6 +81,7 @@ build-static:
     - git config --global --add safe.directory '*'
     - opam update
     - opam install . --deps-only -y
+    - make version
     - opam exec -- dune build --profile=static-release src/main_static.exe
     - cp _build/default/src/main_static.exe mlang-static.exe
 
@@ -95,6 +96,8 @@ build:
     # A workaround against a bug in gitlab-runner's default
     # unzipping implementation, which partially breaks caching for the dune _build cache.
     # See https://gitlab.com/gitlab-org/gitlab-runner/-/issues/27496 for more details.
+
+    EXTRA_YEARS: 2020 2022 2023
 
   rules:
     - exists:
@@ -117,4 +120,15 @@ build:
     - opam exec -- dune build @fmt
     # Compilation
     - make build
+    # Tests CI
     - make ci_tests
+    # Sur la branche dev, on teste toutes les années disponibles
+    - |
+      if [ $CI_COMMIT_BRANCH == "dev" ]; then
+        for year in $EXTRA_YEARS; do
+          echo "Test de l'année $year"
+          make clean build
+          make YEAR=${year} tests
+          make YEAR=${year} test_dgfip_c_backend
+        done
+      fi

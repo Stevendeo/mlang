@@ -1,8 +1,25 @@
+(******************************************************************************)
+(*                                                                            *)
+(* Droit d'auteur (c) 2021 - 2026 DGFiP - INRIA                               *)
+(*                                                                            *)
+(* Ce programme est distribué sous la licence CeCILL-C: vous pouvez le        *)
+(* redistribuer et/ou le modifier sous les contraintes de celle-ci.           *)
+(*                                                                            *)
+(* L'accessibilité au code source et les droits de copie, de modification et  *)
+(* de redistribution qui découlent de ce contrat ont pour contrepartie de     *)
+(* n'offrir aux utilisateurs qu'une garantie limitée et de ne faire peser sur *)
+(* l'auteur du logiciel, le titulaire des droits patrimoniaux et les          *)
+(* concédants successifs qu'une responsabilité restreinte.                    *)
+(*                                                                            *)
+(******************************************************************************)
+
 type optim =
   | All_optims
   | Local_vars_for_arrays
   | No_check_unstoppable_rules
   | No_redundant_boolean_formulae
+  | Simple_binary_op
+  | Shorten_def
 
 (** According on the [value_sort], a specific interpreter will be called with
     the right kind of floating-point value *)
@@ -142,6 +159,12 @@ val optim_no_check_unstoppable : unit -> bool
 
 val optim_no_redundant_boolean_formulae : unit -> bool
 
+val optim_simple_binary_op : unit -> bool
+
+val optim_shorten_def : unit -> bool
+
+val test_var_defs : float option option StrMap.t ref
+
 val set_opts :
   files:string list ->
   application_names:string list ->
@@ -169,4 +192,5 @@ val set_opts :
   trace_output_file:string option ->
   message_format:message_format ->
   optims:optim list ->
+  var_defs:(string * float option option) list ->
   [ `Displayed_dgfip_help | `Error of Err.t | `Run ]

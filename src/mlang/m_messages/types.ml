@@ -1,4 +1,17 @@
-(** {2 Common types} *)
+(******************************************************************************)
+(*                                                                            *)
+(* Droit d'auteur (c) 2026 DGFiP - INRIA                                      *)
+(*                                                                            *)
+(* Ce programme est distribué sous la licence CeCILL-C: vous pouvez le        *)
+(* redistribuer et/ou le modifier sous les contraintes de celle-ci.           *)
+(*                                                                            *)
+(* L'accessibilité au code source et les droits de copie, de modification et  *)
+(* de redistribution qui découlent de ce contrat ont pour contrepartie de     *)
+(* n'offrir aux utilisateurs qu'une garantie limitée et de ne faire peser sur *)
+(* l'auteur du logiciel, le titulaire des droits patrimoniaux et les          *)
+(* concédants successifs qu'une responsabilité restreinte.                    *)
+(*                                                                            *)
+(******************************************************************************)
 
 type rdom_or_chain = RuleDomain of string | Chaining of string
 
@@ -71,6 +84,10 @@ module type LANG = sig
 
     val incomplete_attr_list : string
 
+    val missing_colon : string
+
+    val missing_endif : string
+
     val missing_value_after_equal : string
 
     val syntax_error : code:int -> string
@@ -102,7 +119,7 @@ module type LANG = sig
 
     val ok_non_returned : name:string -> string
 
-    val test_results : num:int -> string
+    val test_results : num:int -> tot:int -> string
 
     val unexpected_failure : string
 

@@ -1,14 +1,17 @@
-(*This program is free software: you can redistribute it and/or modify it under
-  the terms of the GNU General Public License as published by the Free Software
-  Foundation, either version 3 of the License, or (at your option) any later
-  version.
-
-  This program is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License along with
-  this program. If not, see <https://www.gnu.org/licenses/>. *)
+(******************************************************************************)
+(*                                                                            *)
+(* Droit d'auteur (c) 2026 DGFiP - INRIA                                      *)
+(*                                                                            *)
+(* Ce programme est distribué sous la licence CeCILL-C: vous pouvez le        *)
+(* redistribuer et/ou le modifier sous les contraintes de celle-ci.           *)
+(*                                                                            *)
+(* L'accessibilité au code source et les droits de copie, de modification et  *)
+(* de redistribution qui découlent de ce contrat ont pour contrepartie de     *)
+(* n'offrir aux utilisateurs qu'une garantie limitée et de ne faire peser sur *)
+(* l'auteur du logiciel, le titulaire des droits patrimoniaux et les          *)
+(* concédants successifs qu'une responsabilité restreinte.                    *)
+(*                                                                            *)
+(******************************************************************************)
 
 module Types = Types
 
@@ -28,17 +31,18 @@ include Main
     translation. If the ["name_of_the_method"] is an unknown code, this function
     will return [`Unknown_code]. At last, if the input string is not properly
     formatted, returns [`Not_a_code]. *)
-let select_parse_error_message parse_error_message =
+let select_parse_error_message ~code parse_error_message =
   let open Parser in
   try
     Scanf.sscanf parse_error_message "Lang:%s" @@ function
     | "incomplete_attr_definition" -> incomplete_attr_definition
     | "incomplete_attr_list" -> incomplete_attr_list
+    | "missing_colon" -> missing_colon
+    | "missing_endif" -> missing_endif
     | "missing_value_after_equal" -> missing_value_after_equal
     | "unexpected_symbol" -> unexpected_symbol
     | s -> "Code " ^ s
-  with Scanf.Scan_failure _ ->
-    Format.sprintf "%s : %s" unexpected_syntax_error parse_error_message
+  with Scanf.Scan_failure _ -> Format.sprintf "%s" (syntax_error ~code)
 
 (* let print_validator_warning (v : M_frontend.Validator.Warning.t) = *)
 (*   let open Validator.Warning in *)

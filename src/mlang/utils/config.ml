@@ -1,8 +1,25 @@
+(******************************************************************************)
+(*                                                                            *)
+(* Droit d'auteur (c) 2025 - 2026 DGFiP - INRIA                               *)
+(*                                                                            *)
+(* Ce programme est distribué sous la licence CeCILL-C: vous pouvez le        *)
+(* redistribuer et/ou le modifier sous les contraintes de celle-ci.           *)
+(*                                                                            *)
+(* L'accessibilité au code source et les droits de copie, de modification et  *)
+(* de redistribution qui découlent de ce contrat ont pour contrepartie de     *)
+(* n'offrir aux utilisateurs qu'une garantie limitée et de ne faire peser sur *)
+(* l'auteur du logiciel, le titulaire des droits patrimoniaux et les          *)
+(* concédants successifs qu'une responsabilité restreinte.                    *)
+(*                                                                            *)
+(******************************************************************************)
+
 type optim =
   | All_optims
   | Local_vars_for_arrays
   | No_check_unstoppable_rules
   | No_redundant_boolean_formulae
+  | Simple_binary_op
+  | Shorten_def
 
 type value_sort =
   | RegularFloat
@@ -130,6 +147,12 @@ let optim_no_check_unstoppable () = optim_activated No_check_unstoppable_rules
 let optim_no_redundant_boolean_formulae () =
   optim_activated No_redundant_boolean_formulae
 
+let optim_simple_binary_op () = optim_activated Simple_binary_op
+
+let optim_shorten_def () = optim_activated Shorten_def
+
+let test_var_defs = ref StrMap.empty
+
 let set_all_arg_refs (files_ : files) applications_ (without_dgfip_m_ : bool)
     (debug_ : bool) (var_info_debug_ : string list) (display_time_ : bool)
     (no_print_cycles_ : bool) (output_file_ : string option)
@@ -140,7 +163,7 @@ let set_all_arg_refs (files_ : files) applications_ (without_dgfip_m_ : bool)
     (dgfip_flags_ : Dgfip_options.flags) (execution_mode_ : execution_mode)
     (no_nondet_display_ : bool) (plain_output_ : bool) (trace_ : bool)
     (trace_output_ : trace_output) (message_format_ : message_format)
-    (optims_ : optim list) =
+    (optims_ : optim list) (var_defs : (string * float option option) list) =
   source_files := files_;
   application_names := applications_;
   without_dgfip_m := without_dgfip_m_;
@@ -166,7 +189,9 @@ let set_all_arg_refs (files_ : files) applications_ (without_dgfip_m_ : bool)
   Option.iter (( := ) output_file) output_file_;
   Option.iter (( := ) comparison_error_margin) comparison_error_margin_;
   message_format := message_format_;
-  optims := optims_
+  optims := optims_;
+  test_var_defs :=
+    List.fold_left (fun r (s, v) -> StrMap.add s v r) StrMap.empty var_defs
 
 let process_dgfip_options (backend : backend) ~(application_names : string list)
     (dgfip_options : string list option) =
@@ -205,8 +230,8 @@ let set_opts ~(files : string list) ~(application_names : string list)
     ~(m_clean_calls : bool) ~(dgfip_options : string list option)
     ~(no_nondet_display : bool) ~(plain_output : bool) ~(trace : bool)
     ~(trace_output_file : string option) ~(message_format : message_format)
-    ~(optims : optim list) : [ `Run | `Displayed_dgfip_help | `Error of Err.t ]
-    =
+    ~(optims : optim list) ~(var_defs : (string * float option option) list) :
+    [ `Run | `Displayed_dgfip_help | `Error of Err.t ] =
   let exception DGFIP_HELP in
   try
     (* Reading backend first because we need it for parsing dgfip_flags *)
@@ -287,7 +312,7 @@ let set_opts ~(files : string list) ~(application_names : string list)
       m_clean_calls comparison_error_margin income_year value_sort round_ops
       backend dgfip_test_filter mpp_function dgfip_flags execution_mode
       no_nondet_display plain_output trace trace_output_file message_format
-      optims;
+      optims var_defs;
     `Run
   with
   | DGFIP_HELP -> `Displayed_dgfip_help

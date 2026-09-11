@@ -1,22 +1,20 @@
-(* Copyright (C) 2019-2021 Inria, contributor: Denis Merigoux
-   <denis.merigoux@inria.fr>
-
-   This program is free software: you can redistribute it and/or modify it under
-   the terms of the GNU General Public License as published by the Free Software
-   Foundation, either version 3 of the License, or (at your option) any later
-   version.
-
-   This program is distributed in the hope that it will be useful, but WITHOUT
-   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-   FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
-   details.
-
-   You should have received a copy of the GNU General Public License along with
-   this program. If not, see <https://www.gnu.org/licenses/>. *)
+(******************************************************************************)
+(*                                                                            *)
+(* Droit d'auteur (c) 2019 - 2026 DGFiP - INRIA                               *)
+(*                                                                            *)
+(* Ce programme est distribué sous la licence CeCILL-C: vous pouvez le        *)
+(* redistribuer et/ou le modifier sous les contraintes de celle-ci.           *)
+(*                                                                            *)
+(* L'accessibilité au code source et les droits de copie, de modification et  *)
+(* de redistribution qui découlent de ce contrat ont pour contrepartie de     *)
+(* n'offrir aux utilisateurs qu'une garantie limitée et de ne faire peser sur *)
+(* l'auteur du logiciel, le titulaire des droits patrimoniaux et les          *)
+(* concédants successifs qu'une responsabilité restreinte.                    *)
+(*                                                                            *)
+(******************************************************************************)
 
 open Backend_compilers
 open Irj_utils
-open M_ir
 open M_frontend
 
 exception Exit
@@ -129,7 +127,6 @@ let unsafe_driver () =
   let m_program = Expander.proceed m_program in
   let m_program = Validator.proceed !Config.mpp_function m_program in
   let m_program = Mast_to_mir.translate m_program in
-  let m_program = Mir.expand_functions m_program in
   Ppf.debug_print "Creating combined program suitable for execution...";
   match !Config.execution_mode with
   | SingleTest test -> run_single_test m_program test
@@ -156,7 +153,8 @@ let set_opts (files : string list) (application_names : string list)
     (m_clean_calls : bool) (dgfip_options : string list option)
     (no_nondet_display : bool) (plain_output : bool) (trace : bool)
     (trace_output_file : string option) (message_format : Config.message_format)
-    (optims : Config.optim list) =
+    (optims : Config.optim list)
+    (var_defs : (string * float option option) list) =
   begin match (trace, trace_output_file) with
   | false, Some _ ->
       Ppf.warning_print
@@ -168,7 +166,7 @@ let set_opts (files : string list) (application_names : string list)
     ~dgfip_test_filter ~run_test ~mpp_function ~optimize_unsafe_float ~precision
     ~roundops ~comparison_error_margin ~income_year ~m_clean_calls
     ~dgfip_options ~no_nondet_display ~plain_output ~trace ~trace_output_file
-    ~message_format ~optims
+    ~message_format ~optims ~var_defs
 
 let run () =
   let eval_cli =
