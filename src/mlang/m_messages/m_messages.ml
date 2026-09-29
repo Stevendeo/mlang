@@ -35,6 +35,7 @@ let select_parse_error_message ~code parse_error_message =
   let open Parser in
   try
     Scanf.sscanf parse_error_message "Lang:%s" @@ function
+    | "expected_closing_parenthesis" -> expected_closing_parenthesis
     | "incomplete_attr_definition" -> incomplete_attr_definition
     | "incomplete_attr_list" -> incomplete_attr_list
     | "missing_colon" -> missing_colon

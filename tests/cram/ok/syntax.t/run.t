@@ -132,7 +132,6 @@ Dans cet exemple, il manque 'finsi' à l'instruction conditionnelle.
   Fatal error: exception Utils.Errors.StructuredError(_)
   [2]
 
-
 Dans cet exemple, il manque ':' dans la règle, a la selection de l'application.
   $ mlang missing_colon.m --mpp_function addition -A app --without_dfgip_m  --no_nondet_display
   [ERROR] Symbole ':' manquant.
@@ -154,3 +153,6 @@ Dans cet exemple, il manque ':' dans la règle, a la selection de l'application.
   
   Fatal error: exception Utils.Errors.StructuredError(_)
   [2]
+
+  $ mlang missing_closing_paren.m --mpp_function addition -A app --without_dfgip_m --no_nondet_display
+  $ LANG="en" mlang missing_closing_paren.m --mpp_function addition -A app --without_dfgip_m --no_nondet_display

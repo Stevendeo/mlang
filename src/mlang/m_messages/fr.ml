@@ -107,6 +107,9 @@ module Fr : LANG = struct
   end
 
   module Parser = struct
+    let expected_closing_parenthesis =
+      "Caractère innattendu. Avez-vous oublié de fermer une parethèse ?"
+
     let incomplete_attr_definition = "Définition incomplète d'un attribut."
 
     let incomplete_attr_list =

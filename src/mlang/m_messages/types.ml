@@ -80,6 +80,8 @@ module type LANG = sig
 
   (** Parser error messages *)
   module Parser : sig
+    val expected_closing_parenthesis : string
+
     val incomplete_attr_definition : string
 
     val incomplete_attr_list : string

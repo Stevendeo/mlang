@@ -2533,7 +2533,7 @@ source_file: FONCTION SYMBOL COLON APPLICATION COLON SYMBOL SEMICOLON WHEN LPARE
 ## In state 227, spurious reduction of production expression -> sum_expression
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Lang:expected_closing_parenthesis
 
 source_file: FONCTION SYMBOL COLON APPLICATION COLON SYMBOL SEMICOLON SYMBOL LBRACKET SYMBOL RPAREN
 ##
